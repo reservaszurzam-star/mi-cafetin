@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Coffee & Cream Palette overriding 'stone' */
+  --color-stone-50: #FDFBF7;
+  --color-stone-100: #F6F2EB;
+  --color-stone-200: #EBE1D2;
+  --color-stone-300: #DAC5AE;
+  --color-stone-400: #C2A383;
+  --color-stone-500: #AA825C;
+  --color-stone-600: #936746;
+  --color-stone-700: #7A5137;
+  --color-stone-800: #654330;
+  --color-stone-900: #523727;
+  --color-stone-950: #2D1D14;
+
+  /* Caramel Accent overriding 'amber' */
+  --color-amber-50: #FCF9F2;
+  --color-amber-100: #F7EFE1;
+  --color-amber-200: #ECDEBC;
+  --color-amber-300: #DFC28F;
+  --color-amber-400: #CFA05D;
+  --color-amber-500: #BD7C34;
+  --color-amber-600: #A8602A;
+  --color-amber-700: #8C4B25;
+  --color-amber-800: #743E23;
+  --color-amber-900: #5F3420;
+  --color-amber-950: #361A0F;
+}
+
+@layer base {
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased font-sans selection:bg-amber-200 selection:text-amber-900;
+    @apply dark:bg-stone-950 dark:text-stone-100 dark:selection:bg-amber-900 dark:selection:text-amber-100;
+  }
+}
+
+@layer utilities {
+  .delicate-card {
+    @apply bg-white dark:bg-stone-900/80 backdrop-blur-xl rounded-[2rem] border border-stone-200/80 dark:border-stone-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-stone-200 rounded-full dark:bg-stone-800;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-stone-300 dark:bg-stone-700;
+  }
+}

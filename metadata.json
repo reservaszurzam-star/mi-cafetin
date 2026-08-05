@@ -1,0 +1,6 @@
+{
+  "name": "Pollería & Parrillas POS",
+  "description": "Sistema de gestión de pollerías y parrillas, punto de venta por pisos, comandas a horno/cocina/barra, delivery y caja.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
