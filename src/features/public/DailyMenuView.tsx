@@ -1,14 +1,13 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
-import { 
-  ArrowLeft, Utensils, CheckCircle2, MessageCircle, 
-  ShoppingBag, Sparkles, Clock, Flame, Info, Check, 
-  Share2, Coffee, ChevronRight, Phone, MapPin, DollarSign,
-  Heart, Star, AlertCircle
+import {
+  MessageCircle, Check, ChevronLeft,
+  Utensils, Coffee, Cake, Soup,
+  User, Phone, MapPin, ArrowRight, Info
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "../../lib/utils";
-import { DailyMenuItem, DailyMenuSelection, PaymentMethod } from "../../types";
-
+import { DailyMenuItem } from "../../types";
 import { formatMoney, createWhatsAppUrl } from "../../lib/formatters";
 
 interface DailyMenuViewProps {
@@ -16,508 +15,438 @@ interface DailyMenuViewProps {
   onViewFullMenu?: () => void;
 }
 
-const BASE_MENU_PRICE = 16.00;
+const BASE_PRICE = 16.00;
+const WHATSAPP_NUMBER = '51987654321'; // â† Cambiar al nÃºmero real del restaurante
 
+type DeliveryType = 'recojo' | 'salon' | 'delivery';
+type PayMethod = 'Yape' | 'Plin' | 'Efectivo' | 'Tarjeta';
+
+// â”€â”€ Tarjeta de opciÃ³n seleccionable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function OptionCard({
+  item, isSelected, onSelect, accentColor, currency,
+}: {
+  item: DailyMenuItem; isSelected: boolean; onSelect: () => void;
+  accentColor: string; currency: string;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        'relative flex-shrink-0 w-48 sm:w-56 rounded-2xl border-2 p-4 text-left transition-all duration-200 flex flex-col justify-between gap-3',
+        isSelected ? 'bg-white shadow-lg scale-[1.02]' : 'border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm'
+      )}
+      style={isSelected ? { borderColor: accentColor } : {}}
+    >
+      {item.popular && (
+        <span className="absolute top-3 right-3 text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+          â­ Favorito
+        </span>
+      )}
+      <div>
+        <p className="font-black text-sm text-stone-900 leading-snug pr-10">{item.name}</p>
+        {item.description && (
+          <p className="text-[11px] text-stone-500 mt-1.5 leading-relaxed line-clamp-2">{item.description}</p>
+        )}
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold" style={{ color: isSelected ? accentColor : '#a8a29e' }}>
+          {item.extraPrice ? `+${currency} ${item.extraPrice.toFixed(2)}` : 'Incluido'}
+        </span>
+        <div className={cn('w-5 h-5 rounded-full flex items-center justify-center transition-all',
+          isSelected ? 'text-white' : 'border-2 border-stone-300')}
+          style={isSelected ? { backgroundColor: accentColor } : {}}>
+          {isSelected && <Check className="w-3 h-3" />}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// â”€â”€ SecciÃ³n con scroll horizontal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function SelectionSection({
+  step, title, subtitle, items, selected, onSelect,
+  accentColor, currency, optional = false,
+}: {
+  step: number; title: string; subtitle: string;
+  items: DailyMenuItem[]; selected: DailyMenuItem | null;
+  onSelect: (item: DailyMenuItem | null) => void;
+  accentColor: string; currency: string; optional?: boolean;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
+          style={{ backgroundColor: accentColor }}>{step}</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="font-black text-sm text-stone-900">{title}</h3>
+            {optional && <span className="text-[9px] font-black bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-full uppercase tracking-wider">opcional</span>}
+          </div>
+          <p className="text-[11px] text-stone-500 font-medium">{subtitle}</p>
+        </div>
+        {selected && (
+          <span className="text-[11px] font-black text-right max-w-[100px] truncate" style={{ color: accentColor }}>
+            {selected.name.split(' ').slice(0, 2).join(' ')}â€¦
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-3 overflow-x-auto pb-3" style={{ scrollbarWidth: 'none' }}>
+        {optional && (
+          <button onClick={() => onSelect(null)}
+            className={cn(
+              'flex-shrink-0 w-28 rounded-2xl border-2 p-4 text-center flex flex-col items-center justify-center gap-2',
+              !selected ? 'border-stone-400 bg-stone-50' : 'border-stone-200 bg-white hover:border-stone-300'
+            )}>
+            <span className="text-2xl">ðŸš«</span>
+            <span className="text-[11px] font-black text-stone-600">Sin postre</span>
+          </button>
+        )}
+        {items.map(item => (
+          <OptionCard key={item.id} item={item} isSelected={selected?.id === item.id}
+            onSelect={() => onSelect(item)} accentColor={accentColor} currency={currency} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewProps) {
-  const { settings, addSale, dailyMenuItems } = useAppStore();
+  const { settings, dailyMenuItems } = useAppStore();
 
-  // Usar los items del store (o [] si no hay ninguno)
   const starters = dailyMenuItems.filter(i => i.course === 'entrada' && i.available);
-  const mains = dailyMenuItems.filter(i => i.course === 'fondo' && i.available);
-  const drinks = dailyMenuItems.filter(i => i.course === 'bebida' && i.available);
-  const desserts = dailyMenuItems.filter(i => i.course === 'postre' && i.available);
+  const mains    = dailyMenuItems.filter(i => i.course === 'fondo'   && i.available);
+  const drinks   = dailyMenuItems.filter(i => i.course === 'bebida'  && i.available);
+  const desserts = dailyMenuItems.filter(i => i.course === 'postre'  && i.available);
 
-  // Selección activa del cliente
   const [selectedStarter, setSelectedStarter] = useState<DailyMenuItem | null>(starters[0] ?? null);
-  const [selectedMain, setSelectedMain] = useState<DailyMenuItem | null>(mains[0] ?? null);
-  const [selectedDrink, setSelectedDrink] = useState<DailyMenuItem | null>(drinks[0] ?? null);
+  const [selectedMain,    setSelectedMain]    = useState<DailyMenuItem | null>(mains[0]    ?? null);
+  const [selectedDrink,   setSelectedDrink]   = useState<DailyMenuItem | null>(drinks[0]   ?? null);
   const [selectedDessert, setSelectedDessert] = useState<DailyMenuItem | null>(null);
 
-  // Datos de entrega del cliente
-  const [deliveryType, setDeliveryType] = useState<'delivery' | 'salon' | 'para_llevar'>('delivery');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName,    setCustomerName]    = useState('');
+  const [customerPhone,   setCustomerPhone]   = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [orderNotes, setOrderNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Yape');
+  const [deliveryType,    setDeliveryType]    = useState<DeliveryType>('recojo');
+  const [payMethod,       setPayMethod]       = useState<PayMethod>('Yape');
+  const [showCheckout,    setShowCheckout]    = useState(false);
+  const [sent,            setSent]            = useState(false);
 
-  const [isOrdered, setIsOrdered] = useState(false);
-
-  // Fecha de hoy formateada
   const todayFormatted = useMemo(() => {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const d = ['Dom','Lun','Mar','MiÃ©','Jue','Vie','SÃ¡b'];
+    const m = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const now = new Date();
-    return `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}`;
+    return `${d[now.getDay()]} ${now.getDate()} ${m[now.getMonth()]}`;
   }, []);
 
-  // Calcular precio total
   const totalPrice = useMemo(() => {
-    let total = BASE_MENU_PRICE;
-    if (selectedDessert?.extraPrice) total += selectedDessert.extraPrice;
-    if (selectedMain?.extraPrice) total += selectedMain.extraPrice;
-    return total;
+    let t = BASE_PRICE;
+    if (selectedDessert?.extraPrice) t += selectedDessert.extraPrice;
+    if (selectedMain?.extraPrice)    t += selectedMain.extraPrice;
+    return t;
   }, [selectedDessert, selectedMain]);
 
-  // Enviar pedido por WhatsApp
-  const handleSendWhatsApp = () => {
-    if (!selectedStarter || !selectedMain || !selectedDrink) {
-      alert('Por favor selecciona tu Entrada, Plato de Fondo y Bebida para completar el menú.');
-      return;
-    }
+  const isReady = !!(selectedStarter && selectedMain && selectedDrink);
 
-    const phone = settings.paymentDetails?.yape || "987654321";
-
-    const msg = 
-      `*PEDIDO DE MENÚ DEL DÍA - ${settings.companyName.toUpperCase()}*\n\n` +
-      `*Fecha:* ${todayFormatted}\n` +
-      `*Cliente:* ${customerName.trim() || 'Cliente'}\n` +
-      `*Teléfono:* ${customerPhone.trim() || 'No registrado'}\n` +
-      `*Tipo:* ${deliveryType === 'delivery' ? `Delivery a: ${deliveryAddress || 'Domicilio'}` : deliveryType === 'salon' ? 'Consumo en Salón' : 'Para Llevar / Recojo'}\n\n` +
-      `*COMBINACIÓN DE MENÚ:*\n` +
-      `1. Entrada: ${selectedStarter.name}\n` +
-      `2. Plato de Fondo: ${selectedMain.name}\n` +
-      `3. Bebida: ${selectedDrink.name}\n` +
-      (selectedDessert ? `4. Postre Extra: ${selectedDessert.name} (+${formatMoney(selectedDessert.extraPrice || 0, settings.currency)})\n` : '') +
-      (orderNotes.trim() ? `Notas: ${orderNotes}\n` : '') +
-      `\nMétodo de Pago: ${paymentMethod}\n` +
-      `TOTAL A PAGAR: ${formatMoney(totalPrice, settings.currency)}\n\n` +
-      `Muchas gracias. Quedo atento a la confirmación de la orden.`;
-
-    const whatsappUrl = createWhatsAppUrl(phone, msg);
-    window.open(whatsappUrl, '_blank');
-    setIsOrdered(true);
+  const handleSend = () => {
+    if (!isReady || !customerName.trim()) return;
+    const modalidad =
+      deliveryType === 'delivery' ? `Delivery a: ${deliveryAddress}` :
+      deliveryType === 'salon'    ? 'En el restaurante (salÃ³n)' : 'Recoger en local';
+    const msg = [
+      `ðŸ½ï¸ *MENÃš EJECUTIVO â€” ${settings.companyName.toUpperCase()}*`,
+      `ðŸ“… ${todayFormatted}`, ``,
+      `ðŸ‘¤ *Cliente:* ${customerName}`,
+      `ðŸ“± *WhatsApp:* ${customerPhone || '-'}`,
+      `ðŸ“¦ *Modalidad:* ${modalidad}`,
+      `ðŸ’³ *Pago:* ${payMethod}`, ``,
+      `*COMBINACIÃ“N:*`,
+      `1. Entrada: ${selectedStarter?.name}`,
+      `2. Fondo:   ${selectedMain?.name}`,
+      `3. Bebida:  ${selectedDrink?.name}`,
+      selectedDessert ? `4. Postre:  ${selectedDessert.name} (+S/ ${selectedDessert.extraPrice?.toFixed(2)})` : '',
+      ``, `*TOTAL: S/ ${totalPrice.toFixed(2)}*`,
+    ].filter(l => l !== '').join('\n');
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    setSent(true);
+    setShowCheckout(false);
   };
 
-
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans flex flex-col">
-      
-      {/* ── HEADER ── */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-stone-200 shadow-xs px-4 py-3.5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-stone-600 hover:text-stone-900 font-bold text-xs p-2 rounded-xl hover:bg-stone-100 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Volver</span>
-          </button>
+    <div className="min-h-screen bg-[#f9f6f1] font-sans">
 
-          <div className="flex items-center space-x-3">
-            <img
-              src={settings.logoUrl && settings.logoUrl !== "/icono.png" ? settings.logoUrl : "/Logo/logo-lomas-grill.png"}
-              alt="Logo"
-              className="w-9 h-9 rounded-xl object-contain bg-white border border-stone-200 p-0.5 shadow-xs"
-              onError={(e) => { e.currentTarget.src = '/Logo/logo-lomas-grill.png'; }}
-            />
-            <div>
-              <h1 className="font-black text-stone-900 text-sm leading-none">{settings.companyName}</h1>
-              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Menú Ejecutivo Diario</span>
-            </div>
+      {/* HEADER */}
+      <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3">
+          {onBack && (
+            <button onClick={onBack} className="w-9 h-9 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600 shrink-0">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div className="flex-1">
+            <h1 className="font-black text-base text-stone-900 leading-none">MenÃº Ejecutivo</h1>
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mt-0.5">{todayFormatted}</p>
           </div>
-
           {onViewFullMenu && (
-            <button
-              onClick={onViewFullMenu}
-              className="px-3.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition border border-stone-200"
-            >
-              Ver Carta Completa
+            <button onClick={onViewFullMenu}
+              className="text-[11px] font-black text-teal-600 border border-teal-200 bg-teal-50 px-3 py-1.5 rounded-xl hover:bg-teal-100 transition">
+              Ver Carta
             </button>
           )}
         </div>
       </header>
 
-      {/* ── HERO BANNER DEL MENÚ DEL DÍA ── */}
-      <section className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white py-8 px-4 relative overflow-hidden shadow-md">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider text-amber-100">
-              <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-              <span>{todayFormatted}</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-              Menú Ejecutivo del Día
-            </h2>
-            <p className="text-sm text-amber-100 font-medium max-w-xl">
-              Arma tu almuerzo completo: <strong>Entrada + Plato de Fondo + Refresco Casero</strong> con ingredientes frescos del día.
-            </p>
-          </div>
-
-          {/* Tarjeta de Precio Fijo */}
-          <div className="bg-white text-stone-900 rounded-3xl p-5 shadow-2xl border-4 border-white/30 text-center min-w-[200px] shrink-0 transform hover:scale-105 transition-transform">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 block">
-              Precio Completo
-            </span>
-            <div className="flex items-baseline justify-center gap-1 my-0.5">
-              <span className="text-base font-black text-amber-600">{settings.currency}</span>
-              <span className="text-4xl font-black font-mono text-stone-900">{BASE_MENU_PRICE.toFixed(2)}</span>
-            </div>
-            <span className="text-[10px] font-bold text-stone-500 block">Entrada + Fondo + Bebida</span>
+      {/* HERO */}
+      <div className="bg-gradient-to-br from-amber-600 to-orange-600 text-white px-5 py-8">
+        <div className="max-w-lg mx-auto text-center space-y-2">
+          <p className="text-xs font-black uppercase tracking-widest text-amber-200">Almuerzo del dÃ­a</p>
+          <h2 className="text-3xl font-black">Arma tu MenÃº Completo</h2>
+          <p className="text-sm text-amber-100 font-medium">Entrada + Fondo + Bebida â€” todo por</p>
+          <div className="inline-flex items-baseline gap-1 bg-white/15 px-6 py-3 rounded-2xl backdrop-blur-sm">
+            <span className="text-lg font-black text-amber-200">S/</span>
+            <span className="text-5xl font-black">{BASE_PRICE.toFixed(2)}</span>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── PASOS INTERACTIVOS PARA ARMAR EL MENÚ ── */}
-      <main className="max-w-5xl mx-auto w-full px-4 py-8 flex-1 space-y-10">
-        
-        {/* ═══ PASO 1: ENTRADAS ═══ */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-sm">
-                1
+      {/* BARRA DE PROGRESO */}
+      <div className="bg-white border-b border-stone-100 px-5 py-3">
+        <div className="max-w-lg mx-auto flex items-center gap-2">
+          {[
+            { label: 'Entrada', done: !!selectedStarter, color: '#f59e0b' },
+            { label: 'Fondo',   done: !!selectedMain,    color: '#ea580c' },
+            { label: 'Bebida',  done: !!selectedDrink,   color: '#0d9488' },
+            { label: 'Postre',  done: !!selectedDessert, color: '#8b5cf6', optional: true },
+          ].map((s, i) => (
+            <React.Fragment key={s.label}>
+              <div className="flex flex-col items-center gap-1">
+                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all',
+                    s.done ? 'text-white' : 'bg-stone-100 text-stone-400')}
+                  style={s.done ? { backgroundColor: s.color } : {}}>
+                  {s.done ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                </div>
+                <span className={cn('text-[9px] font-black uppercase tracking-wider',
+                  s.done ? 'text-stone-700' : 'text-stone-400')}>
+                  {s.label}{s.optional ? '*' : ''}
+                </span>
               </div>
-              <div>
-                <h3 className="text-lg font-black text-stone-900">Elige tu Entrada o Sopa</h3>
-                <p className="text-xs text-stone-500 font-semibold">Selecciona 1 opción para comenzar tu almuerzo</p>
-              </div>
+              {i < 3 && <div className={cn('flex-1 h-0.5 rounded-full', s.done ? 'bg-stone-300' : 'bg-stone-100')} />}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* SELECCIÃ“N */}
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-8 pb-36">
+
+        {dailyMenuItems.length === 0 && (
+          <div className="py-16 text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-amber-100 mx-auto flex items-center justify-center">
+              <Info className="w-7 h-7 text-amber-600" />
             </div>
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-              {selectedStarter?.name ? selectedStarter.name.split(' ')[0] : 'Pendiente'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-            {starters.map((item) => {
-              const isSelected = selectedStarter?.id === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedStarter(item)}
-                  className={cn(
-                    "p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 shadow-xs",
-                    isSelected
-                      ? "bg-amber-50/80 border-amber-500 ring-2 ring-amber-500/20 shadow-md"
-                      : "bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      {item.popular && (
-                        <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 mb-1.5">
-                          Favorito
-                        </span>
-                      )}
-                      <h4 className="font-black text-sm text-stone-900 leading-snug">{item.name}</h4>
-                      <p className="text-[11px] text-stone-500 font-medium mt-1 line-clamp-2">{item.description}</p>
-                    </div>
-                    
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isSelected ? "bg-amber-500 text-white shadow-sm" : "border-2 border-stone-300 bg-white"
-                    )}>
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] font-bold text-stone-500">
-                    <span>Incluido en el menú</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ═══ PASO 2: PLATOS DE FONDO (SEGUNDOS) ═══ */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-sm">
-                2
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-stone-900">Elige tu Plato de Fondo</h3>
-                <p className="text-xs text-stone-500 font-semibold">Nuestra selección especial de carnes, pastas y criollos</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-              {selectedMain?.name ? selectedMain.name.split(' ')[0] : 'Pendiente'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-            {mains.map((item) => {
-              const isSelected = selectedMain?.id === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedMain(item)}
-                  className={cn(
-                    "p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 shadow-xs",
-                    isSelected
-                      ? "bg-amber-50/80 border-amber-500 ring-2 ring-amber-500/20 shadow-md"
-                      : "bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      {item.popular && (
-                        <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 mb-1.5">
-                          Más Pedido
-                        </span>
-                      )}
-                      <h4 className="font-black text-sm text-stone-900 leading-snug">{item.name}</h4>
-                      <p className="text-[11px] text-stone-500 font-medium mt-1 line-clamp-2">{item.description}</p>
-                    </div>
-
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isSelected ? "bg-amber-500 text-white shadow-sm" : "border-2 border-stone-300 bg-white"
-                    )}>
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] font-bold text-stone-500">
-                    <span>Plato Principal</span>
-                    {item.extraPrice ? (
-                      <span className="text-amber-800 font-mono font-bold">+{settings.currency} {item.extraPrice.toFixed(2)}</span>
-                    ) : (
-                      <span className="text-emerald-600 font-bold">Incluido</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ═══ PASO 3: BEBIDAS DEL DÍA ═══ */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-sm">
-                3
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-stone-900">Elige tu Bebida o Refresco</h3>
-                <p className="text-xs text-stone-500 font-semibold">Refrescos naturales de fruta fresca o gaseosa</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-              {selectedDrink?.name ? selectedDrink.name.split(' ')[0] : 'Pendiente'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
-            {drinks.map((item) => {
-              const isSelected = selectedDrink?.id === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedDrink(item)}
-                  className={cn(
-                    "p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 shadow-xs",
-                    isSelected
-                      ? "bg-amber-50/80 border-amber-500 ring-2 ring-amber-500/20 shadow-md"
-                      : "bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-black text-sm text-stone-900 leading-snug">{item.name}</h4>
-                      <p className="text-[11px] text-stone-500 font-medium mt-1 line-clamp-2">{item.description}</p>
-                    </div>
-
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isSelected ? "bg-amber-500 text-white shadow-sm" : "border-2 border-stone-300 bg-white"
-                    )}>
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-stone-100 text-[11px] font-bold text-emerald-600">
-                    Incluido
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ═══ PASO 4: POSTRE O ADICIONAL (OPCIONAL) ═══ */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-2xl bg-stone-300 text-stone-700 flex items-center justify-center font-black text-sm">
-                4
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-stone-900">¿Deseas agregar un Postre? (Opcional)</h3>
-                <p className="text-xs text-stone-500 font-semibold">Endulza tu almuerzo con nuestros postres criollos</p>
-              </div>
-            </div>
-            {selectedDessert && (
-              <button
-                onClick={() => setSelectedDessert(null)}
-                className="text-xs font-bold text-rose-600 hover:underline"
-              >
-                Quitar postre
+            <p className="font-bold text-stone-700">El menÃº de hoy no estÃ¡ disponible aÃºn.</p>
+            <p className="text-sm text-stone-400">Vuelve mÃ¡s tarde o consulta la carta completa.</p>
+            {onViewFullMenu && (
+              <button onClick={onViewFullMenu} className="px-5 py-2.5 bg-teal-600 text-white text-sm font-black rounded-xl">
+                Ver Carta Completa
               </button>
             )}
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {desserts.map((item) => {
-              const isSelected = selectedDessert?.id === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedDessert(isSelected ? null : item)}
-                  className={cn(
-                    "p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 shadow-xs",
-                    isSelected
-                      ? "bg-amber-50/80 border-amber-500 ring-2 ring-amber-500/20 shadow-md"
-                      : "bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50/50"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-black text-sm text-stone-900 leading-snug">{item.name}</h4>
-                      <p className="text-[11px] text-stone-500 font-medium mt-1">{item.description}</p>
-                    </div>
+        <SelectionSection step={1} title="Elige tu Entrada" subtitle="Sopa o entrada para comenzar"
+          items={starters} selected={selectedStarter} onSelect={setSelectedStarter}
+          accentColor="#f59e0b" currency={settings.currency} />
 
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all",
-                      isSelected ? "bg-amber-500 text-white shadow-sm" : "border-2 border-stone-300 bg-white"
-                    )}>
-                      {isSelected && <Check className="w-3.5 h-3.5" />}
-                    </div>
-                  </div>
+        <SelectionSection step={2} title="Plato de Fondo" subtitle="El corazÃ³n de tu almuerzo"
+          items={mains} selected={selectedMain} onSelect={setSelectedMain}
+          accentColor="#ea580c" currency={settings.currency} />
 
-                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-stone-500">Adicional</span>
-                    <span className="font-mono text-amber-800">+{settings.currency} {item.extraPrice?.toFixed(2)}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <SelectionSection step={3} title="Bebida del DÃ­a" subtitle="Refrescos naturales o gaseosa"
+          items={drinks} selected={selectedDrink} onSelect={setSelectedDrink}
+          accentColor="#0d9488" currency={settings.currency} />
 
-        {/* ═══ RESUMEN Y ENVÍO DEL PEDIDO ═══ */}
-        <section className="bg-white rounded-3xl p-6 md:p-8 border border-stone-200 shadow-lg space-y-6">
-          <div className="border-b border-stone-100 pb-4">
-            <h3 className="text-xl font-black text-stone-900 flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-amber-500" />
-              Resumen de tu Menú
-            </h3>
-            <p className="text-xs text-stone-500 font-semibold mt-0.5">Verifica tu combinación antes de enviar el pedido</p>
-          </div>
+        {desserts.length > 0 && (
+          <SelectionSection step={4} title="Â¿Quieres un Postre?" subtitle="Endulza tu almuerzo (adicional)"
+            items={desserts} selected={selectedDessert} onSelect={setSelectedDessert}
+            accentColor="#8b5cf6" currency={settings.currency} optional />
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Lista de Elecciones */}
-            <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
-              <div className="flex justify-between items-start text-xs border-b border-stone-200 pb-2">
-                <span className="text-stone-500 font-bold">Entrada:</span>
-                <span className="font-black text-stone-900 text-right">{selectedStarter?.name || 'No seleccionada'}</span>
-              </div>
-              <div className="flex justify-between items-start text-xs border-b border-stone-200 pb-2">
-                <span className="text-stone-500 font-bold">Segundo:</span>
-                <span className="font-black text-stone-900 text-right">{selectedMain?.name || 'No seleccionado'}</span>
-              </div>
-              <div className="flex justify-between items-start text-xs border-b border-stone-200 pb-2">
-                <span className="text-stone-500 font-bold">Bebida:</span>
-                <span className="font-black text-stone-900 text-right">{selectedDrink?.name || 'No seleccionada'}</span>
-              </div>
-              {selectedDessert && (
-                <div className="flex justify-between items-start text-xs border-b border-stone-200 pb-2">
-                  <span className="text-stone-500 font-bold">Postre Extra:</span>
-                  <span className="font-black text-stone-900 text-right">
-                    {selectedDessert.name} (+{settings.currency} {selectedDessert.extraPrice?.toFixed(2)})
-                  </span>
+        {/* Resumen cuando estÃ¡ listo */}
+        {isReady && (
+          <div className="bg-white rounded-2xl border-2 border-amber-400 p-5 space-y-3">
+            <h3 className="font-black text-stone-900 text-sm">âœ… Tu combinaciÃ³n estÃ¡ lista</h3>
+            <div className="space-y-1.5 text-sm">
+              {[
+                { l: 'Entrada', v: selectedStarter?.name },
+                { l: 'Fondo',   v: selectedMain?.name },
+                { l: 'Bebida',  v: selectedDrink?.name },
+                selectedDessert ? { l: 'Postre', v: `${selectedDessert.name} (+S/ ${selectedDessert.extraPrice?.toFixed(2)})` } : null,
+              ].filter(Boolean).map(r => (
+                <div key={r!.l} className="flex justify-between">
+                  <span className="text-stone-500">{r!.l}</span>
+                  <span className="font-bold text-stone-800 text-right max-w-[60%]">{r!.v}</span>
                 </div>
-              )}
-
-              <div className="pt-2 flex justify-between items-center text-stone-900">
-                <span className="font-black text-sm uppercase">Total a Pagar:</span>
-                <span className="font-mono font-black text-2xl text-amber-600">
-                  {settings.currency} {totalPrice.toFixed(2)}
-                </span>
+              ))}
+              <div className="flex justify-between pt-2 border-t border-stone-100 font-black text-base">
+                <span>Total</span>
+                <span className="text-amber-600">S/ {totalPrice.toFixed(2)}</span>
               </div>
             </div>
-
-            {/* Datos de Entrega */}
-            <div className="space-y-3.5">
-              <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-200">
-                <button
-                  onClick={() => setDeliveryType('delivery')}
-                  className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition", deliveryType === 'delivery' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600")}
-                >
-                  Delivery
-                </button>
-                <button
-                  onClick={() => setDeliveryType('salon')}
-                  className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition", deliveryType === 'salon' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600")}
-                >
-                  En Salón
-                </button>
-                <button
-                  onClick={() => setDeliveryType('para_llevar')}
-                  className={cn("flex-1 py-2 rounded-lg text-xs font-bold transition", deliveryType === 'para_llevar' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600")}
-                >
-                  Para Llevar
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Tu Nombre..."
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-xs font-bold text-stone-900 outline-none focus:border-amber-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Teléfono / WhatsApp..."
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-xs font-bold text-stone-900 outline-none focus:border-amber-500"
-                />
-              </div>
-
-              {deliveryType === 'delivery' && (
-                <input
-                  type="text"
-                  placeholder="Dirección exacta de entrega (ej: Av. Gran Chimú 1420)..."
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-xs font-bold text-stone-900 outline-none focus:border-amber-500"
-                />
-              )}
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-bold text-stone-600 shrink-0">Pago con:</span>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="flex-1 bg-stone-50 border border-stone-300 rounded-xl p-2 text-xs font-bold text-stone-900 outline-none"
-                >
-                  <option value="Yape">Yape (987-654-321)</option>
-                  <option value="Plin">Plin (987-654-321)</option>
-                  <option value="Efectivo">Efectivo contra entrega</option>
-                  <option value="Tarjeta">Tarjeta (POS)</option>
-                </select>
-              </div>
-
-              <button
-                onClick={handleSendWhatsApp}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition transform active:scale-95"
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span>Pedir Menú por WhatsApp</span>
-              </button>
-            </div>
-
           </div>
-        </section>
-
+        )}
       </main>
+
+      {/* BARRA FLOTANTE */}
+      <AnimatePresence>
+        {isReady && !showCheckout && (
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-5 left-4 right-4 max-w-lg mx-auto z-40">
+            <button onClick={() => setShowCheckout(true)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl px-5 py-4 flex items-center justify-between shadow-xl shadow-amber-500/30 transition active:scale-95">
+              <div>
+                <p className="font-black text-sm">Pedir mi MenÃº</p>
+                <p className="text-[11px] text-amber-100">Entrada + Fondo + Bebida</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-xl">S/ {totalPrice.toFixed(2)}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL CHECKOUT */}
+      <AnimatePresence>
+        {showCheckout && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+            onClick={() => setShowCheckout(false)}>
+            <motion.div
+              initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[92vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}>
+
+              <div className="flex items-center gap-3 p-5 border-b border-stone-100">
+                <button onClick={() => setShowCheckout(false)}
+                  className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex-1">
+                  <h3 className="font-black text-base text-stone-900">Completar Pedido</h3>
+                  <p className="text-[11px] text-stone-400">Total: <strong className="text-amber-600">S/ {totalPrice.toFixed(2)}</strong></p>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-5">
+                {/* Modalidad */}
+                <div>
+                  <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-2">Â¿CÃ³mo lo recibirÃ¡s?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: 'recojo', label: 'Recojo', emoji: 'ðŸ¥¡' },
+                      { key: 'salon', label: 'En mesa', emoji: 'ðŸ½ï¸' },
+                      { key: 'delivery', label: 'Delivery', emoji: 'ðŸ›µ' },
+                    ] as const).map(t => (
+                      <button key={t.key} onClick={() => setDeliveryType(t.key)}
+                        className={cn('flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-xs font-black transition',
+                          deliveryType === t.key ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-stone-200 text-stone-600')}>
+                        <span className="text-xl">{t.emoji}</span>{t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input type="text" placeholder="Tu nombre *" value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    className="w-full border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-amber-400 transition" />
+                </div>
+
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input type="tel" placeholder="Tu WhatsApp" value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                    className="w-full border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-amber-400 transition" />
+                </div>
+
+                {deliveryType === 'delivery' && (
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input type="text" placeholder="DirecciÃ³n de entrega *" value={deliveryAddress}
+                      onChange={e => setDeliveryAddress(e.target.value)}
+                      className="w-full border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-amber-400 transition" />
+                  </div>
+                )}
+
+                {/* Pago */}
+                <div>
+                  <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-2">MÃ©todo de pago</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['Yape', 'Plin', 'Efectivo', 'Tarjeta'] as PayMethod[]).map(m => (
+                      <button key={m} onClick={() => setPayMethod(m)}
+                        className={cn('flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-black transition',
+                          payMethod === m ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-stone-200 text-stone-600')}>
+                        <span>{m === 'Yape' ? 'ðŸ’œ' : m === 'Plin' ? 'ðŸ’™' : m === 'Efectivo' ? 'ðŸ’µ' : 'ðŸ’³'}</span> {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resumen */}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2 text-sm">
+                  {[
+                    { l: 'Entrada', v: selectedStarter?.name },
+                    { l: 'Fondo',   v: selectedMain?.name },
+                    { l: 'Bebida',  v: selectedDrink?.name },
+                    selectedDessert ? { l: 'Postre', v: `${selectedDessert.name} (+S/ ${selectedDessert.extraPrice?.toFixed(2)})` } : null,
+                  ].filter(Boolean).map(r => (
+                    <div key={r!.l} className="flex justify-between">
+                      <span className="text-stone-500">{r!.l}</span>
+                      <span className="font-bold text-stone-800 text-right max-w-[60%]">{r!.v}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-2 border-t border-amber-200 font-black text-base">
+                    <span>TOTAL</span><span className="text-amber-700">S/ {totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button onClick={handleSend}
+                  disabled={!customerName.trim() || (deliveryType === 'delivery' && !deliveryAddress.trim())}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-black text-base rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-emerald-600/25 transition active:scale-95">
+                  <MessageCircle className="w-5 h-5" />
+                  Enviar Pedido por WhatsApp
+                </button>
+
+                {!customerName.trim() && (
+                  <p className="text-center text-xs text-red-500 font-bold">* Tu nombre es requerido</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PANTALLA Ã‰XITO */}
+      <AnimatePresence>
+        {sent && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8 text-center">
+            <div className="text-7xl mb-4">ðŸŽ‰</div>
+            <h2 className="font-black text-2xl text-stone-900 mb-2">Â¡Pedido enviado!</h2>
+            <p className="text-stone-500 font-medium mb-8">Tu pedido fue enviado por WhatsApp. El restaurante te confirmarÃ¡ pronto.</p>
+            <button onClick={() => setSent(false)} className="px-8 py-3 bg-amber-500 text-white font-black rounded-2xl text-sm">
+              Volver al MenÃº
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
