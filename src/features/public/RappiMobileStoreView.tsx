@@ -182,14 +182,41 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   return (
     <div className="min-h-screen bg-[#f9f6f1] text-stone-900 font-sans">
 
+      {/* Banner para administrador si tiene onBack */}
+      {onBack && (
+        <div className="bg-stone-900 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Vista de Carta Digital ({settings.companyName})</span>
+          </div>
+          <button
+            onClick={onBack}
+            className="bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-1 rounded-lg text-xs font-black transition flex items-center gap-1"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Volver al Panel</span>
+          </button>
+        </div>
+      )}
+
       {/* ══ HEADER ════════════════════════════════════════════════════════════ */}
       <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
 
         {/* Top bar */}
         <div className="flex items-center gap-3 px-4 py-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition shrink-0"
+              title="Volver al Panel"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
           <img
             src={logoImage}
-            alt="Paradero 104"
+            alt={settings.companyName || 'Logo'}
             className="w-11 h-11 rounded-xl object-contain border border-stone-100 bg-white p-0.5 shrink-0"
             onError={e => { e.currentTarget.src = '/LOGO OFICIAL.png'; }}
           />

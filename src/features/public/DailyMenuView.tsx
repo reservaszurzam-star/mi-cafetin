@@ -189,6 +189,23 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   return (
     <div className="min-h-screen bg-[#f9f6f1] font-sans">
 
+      {/* Banner para administrador si tiene onBack */}
+      {onBack && (
+        <div className="bg-stone-900 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>Vista de Menú Ejecutivo ({settings.companyName})</span>
+          </div>
+          <button
+            onClick={onBack}
+            className="bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-1 rounded-lg text-xs font-black transition flex items-center gap-1"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Volver al Panel</span>
+          </button>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -198,7 +215,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
             </button>
           )}
           <div className="flex-1">
-            <h1 className="font-black text-base text-stone-900 leading-none">MenÃº Ejecutivo</h1>
+            <h1 className="font-black text-base text-stone-900 leading-none">Menú Ejecutivo</h1>
             <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mt-0.5">{todayFormatted}</p>
           </div>
           {onViewFullMenu && (
