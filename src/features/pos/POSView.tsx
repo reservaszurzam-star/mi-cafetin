@@ -8,6 +8,8 @@ import { POSCartSidebar } from "./POSCartSidebar";
 import { POSCheckoutModal } from "./POSCheckoutModal";
 import { POSDeliveryModal } from "./POSDeliveryModal";
 import { POSSendKitchenModal } from "./POSSendKitchenModal";
+import { Utensils, ClipboardList } from "lucide-react";
+import { formatMoney } from "../../lib/formatters";
 
 export default function POSView() {
   const {
@@ -19,8 +21,9 @@ export default function POSView() {
 
   const [activeFloor, setActiveFloor] = useState<number>(1);
   const [selectedTable, setSelectedTable] = useState<string>("101");
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | "Todos">("Todos");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [mobileTab, setMobileTab] = useState<'catalog' | 'cart'>('catalog');
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -35,6 +38,7 @@ export default function POSView() {
   const activeOrder = useMemo(() => orders.find((o) => o.tableNumber === selectedTable), [orders, selectedTable]);
   const currentItems = activeOrder?.items ?? [];
   const currentTotal = currentItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const totalItemCount = currentItems.reduce((s, i) => s + i.quantity, 0);
 
   // ── Handlers de Carrito ──
   const handleAddProduct = (product: Product) => {
@@ -249,35 +253,103 @@ export default function POSView() {
         onQuickSale={handleQuickDirectSale}
       />
 
+      {/* ── SELECTOR MÓVIL: CATÁLOGO vs COMANDA ── */}
+      <div className="flex lg:hidden bg-stone-200/80 p-1 rounded-2xl gap-1 border border-stone-200/50 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setMobileTab('catalog')}
+          className={`flex-1 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition ${
+            mobileTab === 'catalog'
+              ? 'bg-white text-stone-900 shadow-sm'
+              : 'text-stone-600 hover:text-stone-900'
+          }`}
+        >
+          <Utensils className="w-3.5 h-3.5 text-amber-500" />
+          <span>1. Elegir Platos</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('cart')}
+          className={`flex-1 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition relative ${
+            mobileTab === 'cart'
+              ? 'bg-stone-900 text-white shadow-sm'
+              : 'text-stone-600 hover:text-stone-900'
+          }`}
+        >
+          <ClipboardList className="w-3.5 h-3.5 text-amber-400" />
+          <span>2. Comanda ({totalItemCount})</span>
+          {totalItemCount > 0 && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          )}
+        </button>
+      </div>
+
       {/* ── CUERPO PRINCIPAL DEL POS: CATÁLOGO + COMANDA ── */}
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-280px)] min-h-[580px]">
         
         {/* Catálogo Táctil */}
-        <POSProductCatalog
-          products={products}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onAddProduct={handleAddProduct}
-          settings={settings}
-        />
+        <div className={`flex-1 flex flex-col min-h-0 ${mobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
+          <POSProductCatalog
+            products={products}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onAddProduct={handleAddProduct}
+            settings={settings}
+            activeOrder={activeOrder || null}
+          />
+        </div>
 
         {/* Barra Lateral de Comanda / Carrito */}
-        <POSCartSidebar
-          activeOrder={activeOrder || null}
-          selectedTable={selectedTable}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-          onSaveNote={handleSaveNote}
-          onSendToKitchen={handleOpenSendKitchenModal}
-          onOpenCheckout={() => setIsCheckoutOpen(true)}
-          onPrintPreBill={handlePrintPreBill}
-          onSaveCustomerName={handleSaveCustomerName}
-          settings={settings}
-        />
+        <div className={`w-full lg:w-96 flex flex-col min-h-0 ${mobileTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
+          <POSCartSidebar
+            activeOrder={activeOrder || null}
+            selectedTable={selectedTable}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveItem={handleRemoveItem}
+            onSaveNote={handleSaveNote}
+            onSendToKitchen={handleOpenSendKitchenModal}
+            onOpenCheckout={() => setIsCheckoutOpen(true)}
+            onPrintPreBill={handlePrintPreBill}
+            onSaveCustomerName={handleSaveCustomerName}
+            onBackToCatalog={() => setMobileTab('catalog')}
+            settings={settings}
+          />
+        </div>
 
       </div>
+
+      {/* ── BOTÓN FLOTANTE EN MÓVIL PARA REVISAR COMANDA RÁPIDO ── */}
+      {mobileTab === 'catalog' && totalItemCount > 0 && (
+        <div className="fixed bottom-16 left-3 right-3 z-40 lg:hidden animate-in slide-in-from-bottom-2">
+          <button
+            type="button"
+            onClick={() => setMobileTab('cart')}
+            className="w-full bg-stone-900 hover:bg-black text-white rounded-2xl p-3.5 flex items-center justify-between shadow-2xl border border-stone-800 active:scale-95 transition"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-stone-950 font-black flex items-center justify-center text-xs">
+                {totalItemCount}
+              </div>
+              <div className="text-left">
+                <p className="font-black text-xs text-white">Mesa {selectedTable}</p>
+                <p className="text-[10px] text-amber-300 font-bold">{currentItems.length} tipos de platos</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-black text-amber-400 text-sm">
+                {formatMoney(currentTotal, settings.currency)}
+              </span>
+              <span className="text-xs font-black bg-amber-500 text-stone-950 px-3 py-1.5 rounded-xl shadow-xs">
+                Ver Comanda →
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* ── MODAL SELECCIÓN DE PANTALLA Y ENVÍO A COCINA ── */}
       <POSSendKitchenModal

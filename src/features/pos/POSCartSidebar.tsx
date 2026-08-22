@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Minus, Trash2, Send, CreditCard, Printer, 
   Edit2, Check, MessageSquare, Clock, User,
-  Utensils, Truck, ClipboardList
+  Utensils, Truck, ClipboardList, ChevronLeft
 } from 'lucide-react';
 import { RestaurantOrder, OrderItem, Settings } from '../../types';
 import { formatMoney } from '../../lib/formatters';
@@ -17,6 +17,7 @@ interface POSCartSidebarProps {
   onOpenCheckout: () => void;
   onPrintPreBill: () => void;
   onSaveCustomerName: (name: string) => void;
+  onBackToCatalog?: () => void;
   settings: Settings;
 }
 
@@ -30,6 +31,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   onOpenCheckout,
   onPrintPreBill,
   onSaveCustomerName,
+  onBackToCatalog,
   settings,
 }) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -58,10 +60,21 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   };
 
   return (
-    <div className="w-full lg:w-96 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col justify-between overflow-hidden shrink-0">
+    <div className="w-full lg:w-96 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col justify-between overflow-hidden shrink-0 min-h-0">
       
       {/* Header Comanda */}
-      <div className="p-4 border-b border-stone-100 bg-stone-50 space-y-2">
+      <div className="p-3 sm:p-4 border-b border-stone-100 bg-stone-50 space-y-2">
+        {onBackToCatalog && (
+          <button
+            type="button"
+            onClick={onBackToCatalog}
+            className="w-full py-2 px-3 bg-stone-900 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 lg:hidden mb-1"
+          >
+            <ChevronLeft className="w-4 h-4 text-amber-400" />
+            <span>← Volver a Catálogo de Platos</span>
+          </button>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-500 text-white font-black text-xs flex items-center justify-center">
