@@ -109,9 +109,11 @@ export default function POSView() {
     updateOrder(activeOrder.id, { items: newItems, total: newTotal });
   };
 
-  const handleRemoveItem = (productId: string) => {
+  const handleRemoveItem = (itemOrProductId: string) => {
     if (!activeOrder) return;
-    const newItems = activeOrder.items.filter((i) => i.productId !== productId || i.sentToKitchen);
+    const newItems = activeOrder.items.filter(
+      (i) => i.productId !== itemOrProductId && i.id !== itemOrProductId
+    );
     const newTotal = newItems.reduce((s, i) => s + i.price * i.quantity, 0);
     updateOrder(activeOrder.id, { items: newItems, total: newTotal });
   };

@@ -570,7 +570,11 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const deleteProduct = useCallback((id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      localStorage.setItem(`${tenantId}_cafetin_products`, JSON.stringify(next));
+      return next;
+    });
     svc.deleteProduct(tenantId, id);
   }, [tenantId]);
 

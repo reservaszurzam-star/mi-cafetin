@@ -310,8 +310,13 @@ export async function upsertProduct(tenantId: string, p: Product): Promise<void>
 }
 
 export async function deleteProduct(tenantId: string, id: string): Promise<void> {
-  const { error } = await db(tenantId).from('products').update({ active: false }).eq('id', id).eq('tenant_id', tenantId);
-  if (error) handleError('deleteProduct', error);
+  const client = db(tenantId);
+  const { error } = await client.from('products').delete().eq('id', id).eq('tenant_id', tenantId);
+  if (error) {
+    // Si falla por restricción de integridad referencial, desactivar el producto
+    const { error: updErr } = await client.from('products').update({ active: false }).eq('id', id).eq('tenant_id', tenantId);
+    if (updErr) handleError('deleteProduct', updErr);
+  }
 }
 
 // ─── ORDERS ──────────────────────────────────────────────────────────────────
@@ -324,10 +329,10 @@ function mapDbOrderItem(i: Record<string, unknown>): OrderItem {
     quantity:       i.quantity as number,
     price:          i.price as number,
     notes:          i.notes as string | undefined,
-    station:        i.station as string,
-    sentToKitchen:  i.sent_to_kitchen as boolean,
+    station:        i.station as OrderItem['station'],
+    sentToKitchen:  (i.sent_to_kitchen as boolean) ?? false,
     sentAt:         i.sent_at as string | undefined,
-    batchNumber:    i.batch_number as number,
+    batchNumber:    i.batch_number as number | undefined,
   };
 }
 
@@ -335,33 +340,34 @@ function mapDbOrder(o: Record<string, unknown>): RestaurantOrder {
   const items = Array.isArray(o.order_items)
     ? (o.order_items as Record<string, unknown>[]).map(mapDbOrderItem)
     : [];
+
   return {
-    id:               o.id as string,
-    type:             o.type as RestaurantOrder['type'],
-    floor:            o.floor as RestaurantOrder['floor'],
-    tableNumber:      o.table_number as string,
-    customTableName:  o.custom_table_name as string | undefined,
-    dinerName:        o.diner_name as string | undefined,
-    customerId:       o.customer_id as string | undefined,
-    customerPhone:    o.customer_phone as string | undefined,
-    deliveryAddress:  o.delivery_address as string | undefined,
-    deliveryLat:      o.delivery_lat as number | undefined,
-    deliveryLng:      o.delivery_lng as number | undefined,
-    routeDistanceKm:  o.route_distance_km as number | undefined,
-    routeDurationMins:o.route_duration_mins as number | undefined,
-    deliveryCost:     o.delivery_cost as number | undefined,
-    deliveryPlatform: o.delivery_platform as RestaurantOrder['deliveryPlatform'],
-    driverId:         o.driver_id as string | undefined,
-    driverName:       o.driver_name as string | undefined,
-    status:           o.status as RestaurantOrder['status'],
+    id:                 o.id as string,
+    type:               o.type as RestaurantOrder['type'],
+    floor:              (o.floor as 1 | 2 | 3 | 4) ?? 1,
+    tableNumber:        o.table_number as string,
+    customTableName:    o.custom_table_name as string | undefined,
+    dinerName:          o.diner_name as string | undefined,
+    customerId:         o.customer_id as string | undefined,
+    customerPhone:      o.customer_phone as string | undefined,
+    deliveryAddress:    o.delivery_address as string | undefined,
+    deliveryLat:        o.delivery_lat as number | undefined,
+    deliveryLng:        o.delivery_lng as number | undefined,
+    routeDistanceKm:    o.route_distance_km as number | undefined,
+    routeDurationMins:  o.route_duration_mins as number | undefined,
+    deliveryCost:       o.delivery_cost as number | undefined,
+    deliveryPlatform:   o.delivery_platform as RestaurantOrder['deliveryPlatform'],
+    driverId:           o.driver_id as string | undefined,
+    driverName:         o.driver_name as string | undefined,
+    status:             o.status as RestaurantOrder['status'],
     items,
-    total:            o.total as number,
-    notes:            o.notes as string | undefined,
-    waiterName:       o.waiter_name as string | undefined,
-    posTerminalId:    o.pos_terminal_id as string | undefined,
-    preCountPrinted:  o.pre_count_printed as boolean | undefined,
-    createdAt:        o.created_at as string,
-    updatedAt:        o.updated_at as string,
+    total:              (o.total as number) ?? 0,
+    notes:              o.notes as string | undefined,
+    waiterName:         o.waiter_name as string | undefined,
+    posTerminalId:      o.pos_terminal_id as string | undefined,
+    preCountPrinted:    (o.pre_count_printed as boolean) ?? false,
+    createdAt:          o.created_at as string,
+    updatedAt:          o.updated_at as string,
   };
 }
 
@@ -370,11 +376,9 @@ export async function fetchOrders(tenantId: string): Promise<RestaurantOrder[]> 
     .from('orders')
     .select('*, order_items(*)')
     .eq('tenant_id', tenantId)
-    .not('status', 'in', '(paid,cancelled)')
-    .order('created_at', { ascending: false })
-    .limit(200);
+    .order('created_at', { ascending: false });
   if (error) { handleError('fetchOrders', error); return []; }
-  return (data ?? []).map(o => mapDbOrder(o as Record<string, unknown>));
+  return (data ?? []).map(mapDbOrder);
 }
 
 export async function upsertOrder(tenantId: string, order: RestaurantOrder): Promise<void> {
@@ -412,10 +416,30 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
   const { error: orderErr } = await client.from('orders').upsert(orderRow, { onConflict: 'id' });
   if (orderErr) { handleError('upsertOrder:order', orderErr); return; }
 
-  // Upsert items
+  // Sincronizar items de la comanda y limpiar items eliminados
+  const currentItemIds = (order.items || []).map(i => ensureUUID(i.id));
+
+  if (currentItemIds.length > 0) {
+    // Eliminar de Supabase los platos que ya no están en la orden
+    const { error: delErr } = await client
+      .from('order_items')
+      .delete()
+      .eq('order_id', validOrderId)
+      .not('id', 'in', `(${currentItemIds.join(',')})`);
+    if (delErr) handleError('upsertOrder:cleanItems', delErr);
+  } else {
+    // Si la orden no tiene platos, borrar todos sus items
+    const { error: delAllErr } = await client
+      .from('order_items')
+      .delete()
+      .eq('order_id', validOrderId);
+    if (delAllErr) handleError('upsertOrder:clearItems', delAllErr);
+  }
+
+  // Insertar o actualizar los platos actuales
   if (order.items && order.items.length > 0) {
-    const itemRows = order.items.map(i => ({
-      id:             ensureUUID(i.id),
+    const itemRows = order.items.map((i, idx) => ({
+      id:             currentItemIds[idx],
       order_id:       validOrderId,
       product_id:     i.productId && UUID_REGEX.test(i.productId) ? i.productId : null,
       product_name:   i.productName,
