@@ -23,6 +23,7 @@ import {
   AppModuleKey,
   RolePermissionConfig,
   KitchenScreen,
+  Promotion,
 } from "../types";
 
 import {
@@ -45,6 +46,7 @@ import {
   DEFAULT_DAILY_MENU_ITEMS,
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_SETTINGS,
+  DEFAULT_PROMOTIONS,
 } from "../data/initialData";
 
 import * as svc from "../lib/supabaseService";
@@ -183,6 +185,17 @@ export function useStore(tenantId: string) {
   const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>(() => {
     const saved = localStorage.getItem(`${tenantId}_cafetin_daily_menu`);
     return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : DEFAULT_DAILY_MENU_ITEMS;
+  });
+
+  const [promotions, setPromotions] = useState<Promotion[]>(() => {
+    const saved = localStorage.getItem(`${tenantId}_cafetin_promotions`);
+    if (!saved) return DEFAULT_PROMOTIONS;
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PROMOTIONS;
+    } catch {
+      return DEFAULT_PROMOTIONS;
+    }
   });
 
   const [rolePermissions, setRolePermissions] = useState<RolePermissionConfig>(() => {
@@ -1017,6 +1030,36 @@ export function useStore(tenantId: string) {
     return allowed.includes(module);
   }, [currentUser.role, ownerSimulatedRole, rolePermissions]);
 
+  const addPromotion = useCallback((promo: Omit<Promotion, 'id' | 'usageCount'>) => {
+    const newPromo: Promotion = {
+      ...promo,
+      id: Date.now().toString(),
+      usageCount: 0,
+      tenant_id: tenantId,
+    };
+    setPromotions(prev => {
+      const updated = [newPromo, ...prev];
+      localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [tenantId]);
+
+  const updatePromotion = useCallback((id: string, partial: Partial<Promotion>) => {
+    setPromotions(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, ...partial } : p);
+      localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [tenantId]);
+
+  const deletePromotion = useCallback((id: string) => {
+    setPromotions(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [tenantId]);
+
   return {
     inventoryItems,
     inventoryMovements,
@@ -1083,6 +1126,10 @@ export function useStore(tenantId: string) {
     updateDailyMenuItem,
     deleteDailyMenuItem,
     resetDailyMenuItems,
+    promotions,
+    addPromotion,
+    updatePromotion,
+    deletePromotion,
     rolePermissions,
     updateRolePermission,
     resetRolePermissions,

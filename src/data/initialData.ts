@@ -502,3 +502,11 @@ export const DEFAULT_SETTINGS: Settings = {
     transferencia: "BCP: 191-98765432-0-01 (CCI: 0021910098765432001)",
   },
 };
+
+export const DEFAULT_PROMOTIONS = [
+  { id: '1', title: 'Happy Hour Cócteles', type: '2x1' as const, description: 'Todos los jueves y viernes de 6pm a 8pm. Aplica en Pisco Sour y Chilcanos.', status: 'Activo' as const, usageCount: 145 },
+  { id: '2', title: 'Descuento Corporativo', type: 'Porcentaje' as const, discountValue: 20, description: '20% de descuento para empresas afiliadas.', status: 'Activo' as const, usageCount: 89 },
+  { id: '3', title: 'Cupón FIRST10', type: 'Cupón' as const, discountValue: 10, description: '10% de descuento en la primera compra por Delivery.', status: 'Activo' as const, usageCount: 32 },
+  { id: '4', title: 'Día del Pollo', type: 'Porcentaje' as const, discountValue: 15, description: '1/4 de pollo a precio especial todo el día.', status: 'Programado' as const, usageCount: 0 },
+  { id: '5', title: 'Almuerzo Ejecutivo', type: 'Porcentaje' as const, discountValue: 10, description: 'Menú a precio rebajado de Lunes a Miércoles.', status: 'Pausado' as const, usageCount: 412 },
+];

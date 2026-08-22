@@ -192,6 +192,19 @@ export default function POSView() {
       payments = [{ method: details.paymentMethod, amount: activeOrder.total }];
     }
 
+    if (details.printTicket) {
+      const orderToPrint = {
+        ...activeOrder,
+        items: activeOrder.items.map(item => ({ ...item })),
+        customerName: details.customerName || activeOrder.dinerName,
+        customerDocNumber: details.docNumber,
+        paymentMethod: details.paymentMethod,
+      };
+      setTicketOrderToPrint(orderToPrint);
+      setTicketTypeToPrint("boleta_venta");
+      setShowPrintModal(true);
+    }
+
     closeOrderAndPay(
       activeOrder.id,
       payments,
@@ -199,16 +212,6 @@ export default function POSView() {
       details.docType,
       details.docNumber
     );
-
-    if (details.printTicket) {
-      setTicketOrderToPrint({
-        ...activeOrder,
-        customerName: details.customerName || activeOrder.dinerName,
-        customerDocNumber: details.docNumber,
-      });
-      setTicketTypeToPrint("boleta_venta");
-      setShowPrintModal(true);
-    }
 
     setIsCheckoutOpen(false);
   };

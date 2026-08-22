@@ -194,6 +194,7 @@ export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
         onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         onNavigate={navigate}
         onBackToPortal={handleBackToPortal}
+        onBackToBrands={onBackToBrands}
         onLogout={handleLogout}
         onOpenTutorials={() => setShowTutorialModal(true)}
       />

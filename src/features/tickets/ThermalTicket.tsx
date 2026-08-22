@@ -8,7 +8,7 @@ import { OrderItem, RestaurantOrder, PaymentMethod } from "../../types";
 import { useAppStore } from "../../hooks/StoreContext";
 import { formatMoney } from '../../lib/formatters';
 
-export type TicketType = 'boleta_cliente' | 'comanda_cocina' | 'reporte_ventas';
+export type TicketType = 'boleta_cliente' | 'boleta_venta' | 'comanda_cocina' | 'reporte_ventas';
 
 interface ThermalTicketProps {
   order: RestaurantOrder;
@@ -407,7 +407,7 @@ export function ThermalTicket({
             <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }} />
 
             {/* ═══ MODO 1: BOLETA / FACTURA / PRE-CUENTA CLIENTE ═══ */}
-            {ticketType === 'boleta_cliente' && (
+            {(ticketType === 'boleta_cliente' || ticketType === 'boleta_venta') && (
               <>
                 <div style={{ 
                   border: '1.5px solid #000', 

@@ -244,6 +244,23 @@ export type DailyMenuSelection = {
   paymentMethod?: PaymentMethod;
 };
 
+// ── Promociones & Ofertas ──
+export type PromotionType = 'Happy Hour' | 'Porcentaje' | '2x1' | 'Cupón';
+export type PromotionStatus = 'Activo' | 'Pausado' | 'Programado';
+
+export interface Promotion {
+  id: string;
+  title: string;
+  type: PromotionType;
+  discountValue?: number;
+  description: string;
+  status: PromotionStatus;
+  usageCount: number;
+  startDate?: string;
+  endDate?: string;
+  tenant_id?: string;
+}
+
 export type InventoryItem = {
   id: string;
   name: string;

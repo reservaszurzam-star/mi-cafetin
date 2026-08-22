@@ -94,7 +94,7 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
       if (transactions.length > 0)  setters.setTransactions(transactions);
       if (products.length > 0)      setters.setProducts(products);
       if (expenses.length > 0)      setters.setExpenses(expenses);
-      if (orders.length > 0)        setters.setOrders(orders);
+      setters.setOrders(orders);
       if (printers.length > 0)      setters.setPrinters(printers);
       if (inventoryItems.length > 0)setters.setInventoryItems(inventoryItems);
       if (reservations.length > 0)  setters.setReservations(reservations);
@@ -149,9 +149,9 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
         () => {
-          // Recarga solo órdenes activas cuando hay cualquier cambio
+          // Recarga órdenes activas cuando hay cualquier cambio
           svc.fetchOrders(tenantId).then(orders => {
-            if (orders.length > 0) setters.setOrders(orders);
+            setters.setOrders(orders);
           });
         }
       )
