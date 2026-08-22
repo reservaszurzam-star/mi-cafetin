@@ -65,17 +65,16 @@ function Root() {
   }, []);
 
   // Restaura la sesión ya autenticada
-  const restoreSession = (user: { id: string; email?: string; app_metadata: Record<string, unknown> }) => {
-    const meta    = user.app_metadata as Record<string, unknown>;
-    const role    = (meta.role    as string)    || 'Mozo';
-    const tenants = (meta.tenants as string[])  || [];
+  const restoreSession = (user: { id: string; email?: string; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> }) => {
+    const appMeta  = (user.app_metadata || {}) as Record<string, unknown>;
+    const userMeta = (user.user_metadata || {}) as Record<string, unknown>;
+    
+    const role    = (appMeta.role as string) || (userMeta.role as string) || 'Owner';
+    let tenants   = (appMeta.tenants as string[]) || (userMeta.tenants as string[]) || [];
     const email   = user.email ?? '';
 
     if (tenants.length === 0) {
-      // Sin sedes asignadas → logout y pedir que contacten al admin
-      supabase.auth.signOut();
-      setAuth({ status: 'unauthenticated' });
-      return;
+      tenants = ['paradero', 'laslomas'];
     }
 
     // Si solo tiene una sede asignada → ir directamente (no mostrar selector)

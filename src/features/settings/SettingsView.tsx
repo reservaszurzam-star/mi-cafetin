@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import { Settings as SettingsType, StationPrinter, OrderStation } from "../../types";
 import { cn } from "../../lib/utils";
+import { createWhatsAppUrl } from "../../lib/formatters";
 import { 
   Settings, Image as ImageIcon, QrCode, Printer, AlertTriangle, 
   CheckCircle2, Store, CreditCard, Building2, Smartphone, 
   Plus, Trash2, Edit3, Wifi, Usb, Bluetooth, Bell, Volume2, 
   Clock, DollarSign, Receipt, Sparkles, Check, X, Sliders,
-  HelpCircle, ShieldCheck
+  HelpCircle, ShieldCheck, MessageCircle, Send, Eye
 } from 'lucide-react';
 
 const AVAILABLE_CATEGORIES = [
@@ -38,6 +39,12 @@ export default function SettingsView() {
     companyRuc: settings.companyRuc || '20601234567',
     address: settings.address || 'Av. Los Frutales 104, Lima',
     phone: settings.phone || '987-654-321',
+    whatsappOrdersPhone: settings.whatsappOrdersPhone || settings.phone || '987654321',
+    whatsappMessageGreeting: settings.whatsappMessageGreeting || `*PEDIDO — ${settings.companyName.toUpperCase()}*`,
+    whatsappCustomFooter: settings.whatsappCustomFooter || 'Por favor confirmar el tiempo estimado de entrega. ¡Muchas gracias!',
+    whatsappIncludeAddress: settings.whatsappIncludeAddress ?? true,
+    whatsappIncludePayment: settings.whatsappIncludePayment ?? true,
+    whatsappIncludeNotes: settings.whatsappIncludeNotes ?? true,
     kitchenDelayThresholdMins: settings.kitchenDelayThresholdMins || 20,
     deliveryDelayThresholdMins: settings.deliveryDelayThresholdMins || 35,
     soundAlertsEnabled: settings.soundAlertsEnabled ?? true,
@@ -71,7 +78,7 @@ export default function SettingsView() {
   const [printerList, setPrinterList] = useState<StationPrinter[]>(printers);
   const [editingPrinterId, setEditingPrinterId] = useState<string | null>(null);
   const [showAddPrinterModal, setShowAddPrinterModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'payments' | 'restaurant' | 'alerts'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'whatsapp' | 'payments' | 'restaurant' | 'alerts'>('general');
   const [testPrintSuccess, setTestPrintSuccess] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -198,6 +205,19 @@ export default function SettingsView() {
             >
               <Store className={cn("w-4 h-4", activeTab === 'general' ? "text-amber-400" : "text-stone-400")} /> 
               <span>General & Marca</span>
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('whatsapp')} 
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs md:text-sm transition-all whitespace-nowrap", 
+                activeTab === 'whatsapp' 
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" 
+                  : "bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80 shadow-2xs"
+              )}
+            >
+              <MessageCircle className={cn("w-4 h-4", activeTab === 'whatsapp' ? "text-white" : "text-emerald-500")} /> 
+              <span>Pedidos por WhatsApp</span>
             </button>
 
             <button 
@@ -367,6 +387,217 @@ export default function SettingsView() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ══════════════ TAB: PEDIDOS POR WHATSAPP ══════════════ */}
+          {activeTab === 'whatsapp' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="border-b border-stone-100 pb-4">
+                <h2 className="text-lg md:text-xl font-black text-stone-900 flex items-center gap-2.5">
+                  <MessageCircle className="w-5 h-5 text-emerald-600" />
+                  Configuración de Pedidos por WhatsApp
+                </h2>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Configura a qué número de teléfono llegarán los pedidos de la carta pública y personaliza el formato y estructura del mensaje.
+                </p>
+              </div>
+
+              {/* Número de WhatsApp Receptor */}
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-sm">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm text-emerald-950 uppercase tracking-wide">
+                      Número de WhatsApp para Recepción de Pedidos
+                    </h3>
+                    <p className="text-xs text-emerald-800 font-medium">
+                      Cuando un cliente termine su pedido en la carta web, se abrirá WhatsApp dirigido a este número.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      +51
+                    </span>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. 987654321" 
+                      value={formData.whatsappOrdersPhone || ''} 
+                      onChange={e => setFormData({ ...formData, whatsappOrdersPhone: e.target.value })} 
+                      className="w-full bg-white border border-emerald-300 focus:border-emerald-500 rounded-xl pl-16 pr-4 py-3 font-mono font-black text-sm text-stone-900 outline-none transition shadow-2xs" 
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const testUrl = createWhatsAppUrl(
+                        formData.whatsappOrdersPhone || '51987654321',
+                        `*MENSAJE DE PRUEBA — ${formData.companyName}*\n\n¡La conexión de WhatsApp para recepción de pedidos está configurada y lista!`
+                      );
+                      window.open(testUrl, '_blank');
+                    }}
+                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition shadow-md whitespace-nowrap active:scale-95"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Probar Envío a este Número</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Personalización de Estructura y Textos */}
+              <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-2xs space-y-6">
+                <div>
+                  <h3 className="font-black text-sm text-stone-900 uppercase tracking-wider flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-amber-500" />
+                    Estructura y Textos del Mensaje
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Personaliza el encabezado, las opciones que se adjuntarán y la despedida de cada mensaje.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block font-bold text-xs text-stone-700 mb-1.5">
+                      Encabezado / Título del Mensaje:
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: *PEDIDO — PARADERO 104*" 
+                      value={formData.whatsappMessageGreeting || ''} 
+                      onChange={e => setFormData({ ...formData, whatsappMessageGreeting: e.target.value })} 
+                      className="w-full bg-stone-50 border border-stone-200 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold outline-none transition" 
+                    />
+                    <p className="text-[10px] text-stone-400 mt-1">Aparece en la primera línea en negrita al inicio del mensaje.</p>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-xs text-stone-700 mb-1.5">
+                      Mensaje de Cierre / Despedida:
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: Por favor confirmar el tiempo estimado. ¡Muchas gracias!" 
+                      value={formData.whatsappCustomFooter || ''} 
+                      onChange={e => setFormData({ ...formData, whatsappCustomFooter: e.target.value })} 
+                      className="w-full bg-stone-50 border border-stone-200 focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold outline-none transition" 
+                    />
+                    <p className="text-[10px] text-stone-400 mt-1">Aparece al final del mensaje de WhatsApp como agradecimiento o instrucción.</p>
+                  </div>
+                </div>
+
+                {/* Toggles de Campos */}
+                <div className="space-y-2">
+                  <label className="block font-black text-xs text-stone-700 uppercase tracking-wider">
+                    Campos y Detalles a Incluir en el Mensaje:
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-emerald-300 transition">
+                      <div>
+                        <p className="font-bold text-xs text-stone-900">Modalidad & Dirección</p>
+                        <p className="text-[10px] text-stone-500">Delivery, Salón o Recojo</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.whatsappIncludeAddress !== false} 
+                        onChange={e => setFormData({ ...formData, whatsappIncludeAddress: e.target.checked })} 
+                        className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                      />
+                    </label>
+
+                    <label className="bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-emerald-300 transition">
+                      <div>
+                        <p className="font-bold text-xs text-stone-900">Método de Pago</p>
+                        <p className="text-[10px] text-stone-500">Yape, Plin, Efectivo, POS</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.whatsappIncludePayment !== false} 
+                        onChange={e => setFormData({ ...formData, whatsappIncludePayment: e.target.checked })} 
+                        className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                      />
+                    </label>
+
+                    <label className="bg-stone-50 border border-stone-200 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-emerald-300 transition">
+                      <div>
+                        <p className="font-bold text-xs text-stone-900">Notas de Platos</p>
+                        <p className="text-[10px] text-stone-500">Indicaciones del cliente</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.whatsappIncludeNotes !== false} 
+                        onChange={e => setFormData({ ...formData, whatsappIncludeNotes: e.target.checked })} 
+                        className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" 
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulador en Vivo de WhatsApp */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-xs text-stone-700 uppercase tracking-wider flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-emerald-600" />
+                    Simulador en Tiempo Real del Mensaje
+                  </h3>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                    Vista previa de lo que recibirás
+                  </span>
+                </div>
+
+                <div className="bg-[#e5ddd5] p-4 sm:p-6 rounded-3xl border border-stone-300 shadow-inner max-w-lg">
+                  {/* WhatsApp Message Bubble */}
+                  <div className="bg-[#dcf8c6] rounded-2xl rounded-tr-xs p-4 text-xs font-mono text-stone-900 shadow-md space-y-2.5 border border-emerald-200/60 leading-relaxed">
+                    <p className="font-black text-sm text-stone-950">
+                      {formData.whatsappMessageGreeting || `*PEDIDO — ${formData.companyName.toUpperCase()}*`}
+                    </p>
+                    <p className="text-[11px] text-stone-700">📅 Sáb 22 Ago · 03:30 PM</p>
+                    
+                    <div className="border-t border-emerald-200/80 pt-2 space-y-1">
+                      <p>👤 <strong>Cliente:</strong> Juan Pérez</p>
+                      <p>📱 <strong>WhatsApp:</strong> 999 888 777</p>
+                      {formData.whatsappIncludeAddress !== false && (
+                        <p>🛵 <strong>Modalidad:</strong> Delivery a: Av. Los Frutales 104, Dpto 302</p>
+                      )}
+                      {formData.whatsappIncludePayment !== false && (
+                        <p>💳 <strong>Pago:</strong> Yape</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-emerald-200/80 pt-2 space-y-1">
+                      <p className="font-black">DETALLE DEL PEDIDO:</p>
+                      <p>• <strong>1x</strong> Ceviche Mixto {formData.whatsappIncludeNotes !== false ? '_(Nota: poco ají)_' : ''} → S/ 30.00</p>
+                      <p>• <strong>2x</strong> Chicharrón de Pota → S/ 40.00</p>
+                    </div>
+
+                    <div className="border-t border-emerald-200/80 pt-2 space-y-0.5 text-[11px]">
+                      <p>Subtotal: S/ 70.00</p>
+                      <p>Delivery: GRATIS 🎉</p>
+                      <p className="font-black text-xs text-emerald-950 pt-1 border-t border-emerald-200/80">
+                        TOTAL: S/ 70.00
+                      </p>
+                    </div>
+
+                    {formData.whatsappCustomFooter && (
+                      <p className="text-[11px] italic text-stone-700 border-t border-emerald-200/80 pt-2">
+                        {formData.whatsappCustomFooter}
+                      </p>
+                    )}
+
+                    <div className="flex justify-end pt-1">
+                      <span className="text-[9px] text-stone-500 font-sans">03:30 PM ✓✓</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 

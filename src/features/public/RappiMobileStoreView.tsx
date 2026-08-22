@@ -44,8 +44,7 @@ function getCategoryIcon(category: string, className = 'w-4 h-4') {
   return <ChefHat className={className} />;
 }
 
-// ─── Número de WhatsApp del restaurante ──────────────────────────────────────
-const WHATSAPP_NUMBER = '51987654321'; // ← Reemplazar con el número real de Paradero 104
+import { createWhatsAppUrl } from "../../lib/formatters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props) {
@@ -73,7 +72,8 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   const [orderType, setOrderType] = useState<OrderType>('recojo');
   const [payMethod, setPayMethod] = useState<PayMethod>('Yape');
 
-  const logoImage = '/Logo/logo-paradero-104.png';
+  const isParadero = settings.companyName.toLowerCase().includes('paradero');
+  const logoImage = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
 
   // ─── Categorías ────────────────────────────────────────────────────────────
   const categories = useMemo(() => {
@@ -105,7 +105,7 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   // ─── Totales ───────────────────────────────────────────────────────────────
   const totalItems = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
   const subtotal = useMemo(() => cart.reduce((s, i) => s + i.product.price * i.quantity, 0), [cart]);
-  const deliveryFee = orderType === 'delivery' ? (subtotal >= 50 ? 0 : 5) : 0;
+  const deliveryFee = orderType === 'delivery' ? (subtotal >= 50 ? 0 : (settings.defaultDeliveryCost ?? 5)) : 0;
   const total = subtotal + deliveryFee;
 
   // ─── Carrito helpers ────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
     if (!cart.length || !customerName.trim()) return;
 
     const lines = cart.map(i =>
-      `• ${i.quantity}x ${i.product.name}${i.notes ? ` _(${i.notes})_` : ''} → S/ ${(i.product.price * i.quantity).toFixed(2)}`
+      `• *${i.quantity}x* ${i.product.name}${i.notes && settings.whatsappIncludeNotes !== false ? ` _(Nota: ${i.notes})_` : ''} → ${settings.currency} ${(i.product.price * i.quantity).toFixed(2)}`
     ).join('\n');
 
     const modalidad =
@@ -150,24 +150,29 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       orderType === 'salon' ? '🍽️ En mesa (salón)' :
       '🥡 Para recoger en local';
 
-    const msg = [
-      `🦐 *PEDIDO — PARADERO 104*`,
+    const greeting = settings.whatsappMessageGreeting || `*PEDIDO — ${settings.companyName.toUpperCase()}*`;
+    const footer = settings.whatsappCustomFooter || 'Por favor confirmar el tiempo estimado de entrega. ¡Muchas gracias!';
+
+    const msgParts = [
+      greeting,
       ``,
       `👤 *Cliente:* ${customerName}`,
-      `📱 *WhatsApp:* ${customerPhone || '-'}`,
+      customerPhone ? `📱 *WhatsApp:* ${customerPhone}` : '',
       `📦 *Modalidad:* ${modalidad}`,
-      `💳 *Pago:* ${payMethod}`,
+      settings.whatsappIncludePayment !== false ? `💳 *Pago:* ${payMethod}` : '',
       ``,
       `*DETALLE DEL PEDIDO:*`,
       lines,
       ``,
-      `Subtotal: S/ ${subtotal.toFixed(2)}`,
-      deliveryFee > 0 ? `Delivery: S/ ${deliveryFee.toFixed(2)}` : `Delivery: GRATIS 🎉`,
-      `*TOTAL: S/ ${total.toFixed(2)}*`,
-    ].join('\n');
+      `Subtotal: ${settings.currency} ${subtotal.toFixed(2)}`,
+      deliveryFee > 0 ? `Delivery: ${settings.currency} ${deliveryFee.toFixed(2)}` : `Delivery: GRATIS 🎉`,
+      `*TOTAL: ${settings.currency} ${total.toFixed(2)}*`,
+      footer ? `\n${footer}` : '',
+    ].filter(line => line !== null && line !== undefined && line !== '');
 
-    const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank');
+    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51987654321';
+    const waUrl = createWhatsAppUrl(targetPhone, msgParts.join('\n'));
+    window.open(waUrl, '_blank');
     setIsCartOpen(false);
     setCart([]);
     setCheckoutStep('cart');

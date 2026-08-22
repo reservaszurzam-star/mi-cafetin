@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import {
   MessageCircle, Check, ChevronLeft,
@@ -135,7 +135,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const [sent,            setSent]            = useState(false);
 
   const todayFormatted = useMemo(() => {
-    const d = ['Dom','Lun','Mar','MiÃ©','Jue','Vie','SÃ¡b'];
+    const d = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     const m = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const now = new Date();
     return `${d[now.getDay()]} ${now.getDate()} ${m[now.getMonth()]}`;
@@ -153,23 +153,34 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const handleSend = () => {
     if (!isReady || !customerName.trim()) return;
     const modalidad =
-      deliveryType === 'delivery' ? `Delivery a: ${deliveryAddress}` :
-      deliveryType === 'salon'    ? 'En el restaurante (salÃ³n)' : 'Recoger en local';
+      deliveryType === 'delivery' ? `🛵 Delivery a: ${deliveryAddress}` :
+      deliveryType === 'salon'    ? '🍽️ En el restaurante (salón)' : '🥡 Recoger en local';
+
+    const greeting = settings.whatsappMessageGreeting || `🍽️ *MENÚ EJECUTIVO — ${settings.companyName.toUpperCase()}*`;
+    const footer = settings.whatsappCustomFooter || 'Por favor confirmar el pedido. ¡Muchas gracias!';
+
     const msg = [
-      `ðŸ½ï¸ *MENÃš EJECUTIVO â€” ${settings.companyName.toUpperCase()}*`,
-      `ðŸ“… ${todayFormatted}`, ``,
-      `ðŸ‘¤ *Cliente:* ${customerName}`,
-      `ðŸ“± *WhatsApp:* ${customerPhone || '-'}`,
-      `ðŸ“¦ *Modalidad:* ${modalidad}`,
-      `ðŸ’³ *Pago:* ${payMethod}`, ``,
-      `*COMBINACIÃ“N:*`,
+      greeting,
+      `📅 ${todayFormatted}`,
+      ``,
+      `👤 *Cliente:* ${customerName}`,
+      customerPhone ? `📱 *WhatsApp:* ${customerPhone}` : '',
+      `📦 *Modalidad:* ${modalidad}`,
+      settings.whatsappIncludePayment !== false ? `💳 *Pago:* ${payMethod}` : '',
+      ``,
+      `*COMBINACIÓN:*`,
       `1. Entrada: ${selectedStarter?.name}`,
       `2. Fondo:   ${selectedMain?.name}`,
       `3. Bebida:  ${selectedDrink?.name}`,
-      selectedDessert ? `4. Postre:  ${selectedDessert.name} (+S/ ${selectedDessert.extraPrice?.toFixed(2)})` : '',
-      ``, `*TOTAL: S/ ${totalPrice.toFixed(2)}*`,
+      selectedDessert ? `4. Postre:  ${selectedDessert.name} (+${settings.currency} ${selectedDessert.extraPrice?.toFixed(2)})` : '',
+      ``,
+      `*TOTAL: ${settings.currency} ${totalPrice.toFixed(2)}*`,
+      footer ? `\n${footer}` : '',
     ].filter(l => l !== '').join('\n');
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51987654321';
+    const waUrl = createWhatsAppUrl(targetPhone, msg);
+    window.open(waUrl, '_blank');
     setSent(true);
     setShowCheckout(false);
   };

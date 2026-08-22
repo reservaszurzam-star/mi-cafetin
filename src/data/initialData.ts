@@ -488,6 +488,12 @@ export const DEFAULT_SETTINGS: Settings = {
   posTerminalId: "POS-CAJA-01",
   showPaymentQR: true,
   defaultDeliveryCost: 5.00,
+  whatsappOrdersPhone: "51987654321",
+  whatsappMessageGreeting: "¡Hola! Quisiera realizar el siguiente pedido:",
+  whatsappCustomFooter: "Por favor confirmar el tiempo estimado. ¡Muchas gracias!",
+  whatsappIncludeAddress: true,
+  whatsappIncludePayment: true,
+  whatsappIncludeNotes: true,
   paymentDetails: {
     yape: "987-654-321",
     yapeImage: "",

@@ -18,6 +18,12 @@ export type Settings = {
   showPaymentQR?: boolean;
   printBankDetailsOnTicket?: boolean;
   defaultDeliveryCost?: number;
+  whatsappOrdersPhone?: string; // Número WhatsApp al que se envían los pedidos
+  whatsappMessageGreeting?: string; // Encabezado / saludo del pedido
+  whatsappCustomFooter?: string; // Pie de página o despedida
+  whatsappIncludeAddress?: boolean; // Si incluir dirección en delivery
+  whatsappIncludePayment?: boolean; // Si incluir método de pago
+  whatsappIncludeNotes?: boolean; // Si incluir notas especiales de los platos
   paymentDetails?: {
     yape?: string;
     yapeHolder?: string;
