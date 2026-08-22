@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, Minus, Trash2, Send, CreditCard, Printer, 
   Edit2, Check, MessageSquare, Clock, User,
@@ -36,8 +36,11 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
 }) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
-  const [isEditingCustomerName, setIsEditingCustomerName] = useState(false);
   const [tempCustomerName, setTempCustomerName] = useState(activeOrder?.dinerName || '');
+
+  useEffect(() => {
+    setTempCustomerName(activeOrder?.dinerName || '');
+  }, [activeOrder?.dinerName, selectedTable]);
 
   const items = activeOrder?.items || [];
   const unsentCount = items.filter(i => !i.sentToKitchen).length;
@@ -56,14 +59,13 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
 
   const handleCommitCustomerName = () => {
     onSaveCustomerName(tempCustomerName);
-    setIsEditingCustomerName(false);
   };
 
   return (
     <div className="w-full lg:w-96 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col justify-between overflow-hidden shrink-0 min-h-0">
       
       {/* Header Comanda */}
-      <div className="p-3 sm:p-4 border-b border-stone-100 bg-stone-50 space-y-2">
+      <div className="p-3 sm:p-4 border-b border-stone-100 bg-stone-50 space-y-2.5">
         {onBackToCatalog && (
           <button
             type="button"
@@ -76,8 +78,8 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
         )}
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white font-black text-xs flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
               {selectedTable.startsWith('D-') ? (
                 <Truck className="w-4 h-4" />
               ) : (
@@ -85,59 +87,59 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
               )}
             </div>
             <div>
-              <h3 className="font-black text-sm text-stone-900 leading-tight">
-                Mesa / Pedido: <span className="text-amber-600">{selectedTable}</span>
+              <h3 className="font-black text-sm text-stone-900 leading-tight flex items-center gap-1.5 flex-wrap">
+                <span>Mesa <span className="text-amber-600 font-mono font-black">{selectedTable}</span></span>
+                {activeOrder?.dinerName && (
+                  <span className="bg-amber-100 text-amber-950 text-[11px] px-2 py-0.5 rounded-lg border border-amber-300 font-black truncate max-w-[150px]">
+                    👤 {activeOrder.dinerName}
+                  </span>
+                )}
               </h3>
-              <p className="text-[10px] text-stone-500 font-semibold">{items.length} ítems en comanda</p>
+              <p className="text-[10px] text-stone-500 font-semibold mt-0.5">{items.length} ítems en comanda</p>
             </div>
           </div>
 
           <button
             onClick={onPrintPreBill}
             disabled={items.length === 0}
-            className="p-2 text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-xl text-xs font-bold transition disabled:opacity-40"
+            className="p-2 text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-xl text-xs font-bold transition disabled:opacity-40 shadow-2xs"
             title="Imprimir Pre-cuenta para cliente"
           >
             <Printer className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Nombre de Cliente Editable */}
-        <div className="bg-white p-2 rounded-xl border border-stone-200 flex items-center justify-between text-xs">
-          {isEditingCustomerName ? (
-            <div className="flex items-center gap-1.5 w-full">
+        {/* Nombre de Cliente Editable con Guardado Automático */}
+        <div className="bg-white p-2 rounded-2xl border border-stone-200 shadow-2xs">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <User className="w-3.5 h-3.5 text-amber-600 shrink-0 ml-1" />
               <input
                 type="text"
-                placeholder="Nombre del comensal..."
+                placeholder="Nombre del cliente / mesa..."
                 value={tempCustomerName}
                 onChange={(e) => setTempCustomerName(e.target.value)}
-                autoFocus
-                className="w-full bg-stone-50 text-xs font-bold p-1 rounded-lg outline-none border border-amber-400"
+                onBlur={handleCommitCustomerName}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCommitCustomerName();
+                  }
+                }}
+                className="w-full bg-stone-50 hover:bg-stone-100/80 focus:bg-white text-xs font-bold px-2.5 py-1.5 rounded-xl outline-none border border-transparent focus:border-amber-400 text-stone-900 transition"
               />
+            </div>
+            {tempCustomerName !== (activeOrder?.dinerName || '') && (
               <button
+                type="button"
                 onClick={handleCommitCustomerName}
-                className="p-1 bg-amber-500 text-white rounded-lg"
+                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 rounded-xl text-xs font-black shrink-0 transition flex items-center gap-1 shadow-2xs"
               >
                 <Check className="w-3.5 h-3.5" />
+                <span>Guardar</span>
               </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between w-full">
-              <span className="flex items-center gap-1.5 text-stone-600 font-bold">
-                <User className="w-3.5 h-3.5 text-stone-400" />
-                {activeOrder?.dinerName || 'Sin comensal asignado'}
-              </span>
-              <button
-                onClick={() => {
-                  setTempCustomerName(activeOrder?.dinerName || '');
-                  setIsEditingCustomerName(true);
-                }}
-                className="text-stone-400 hover:text-stone-700 p-1"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

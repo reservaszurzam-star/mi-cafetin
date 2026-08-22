@@ -184,12 +184,26 @@ export default function POSView() {
   }) => {
     if (!activeOrder) return;
 
-    closeOrderAndPay(activeOrder.id, details.paymentMethod);
+    let payments: { method: PaymentMethod; amount: number }[] = [];
+    if (details.splitType === 'equal' && details.splitWays > 1 && details.splitMethods?.length > 0) {
+      const splitAmount = Number((activeOrder.total / details.splitWays).toFixed(2));
+      payments = details.splitMethods.slice(0, details.splitWays).map((m) => ({ method: m, amount: splitAmount }));
+    } else {
+      payments = [{ method: details.paymentMethod, amount: activeOrder.total }];
+    }
+
+    closeOrderAndPay(
+      activeOrder.id,
+      payments,
+      activeOrder.customerId,
+      details.docType,
+      details.docNumber
+    );
 
     if (details.printTicket) {
       setTicketOrderToPrint({
         ...activeOrder,
-        customerName: details.customerName,
+        customerName: details.customerName || activeOrder.dinerName,
         customerDocNumber: details.docNumber,
       });
       setTicketTypeToPrint("boleta_venta");

@@ -689,29 +689,49 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const closeOrderAndPay = useCallback(
-    (orderId: string, payments: { method: PaymentMethod; amount: number }[], customerId?: string, docType?: "Boleta" | "Factura" | "Nota de Venta", docNumber?: string) => {
+    (
+      orderId: string, 
+      paymentInput: PaymentMethod | { method: PaymentMethod; amount: number }[] | { method: PaymentMethod; amount: number }, 
+      customerId?: string, 
+      docType?: "Boleta" | "Factura" | "Nota de Venta", 
+      docNumber?: string
+    ) => {
       setOrders((prev) => {
         const target = prev.find((o) => o.id === orderId);
         if (!target) return prev;
 
-        // Auto-descuento en Inventario
-        target.items.forEach(item => {
-          const matchingInventoryItem = inventoryItems.find(inv => 
-            inv.name.toLowerCase() === item.productName.toLowerCase() || 
-            inv.name.toLowerCase().includes(item.productName.toLowerCase())
-          );
-          if (matchingInventoryItem) {
-             addInventoryMovement({
-               itemId: matchingInventoryItem.id,
-               type: 'out',
-               quantity: item.quantity,
-               reason: `Venta de ${item.productName}`,
-               referenceOrderId: target.id
-             });
-          }
-        });
+        // Normalizar pagos en una lista válida de métodos y montos
+        let paymentList: { method: PaymentMethod; amount: number }[] = [];
+        if (typeof paymentInput === 'string') {
+          paymentList = [{ method: paymentInput as PaymentMethod, amount: target.total }];
+        } else if (Array.isArray(paymentInput)) {
+          paymentList = paymentInput.length > 0 ? paymentInput : [{ method: 'Efectivo', amount: target.total }];
+        } else if (paymentInput && typeof paymentInput === 'object') {
+          paymentList = [paymentInput as { method: PaymentMethod; amount: number }];
+        } else {
+          paymentList = [{ method: 'Efectivo', amount: target.total }];
+        }
 
-        const saleItems = target.items.map((i) => ({
+        // Auto-descuento en Inventario
+        if (Array.isArray(target.items)) {
+          target.items.forEach(item => {
+            const matchingInventoryItem = (inventoryItems || []).find(inv => 
+              inv.name.toLowerCase() === item.productName.toLowerCase() || 
+              inv.name.toLowerCase().includes(item.productName.toLowerCase())
+            );
+            if (matchingInventoryItem) {
+               addInventoryMovement({
+                 itemId: matchingInventoryItem.id,
+                 type: 'out',
+                 quantity: item.quantity,
+                 reason: `Venta de ${item.productName}`,
+                 referenceOrderId: target.id
+               });
+            }
+          });
+        }
+
+        const saleItems = (target.items || []).map((i) => ({
           productId: i.productId,
           productName: i.productName,
           quantity: i.quantity,
@@ -720,8 +740,17 @@ export function useStore(tenantId: string) {
         }));
 
         // Registrar Venta
-        payments.forEach(payment => {
-          addSale(saleItems, payment.amount, payment.method, customerId || target.customerId, target.tableNumber, target.floor, target.type, target.waiterName);
+        paymentList.forEach(payment => {
+          addSale(
+            saleItems, 
+            payment.amount, 
+            payment.method, 
+            customerId || target.customerId, 
+            target.tableNumber, 
+            target.floor, 
+            target.type, 
+            target.waiterName
+          );
         });
 
         // Generar Comprobante SUNAT si es Boleta o Factura
@@ -729,7 +758,7 @@ export function useStore(tenantId: string) {
           const subtotal = Number((target.total / 1.18).toFixed(2));
           const igv = Number((target.total - subtotal).toFixed(2));
           const series = docType === "Boleta" ? "B001" : "F001";
-          const number = String(sunatInvoices.length + 1).padStart(6, '0');
+          const number = String((sunatInvoices || []).length + 1).padStart(6, '0');
           
           const newSunatDoc: SunatInvoice = {
             id: `sunat-${Date.now()}`,
@@ -746,18 +775,18 @@ export function useStore(tenantId: string) {
             status: "Aceptado",
             hash: Math.random().toString(36).substring(2, 12),
             orderId: target.id,
-            paymentMethod: payments[0]?.method || "Efectivo",
+            paymentMethod: paymentList[0]?.method || "Efectivo",
           };
           setSunatInvoices(s => [newSunatDoc, ...s]);
           svc.insertSunatInvoice(tenantId, newSunatDoc);
         }
 
-        // Marcar el pedido como pagado (en lugar de eliminarlo)
+        // Marcar el pedido como pagado
         svc.updateOrderStatus(tenantId, orderId, 'paid');
         return prev.filter((o) => o.id !== orderId);
       });
     },
-    [inventoryItems, addInventoryMovement, sunatInvoices.length, tenantId]
+    [inventoryItems, addInventoryMovement, sunatInvoices?.length, tenantId, addSale]
   );
 
 

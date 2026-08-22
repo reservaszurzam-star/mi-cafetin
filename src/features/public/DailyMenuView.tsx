@@ -26,7 +26,7 @@ function OptionCard({
   item, isSelected, onSelect, accentColor, currency,
 }: {
   item: DailyMenuItem; isSelected: boolean; onSelect: () => void;
-  accentColor: string; currency: string;
+  accentColor: string; currency: string; key?: React.Key;
 }) {
   return (
     <button
