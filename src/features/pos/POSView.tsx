@@ -300,10 +300,10 @@ export default function POSView() {
       </div>
 
       {/* ── CUERPO PRINCIPAL DEL POS: CATÁLOGO + COMANDA ── */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-280px)] min-h-[580px]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-280px)] lg:h-[calc(100vh-280px)] lg:min-h-[580px] pb-16 lg:pb-0">
         
         {/* Catálogo Táctil */}
-        <div className={`flex-1 flex flex-col min-h-0 ${mobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`flex-1 flex flex-col min-h-0 h-full ${mobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
           <POSProductCatalog
             products={products}
             selectedCategory={selectedCategory}
@@ -317,7 +317,7 @@ export default function POSView() {
         </div>
 
         {/* Barra Lateral de Comanda / Carrito */}
-        <div className={`w-full lg:w-96 flex flex-col min-h-0 ${mobileTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`w-full lg:w-96 flex flex-col min-h-0 h-full ${mobileTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
           <POSCartSidebar
             activeOrder={activeOrder || null}
             selectedTable={selectedTable}

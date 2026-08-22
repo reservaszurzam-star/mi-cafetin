@@ -62,10 +62,10 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   };
 
   return (
-    <div className="w-full lg:w-96 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col justify-between overflow-hidden shrink-0 min-h-0">
+    <div className="w-full lg:w-96 bg-white rounded-3xl border border-stone-200 shadow-sm flex flex-col justify-between overflow-hidden shrink-0 h-full max-h-full">
       
       {/* Header Comanda */}
-      <div className="p-3 sm:p-4 border-b border-stone-100 bg-stone-50 space-y-2.5">
+      <div className="shrink-0 p-3 sm:p-4 border-b border-stone-100 bg-stone-50 space-y-2.5">
         {onBackToCatalog && (
           <button
             type="button"
@@ -144,9 +144,9 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
       </div>
 
       {/* Lista de Ítems en Carrito */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+      <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 space-y-2.5 custom-scrollbar">
         {items.length === 0 ? (
-          <div className="text-center py-16 text-stone-400 space-y-2">
+          <div className="text-center py-12 text-stone-400 space-y-2">
             <ClipboardList className="w-10 h-10 text-stone-300 mx-auto" />
             <p className="text-xs font-bold text-stone-500">Comanda vacía</p>
             <p className="text-[11px]">Selecciona platos del catálogo para agregarlos.</p>
@@ -188,7 +188,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleStartEditNote(item)}
-                    className="p-1 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition"
+                    className="p-1 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100 transition cursor-pointer"
                     title="Agregar especificación de cocina"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
@@ -203,20 +203,20 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
                 <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-xl border border-stone-200">
                   <button
                     onClick={() => onUpdateQuantity(item.productId, -1)}
-                    className="p-1 text-stone-500 hover:text-stone-900"
+                    className="p-1 text-stone-500 hover:text-stone-900 cursor-pointer"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="font-black font-mono text-xs px-1 text-stone-900">{item.quantity}</span>
                   <button
                     onClick={() => onUpdateQuantity(item.productId, 1)}
-                    className="p-1 text-stone-500 hover:text-stone-900"
+                    className="p-1 text-stone-500 hover:text-stone-900 cursor-pointer"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => onRemoveItem(item.productId)}
-                    className="p-1 text-stone-300 hover:text-rose-600 ml-1"
+                    className="p-1 text-stone-300 hover:text-rose-600 ml-1 cursor-pointer"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -236,7 +236,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
                   />
                   <button
                     onClick={() => handleCommitNote(item.productId)}
-                    className="px-2 bg-stone-900 text-white rounded-lg text-xs font-bold"
+                    className="px-2 bg-stone-900 text-white rounded-lg text-xs font-bold cursor-pointer"
                   >
                     OK
                   </button>
@@ -247,8 +247,8 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
         )}
       </div>
 
-      {/* Footer Totales y Acciones */}
-      <div className="p-4 bg-stone-50 border-t border-stone-100 space-y-3">
+      {/* Footer Totales y Acciones Fijo */}
+      <div className="shrink-0 p-3 sm:p-4 bg-stone-50 border-t border-stone-100 space-y-2.5">
         <div className="space-y-1 text-xs">
           <div className="flex justify-between text-stone-500 font-semibold">
             <span>Subtotal (sin IGV):</span>
@@ -264,11 +264,11 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             onClick={onSendToKitchen}
             disabled={unsentCount === 0}
-            className="py-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition disabled:opacity-40"
+            className="py-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition disabled:opacity-40 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Enviar ({unsentCount})</span>
@@ -277,9 +277,9 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
           <button
             onClick={onOpenCheckout}
             disabled={items.length === 0}
-            className="py-3 bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-40"
+            className="py-3 bg-stone-900 hover:bg-black active:scale-95 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-40 cursor-pointer"
           >
-            <CreditCard className="w-3.5 h-3.5" />
+            <CreditCard className="w-3.5 h-3.5 text-amber-400" />
             <span>Cobrar</span>
           </button>
         </div>
