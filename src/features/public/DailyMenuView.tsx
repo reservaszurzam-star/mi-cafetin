@@ -12,7 +12,7 @@ import { DailyMenuItem, DailyMenuSelection, PaymentMethod } from "../../types";
 import { formatMoney, createWhatsAppUrl } from "../../lib/formatters";
 
 interface DailyMenuViewProps {
-  onBack: () => void;
+  onBack?: () => void;
   onViewFullMenu?: () => void;
 }
 

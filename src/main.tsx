@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import LoginView from './features/auth/LoginView';
 import BusinessSelectorView from './features/auth/BusinessSelectorView';
+import PublicMenuView from './features/public/PublicMenuView';
 import './index.css';
 import { StoreProvider } from './hooks/StoreContext';
 import { supabase } from './lib/supabaseClient';
@@ -19,8 +20,27 @@ type AuthState =
 
 function Root() {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' });
+  const path = window.location.pathname;
 
-  // Al montar: verificar si ya hay sesión activa en Supabase
+  // Interceptar rutas públicas (raíz / o /carta) para que los clientes no vean el login
+  const isAdminRoute = path.startsWith('/admin') || path.startsWith('/login');
+  
+  if (!isAdminRoute) {
+    // Extraer tenantId de la URL si existe (ej. /carta/laslomas), por defecto paradero
+    const parts = path.split('/');
+    const urlTenant = parts.length > 2 && parts[1] === 'carta' ? parts[2] : null;
+    
+    // Podemos leer también si hay subdominio, pero usaremos URL path o Paradero por defecto
+    const tenantId = urlTenant || 'paradero'; 
+
+    return (
+      <StoreProvider tenantId={tenantId} key={`public-${tenantId}`}>
+        <PublicMenuView onBack={() => { window.location.href = '/admin'; }} />
+      </StoreProvider>
+    );
+  }
+
+  // ─── Flujo de Autenticación para Administradores (/admin) ───
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();

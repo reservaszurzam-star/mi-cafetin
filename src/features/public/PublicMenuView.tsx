@@ -6,7 +6,7 @@ import DailyMenuView from './DailyMenuView';
 import RappiMobileStoreView from './RappiMobileStoreView';
 
 type PublicMenuViewProps = {
-  onBack: () => void;
+  onBack?: () => void;
   initialMode?: 'mobile_app' | 'daily' | 'full';
 };
 
@@ -53,16 +53,20 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col animate-in fade-in duration-300">
       
-      {/* ── HEADER ── */}
+      {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-30 bg-white/90 dark:bg-stone-900/90 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button 
-            onClick={onBack}
-            className="flex items-center gap-2 text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white transition-colors p-2 -ml-2 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-bold text-sm hidden sm:inline">Volver</span>
-          </button>
+          {onBack ? (
+            <button 
+              onClick={onBack}
+              className="flex items-center gap-2 text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white transition-colors p-2 -ml-2 rounded-lg"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-bold text-sm hidden sm:inline">Volver</span>
+            </button>
+          ) : (
+            <div className="w-10"></div> /* Spacer para centrar el logo si no hay botón volver */
+          )}
 
           <div className="flex items-center space-x-3 text-stone-900 dark:text-white font-display font-bold text-lg md:text-xl absolute left-1/2 -translate-x-1/2">
             <img 

@@ -9,7 +9,7 @@ import { Product, PaymentMethod } from "../../types";
 import { cn } from "../../lib/utils";
 
 interface Props {
-  onBack: () => void;
+  onBack?: () => void;
   onViewDailyMenu?: () => void;
 }
 
