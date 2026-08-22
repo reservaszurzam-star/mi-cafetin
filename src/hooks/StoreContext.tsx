@@ -5,8 +5,8 @@ type StoreContextType = ReturnType<typeof useStoreHook>;
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
-  const store = useStoreHook();
+export function StoreProvider({ children, tenantId }: { children: ReactNode; tenantId: string; key?: React.Key }) {
+  const store = useStoreHook(tenantId);
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
 
