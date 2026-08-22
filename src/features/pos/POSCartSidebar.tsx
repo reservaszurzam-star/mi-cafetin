@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Minus, Trash2, Send, CreditCard, Printer, 
   Edit2, Check, MessageSquare, Clock, User,
-  Utensils, Truck, ClipboardList, ChevronLeft
+  Utensils, Truck, ClipboardList, ChevronLeft, Save
 } from 'lucide-react';
 import { RestaurantOrder, OrderItem, Settings } from '../../types';
 import { formatMoney } from '../../lib/formatters';
@@ -18,6 +18,7 @@ interface POSCartSidebarProps {
   onPrintPreBill: () => void;
   onSaveCustomerName: (name: string) => void;
   onBackToCatalog?: () => void;
+  onSaveDraft?: () => void;
   settings: Settings;
 }
 
@@ -32,6 +33,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   onPrintPreBill,
   onSaveCustomerName,
   onBackToCatalog,
+  onSaveDraft,
   settings,
 }) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -283,6 +285,18 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
             <span>Cobrar</span>
           </button>
         </div>
+
+        {onSaveDraft && (
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={items.length === 0}
+            className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-900 font-black text-xs rounded-xl border border-stone-300 flex items-center justify-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
+          >
+            <Save className="w-3.5 h-3.5 text-amber-600" />
+            <span>Guardar Borrador & Atender Otra Mesa</span>
+          </button>
+        )}
       </div>
 
     </div>

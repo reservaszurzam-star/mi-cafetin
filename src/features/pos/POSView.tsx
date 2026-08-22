@@ -145,6 +145,16 @@ export default function POSView() {
     }
   };
 
+  const handleSaveDraft = () => {
+    if (!activeOrder) return;
+    saveOrderDraft({
+      ...activeOrder,
+      status: 'draft',
+      updatedAt: new Date().toISOString(),
+    });
+    setMobileTab('catalog');
+  };
+
   const handleOpenSendKitchenModal = () => {
     if (!activeOrder || activeOrder.items.length === 0) return;
     setIsSendKitchenModalOpen(true);
@@ -332,6 +342,7 @@ export default function POSView() {
             onPrintPreBill={handlePrintPreBill}
             onSaveCustomerName={handleSaveCustomerName}
             onBackToCatalog={() => setMobileTab('catalog')}
+            onSaveDraft={handleSaveDraft}
             settings={settings}
           />
         </div>

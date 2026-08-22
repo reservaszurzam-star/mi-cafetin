@@ -10,6 +10,7 @@
  */
 
 import { getSupabaseForTenant } from './supabaseClient';
+import { generateUUID } from './utils';
 import type {
   Customer,
   Transaction,
@@ -32,6 +33,13 @@ import type {
 } from '../types';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function ensureUUID(val: string | undefined | null): string {
+  if (val && UUID_REGEX.test(val)) return val;
+  return generateUUID();
+}
 
 function db(tenantId: string) {
   return getSupabaseForTenant(tenantId);
@@ -371,16 +379,17 @@ export async function fetchOrders(tenantId: string): Promise<RestaurantOrder[]> 
 
 export async function upsertOrder(tenantId: string, order: RestaurantOrder): Promise<void> {
   const client = db(tenantId);
+  const validOrderId = ensureUUID(order.id);
 
   const orderRow = {
-    id:                order.id,
+    id:                validOrderId,
     tenant_id:         tenantId,
     type:              order.type,
     floor:             order.floor,
     table_number:      order.tableNumber,
-    custom_table_name: order.customTableName,
-    diner_name:        order.dinerName,
-    customer_id:       order.customerId ?? null,
+    custom_table_name: order.customTableName ?? null,
+    diner_name:        order.dinerName ?? null,
+    customer_id:       order.customerId && UUID_REGEX.test(order.customerId) ? order.customerId : null,
     customer_phone:    order.customerPhone ?? null,
     delivery_address:  order.deliveryAddress ?? null,
     delivery_lat:      order.deliveryLat ?? null,
@@ -389,7 +398,7 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
     route_duration_mins: order.routeDurationMins ?? null,
     delivery_cost:     order.deliveryCost ?? null,
     delivery_platform: order.deliveryPlatform ?? null,
-    driver_id:         order.driverId ?? null,
+    driver_id:         order.driverId && UUID_REGEX.test(order.driverId) ? order.driverId : null,
     driver_name:       order.driverName ?? null,
     status:            order.status,
     total:             order.total,
@@ -404,19 +413,19 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
   if (orderErr) { handleError('upsertOrder:order', orderErr); return; }
 
   // Upsert items
-  if (order.items.length > 0) {
+  if (order.items && order.items.length > 0) {
     const itemRows = order.items.map(i => ({
-      id:             i.id,
-      order_id:       order.id,
-      product_id:     i.productId ?? null,
+      id:             ensureUUID(i.id),
+      order_id:       validOrderId,
+      product_id:     i.productId && UUID_REGEX.test(i.productId) ? i.productId : null,
       product_name:   i.productName,
       quantity:       i.quantity,
       price:          i.price,
       notes:          i.notes ?? null,
-      station:        i.station,
-      sent_to_kitchen:i.sentToKitchen,
+      station:        i.station ?? null,
+      sent_to_kitchen:i.sentToKitchen ?? false,
       sent_at:        i.sentAt ?? null,
-      batch_number:   i.batchNumber,
+      batch_number:   i.batchNumber ?? 1,
     }));
     const { error: itemErr } = await client.from('order_items').upsert(itemRows, { onConflict: 'id' });
     if (itemErr) handleError('upsertOrder:items', itemErr);
