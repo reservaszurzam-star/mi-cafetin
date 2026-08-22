@@ -22,20 +22,17 @@ function Root() {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' });
   const path = window.location.pathname;
 
-  // Interceptar rutas públicas (raíz / o /carta) para que los clientes no vean el login
-  const isAdminRoute = path.startsWith('/admin') || path.startsWith('/login');
-  
-  if (!isAdminRoute) {
-    // Extraer tenantId de la URL si existe (ej. /carta/laslomas), por defecto paradero
+  // Rutas públicas: solo /carta/* muestra la carta al cliente sin login
+  const isPublicMenu = path.startsWith('/carta');
+
+  if (isPublicMenu) {
+    // Extraer tenantId: /carta/paradero → 'paradero', /carta/laslomas → 'laslomas'
     const parts = path.split('/');
-    const urlTenant = parts.length > 2 && parts[1] === 'carta' ? parts[2] : null;
-    
-    // Podemos leer también si hay subdominio, pero usaremos URL path o Paradero por defecto
-    const tenantId = urlTenant || 'paradero'; 
+    const tenantId = parts[2] || 'paradero';
 
     return (
       <StoreProvider tenantId={tenantId} key={`public-${tenantId}`}>
-        <PublicMenuView onBack={() => { window.location.href = '/admin'; }} />
+        <PublicMenuView />
       </StoreProvider>
     );
   }
