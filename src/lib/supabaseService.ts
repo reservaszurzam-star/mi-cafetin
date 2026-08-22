@@ -48,7 +48,7 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
     .from('settings')
     .select('*')
     .eq('tenant_id', tenantId)
-    .single();
+    .maybeSingle();
   if (error) { handleError('fetchSettings', error); return null; }
   if (!data) return null;
 
