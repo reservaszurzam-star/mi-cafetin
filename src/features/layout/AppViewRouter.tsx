@@ -82,7 +82,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
       {view.name === "audit_log" && <AuditLogView />}
       {view.name === "printers" && <PrintersView />}
       {view.name === "customers" && <CustomersList onNavigate={onNavigate} />}
-      {view.name === "billing" && <BillingView />}
+      {view.name === "billing" && <BillingView onNavigate={onNavigate} />}
       {view.name === "expenses" && <ExpensesList />}
       {view.name === "reports" && <Reports />}
       {view.name === "settings" && <SettingsView />}
