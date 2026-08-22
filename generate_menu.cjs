@@ -149,8 +149,8 @@ const sql = `
 -- Script para insertar la Carta Fija de Paradero 104
 -- Ejecutar en el Editor SQL de Supabase
 
-INSERT INTO products (id, name, price, category, tenant_id, available) VALUES
-${products.map(p => `(gen_random_uuid(), '${p.name.replace(/'/g, "''")}', ${p.price}, '${p.category}', 'paradero', true)`).join(',\n')};
+INSERT INTO products (id, name, price, category, tenant_id) VALUES
+${products.map(p => `(gen_random_uuid(), '${p.name.replace(/'/g, "''")}', ${p.price}, '${p.category}', 'paradero')`).join(',\n')};
 `;
 
 const fs = require('fs');
