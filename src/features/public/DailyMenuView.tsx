@@ -114,7 +114,7 @@ function SelectionSection({
 
 // â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewProps) {
-  const { settings, dailyMenuItems } = useAppStore();
+  const { settings, dailyMenuItems, orders, saveOrderDraft } = useAppStore();
 
   const starters = dailyMenuItems.filter(i => i.course === 'entrada' && i.available);
   const mains    = dailyMenuItems.filter(i => i.course === 'fondo'   && i.available);
@@ -129,7 +129,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const [customerName,    setCustomerName]    = useState('');
   const [customerPhone,   setCustomerPhone]   = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [deliveryType,    setDeliveryType]    = useState<DeliveryType>('recojo');
+  const [deliveryType,    setDeliveryType]    = useState<DeliveryType>('delivery');
   const [payMethod,       setPayMethod]       = useState<PayMethod>('Yape');
   const [showCheckout,    setShowCheckout]    = useState(false);
   const [sent,            setSent]            = useState(false);
@@ -152,6 +152,77 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
 
   const handleSend = () => {
     if (!isReady || !customerName.trim()) return;
+
+    // 1. Crear comanda en el sistema para que aparezca en el POS y Cocina
+    const orderItems = [
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-1`,
+        productId: selectedStarter?.id || 'ent-1',
+        productName: `[Menú] Entrada: ${selectedStarter?.name}`,
+        quantity: 1,
+        price: 0,
+        station: 'Cocina & Parrilla',
+        sentToKitchen: false,
+        batchNumber: 1,
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-2`,
+        productId: selectedMain?.id || 'fnd-1',
+        productName: `[Menú] Fondo: ${selectedMain?.name}`,
+        quantity: 1,
+        price: BASE_PRICE + (selectedMain?.extraPrice || 0),
+        station: 'Cocina & Parrilla',
+        sentToKitchen: false,
+        batchNumber: 1,
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-3`,
+        productId: selectedDrink?.id || 'beb-1',
+        productName: `[Menú] Bebida: ${selectedDrink?.name}`,
+        quantity: 1,
+        price: 0,
+        station: 'Barra & Bebidas',
+        sentToKitchen: false,
+        batchNumber: 1,
+      },
+    ];
+
+    if (selectedDessert) {
+      orderItems.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-4`,
+        productId: selectedDessert.id,
+        productName: `[Menú] Postre: ${selectedDessert.name}`,
+        quantity: 1,
+        price: selectedDessert.extraPrice || 0,
+        station: 'Cocina & Parrilla',
+        sentToKitchen: false,
+        batchNumber: 1,
+      });
+    }
+
+    const dOrders = orders.filter(o => o.tableNumber.startsWith("D-") || o.type === "delivery");
+    const nums = dOrders.map(o => parseInt(o.tableNumber.split("-")[1] || "0")).filter(n => !isNaN(n));
+    const nextNum = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+    const tableNumber = `D-${nextNum.toString().padStart(2, "0")}`;
+
+    saveOrderDraft({
+      id: crypto.randomUUID ? crypto.randomUUID() : `ord-${Date.now()}`,
+      type: deliveryType === 'salon' ? 'salón' : 'delivery',
+      floor: 0,
+      tableNumber,
+      dinerName: customerName.trim(),
+      customerPhone: customerPhone.trim() || undefined,
+      deliveryAddress: deliveryType === 'delivery' ? deliveryAddress.trim() : undefined,
+      status: 'draft',
+      items: orderItems,
+      total: totalPrice,
+      notes: `Pedido Web Menú del Día • Pago: ${payMethod}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      waiterName: 'Pedido Web Cliente',
+    });
+
+    // 2. Abrir WhatsApp para enviar el mensaje con 1 clic
     const modalidad =
       deliveryType === 'delivery' ? `🛵 Delivery a: ${deliveryAddress}` :
       deliveryType === 'salon'    ? '🍽️ En el restaurante (salón)' : '🥡 Recoger en local';
@@ -178,7 +249,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       footer ? `\n${footer}` : '',
     ].filter(l => l !== '').join('\n');
 
-    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51987654321';
+    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51995881303';
     const waUrl = createWhatsAppUrl(targetPhone, msg);
     window.open(waUrl, '_blank');
     setSent(true);

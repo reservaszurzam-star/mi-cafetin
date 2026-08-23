@@ -48,7 +48,7 @@ import { createWhatsAppUrl } from "../../lib/formatters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props) {
-  const { products, settings } = useAppStore();
+  const { products, settings, orders, saveOrderDraft } = useAppStore();
 
   // Menú
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -141,6 +141,43 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   const sendWhatsApp = () => {
     if (!cart.length || !customerName.trim()) return;
 
+    // 1. Guardar comanda en el sistema POS & Delivery para que aparezca en el panel
+    const orderItems = cart.map(i => ({
+      id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random()}`,
+      productId: i.product.id,
+      productName: i.product.name,
+      quantity: i.quantity,
+      price: i.product.price,
+      notes: i.notes || undefined,
+      station: i.product.station || 'Cocina & Parrilla',
+      sentToKitchen: false,
+      batchNumber: 1,
+    }));
+
+    const dOrders = orders.filter(o => o.tableNumber.startsWith("D-") || o.type === "delivery");
+    const nums = dOrders.map(o => parseInt(o.tableNumber.split("-")[1] || "0")).filter(n => !isNaN(n));
+    const nextNum = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+    const tableNumber = `D-${nextNum.toString().padStart(2, "0")}`;
+
+    saveOrderDraft({
+      id: crypto.randomUUID ? crypto.randomUUID() : `ord-${Date.now()}`,
+      type: orderType === 'salon' ? 'salón' : 'delivery',
+      floor: 0,
+      tableNumber,
+      dinerName: customerName.trim(),
+      customerPhone: customerPhone.trim() || undefined,
+      deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() : undefined,
+      deliveryCost: orderType === 'delivery' ? deliveryFee : 0,
+      status: 'draft',
+      items: orderItems,
+      total: total,
+      notes: `Pedido Web Carta Digital • Pago: ${payMethod}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      waiterName: 'Pedido Web Cliente',
+    });
+
+    // 2. Formatear y abrir WhatsApp
     const lines = cart.map(i =>
       `• *${i.quantity}x* ${i.product.name}${i.notes && settings.whatsappIncludeNotes !== false ? ` _(Nota: ${i.notes})_` : ''} → ${settings.currency} ${(i.product.price * i.quantity).toFixed(2)}`
     ).join('\n');
@@ -170,7 +207,7 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       footer ? `\n${footer}` : '',
     ].filter(line => line !== null && line !== undefined && line !== '');
 
-    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51987654321';
+    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51995881303';
     const waUrl = createWhatsAppUrl(targetPhone, msgParts.join('\n'));
     window.open(waUrl, '_blank');
     setIsCartOpen(false);

@@ -22,17 +22,20 @@ function Root() {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' });
   const path = window.location.pathname;
 
-  // Rutas públicas: solo /carta/* muestra la carta al cliente sin login
-  const isPublicMenu = path.startsWith('/carta');
+  // Rutas públicas: /carta/* o /menu/* muestra la carta o menú del día al cliente sin login
+  const isPublicMenu = path.startsWith('/carta') || path.startsWith('/menu');
 
   if (isPublicMenu) {
-    // Extraer tenantId: /carta/paradero → 'paradero', /carta/laslomas → 'laslomas'
+    // Extraer tenantId: /carta/laslomas → 'laslomas', /menu/laslomas → 'laslomas'
     const parts = path.split('/');
-    const tenantId = parts[2] || 'paradero';
+    const urlParams = new URLSearchParams(window.location.search);
+    const tenantParam = urlParams.get('tenant');
+    const tenantId = parts[2] || tenantParam || (parts[1] === 'laslomas' ? 'laslomas' : 'laslomas');
+    const isDaily = path.startsWith('/menu') || urlParams.get('mode') === 'daily';
 
     return (
       <StoreProvider tenantId={tenantId} key={`public-${tenantId}`}>
-        <PublicMenuView />
+        <PublicMenuView initialMode={isDaily ? 'daily' : 'mobile_app'} />
       </StoreProvider>
     );
   }
