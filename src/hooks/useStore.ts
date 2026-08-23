@@ -223,9 +223,11 @@ export function useStore(tenantId: string) {
 
   // ── Supabase: indica si está cargando datos desde la base de datos ──
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(() => new Date());
 
   // ── Supabase: hidrata el store con datos reales y suscribe a Realtime ──
-  useSupabaseSync(tenantId, {
+  const { reload: reloadSupabaseData } = useSupabaseSync(tenantId, {
     setCustomers,
     setTransactions,
     setProducts,
@@ -245,6 +247,16 @@ export function useStore(tenantId: string) {
     setSettings: (s: Settings) => setSettings({ ...s, theme: "light" }),
     setIsLoadingFromDB,
   });
+
+  const syncWithSupabase = useCallback(async () => {
+    setIsManualSyncing(true);
+    try {
+      await reloadSupabaseData();
+      setLastSyncTime(new Date());
+    } finally {
+      setIsManualSyncing(false);
+    }
+  }, [reloadSupabaseData]);
 
   const [settings, setSettings] = useState<Settings>(() => {
     const isParadero = tenantId === 'paradero';
@@ -1149,5 +1161,8 @@ export function useStore(tenantId: string) {
     ownerSimulatedRole,
     setOwnerSimulatedRole: changeOwnerSimulatedRole,
     isLoadingFromDB,
+    syncWithSupabase,
+    isManualSyncing,
+    lastSyncTime,
   };
 }

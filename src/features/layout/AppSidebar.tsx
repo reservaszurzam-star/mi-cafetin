@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ViewState, AppSegment } from '../../App';
 import { Settings, AppModuleKey } from '../../types';
+import { UniversalSyncButton } from '../../components/UniversalSyncButton';
 
 interface AppSidebarProps {
   settings: Settings;
@@ -116,8 +117,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         </div>
       </div>
 
+      {/* Botón Universal Sincronizar Supabase */}
+      <div className="px-4 pt-3 pb-1">
+        <UniversalSyncButton variant="full" />
+      </div>
+
       {/* Nav Content List */}
-      <div className="p-4 flex flex-col flex-1 overflow-y-auto custom-scrollbar space-y-4">
+      <div className="p-4 pt-2 flex flex-col flex-1 overflow-y-auto custom-scrollbar space-y-4">
         
         {/* Volver al Portal */}
         <div className="pb-2 mb-2 border-b border-stone-200">

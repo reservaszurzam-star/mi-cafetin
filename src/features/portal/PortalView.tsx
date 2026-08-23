@@ -20,6 +20,7 @@ import {
   Truck
 } from 'lucide-react';
 import { useAppStore } from "../../hooks/StoreContext";
+import { UniversalSyncButton } from "../../components/UniversalSyncButton";
 
 type PortalViewProps = {
   onSelectModule: (module: 'menu' | 'restaurant' | 'tracking', initialView?: any, segment?: string) => void;
@@ -138,25 +139,29 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
     <div className={`min-h-screen flex flex-col font-sans select-none ${isParadero ? 'bg-[#f4f8fc] text-slate-800' : 'bg-[#faf8f5] text-stone-800'}`}>
 
       {/* ── TOPBAR MOBILE ── */}
+      {/* ── TOPBAR MOBILE ── */}
       <header className="md:hidden sticky top-0 z-40 bg-white border-b border-stone-200 shadow-xs px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <img
             src={isParadero ? '/Logo/logo-paradero-104.png' : (settings.logoUrl && settings.logoUrl !== '/icono.png' ? settings.logoUrl : '/Logo/logo-lomas-grill.png')}
             alt="Logo"
-            className="w-9 h-9 rounded-xl object-contain border border-stone-200 bg-white p-0.5"
+            className="w-9 h-9 rounded-xl object-contain border border-stone-200 bg-white p-0.5 shrink-0"
             onError={(e) => { e.currentTarget.src = '/logo-web.png'; }}
           />
-          <div>
-            <div className="font-black text-sm text-stone-900 leading-tight">{isParadero ? 'Paradero 104' : settings.companyName}</div>
+          <div className="min-w-0 truncate">
+            <div className="font-black text-sm text-stone-900 leading-tight truncate">{isParadero ? 'Paradero 104' : settings.companyName}</div>
             <div className={`text-[9px] font-bold uppercase tracking-wider ${accent}`}>Sistema Gastronómico</div>
           </div>
         </div>
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="p-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 transition"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <UniversalSyncButton variant="compact" />
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 transition cursor-pointer"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* ── DRAWER LATERAL MOBILE ── */}
@@ -169,6 +174,9 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
               <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-xl bg-stone-100 text-stone-600">
                 <X className="w-4 h-4" />
               </button>
+            </div>
+            <div className="p-3 border-b border-stone-200 bg-emerald-50/40">
+              <UniversalSyncButton variant="full" />
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <NavLinks onClose={() => setMobileMenuOpen(false)} />
@@ -184,7 +192,7 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
         <aside className={`hidden md:flex w-[290px] xl:w-[320px] flex-col justify-between py-8 px-6 shrink-0 z-30 border-r bg-white/95 backdrop-blur-xl ${isParadero ? 'border-blue-100' : 'border-stone-200/80'} shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}>
           <div className="flex flex-col">
             {/* Logo */}
-            <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center justify-center mb-6">
               <div className={`w-32 h-32 rounded-2xl p-3.5 flex items-center justify-center shadow-md ${isParadero ? 'bg-blue-50/50 border border-blue-100' : 'bg-stone-50/70 border border-stone-200'}`}>
                 <img
                   src={isParadero ? '/Logo/logo-paradero-104.png' : (settings.logoUrl && settings.logoUrl !== '/icono.png' ? settings.logoUrl : '/Logo/logo-lomas-grill.png')}
@@ -194,7 +202,13 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
                 />
               </div>
             </div>
-            <div className="overflow-y-auto max-h-[calc(100vh-320px)] pr-1 custom-scrollbar">
+
+            {/* Sincronizar Supabase Botón */}
+            <div className="mb-4">
+              <UniversalSyncButton variant="full" />
+            </div>
+
+            <div className="overflow-y-auto max-h-[calc(100vh-360px)] pr-1 custom-scrollbar">
               <NavLinks />
             </div>
           </div>

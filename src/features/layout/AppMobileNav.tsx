@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ViewState, AppSegment } from '../../App';
 import { Settings, AppModuleKey } from '../../types';
+import { UniversalSyncButton } from '../../components/UniversalSyncButton';
 
 interface AppMobileNavProps {
   settings: Settings;
@@ -48,7 +49,7 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
   return (
     <>
       {/* ── TOPBAR MOBILE ── */}
-      <div className="md:hidden bg-white border-b border-stone-200 px-3 py-2.5 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+      <div className="md:hidden bg-white border-b border-stone-200 px-3 py-2 flex items-center justify-between sticky top-0 z-40 shadow-xs gap-2">
         <div className="flex items-center space-x-2 font-bold text-stone-900 min-w-0">
           <img
             src={settings.logoUrl && settings.logoUrl !== "/icono.png" ? settings.logoUrl : "/logo-web.png"}
@@ -56,7 +57,7 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
             className="w-8 h-8 rounded-lg object-contain bg-white border border-stone-200 shrink-0"
           />
           <div className="min-w-0">
-            <span className="text-xs font-black tracking-tight leading-tight block truncate max-w-[130px]">
+            <span className="text-xs font-black tracking-tight leading-tight block truncate max-w-[110px]">
               {settings.companyName}
             </span>
             <span className="text-[9px] text-amber-700 font-bold uppercase tracking-wider block">
@@ -66,13 +67,16 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Botón Sincronizar Supabase Universal */}
+          <UniversalSyncButton variant="compact" />
+
           <button
             onClick={onBackToBrands}
-            className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold rounded-xl border border-stone-200 flex items-center gap-1 transition cursor-pointer"
+            className="px-2 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-bold rounded-xl border border-stone-200 flex items-center gap-1 transition cursor-pointer"
             title="Cambiar de Sede o Negocio"
           >
             <Building2 className="w-3.5 h-3.5 text-amber-600" />
-            <span>Sedes</span>
+            <span className="hidden sm:inline">Sedes</span>
           </button>
 
           <button
@@ -81,7 +85,7 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
             title="Ir al Portal de Módulos"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-amber-600" />
-            <span>Portal</span>
+            <span className="hidden sm:inline">Portal</span>
           </button>
 
           <button
@@ -121,6 +125,11 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Botón Sincronizar dentro del menú */}
+            <div className="p-3 border-b border-stone-200 bg-emerald-50/40">
+              <UniversalSyncButton variant="full" />
             </div>
 
             {/* Accesos Rápidos de Sede y Portal */}

@@ -10,6 +10,7 @@ import { useAppStore } from "./hooks/StoreContext";
 import { AppSidebar } from "./features/layout/AppSidebar";
 import { AppMobileNav } from "./features/layout/AppMobileNav";
 import { AppViewRouter } from "./features/layout/AppViewRouter";
+import { UniversalSyncButton } from "./components/UniversalSyncButton";
 
 export type ViewState =
   | { name: "dashboard" }
@@ -228,6 +229,9 @@ export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
 
       {/* ── ASISTENTE VIRTUAL GRACE ── */}
       <GraceAssistant onNavigate={navigate} />
+
+      {/* ── BOTÓN UNIVERSAL FLOTANTE DE SINCRONIZACIÓN SUPABASE ── */}
+      <UniversalSyncButton variant="floating" />
 
     </div>
   );
