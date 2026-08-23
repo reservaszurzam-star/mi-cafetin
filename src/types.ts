@@ -320,6 +320,7 @@ export type AppModuleKey =
   | 'kds'
   | 'products'
   | 'daily_menu'
+  | 'dish_ranking'
   | 'promotions'
   | 'inventory'
   | 'suppliers'

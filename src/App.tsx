@@ -37,6 +37,7 @@ export type ViewState =
   | { name: "recipes" }
   | { name: "promotions" }
   | { name: "daily_menu" }
+  | { name: "dish_ranking" }
   | { name: "customer_detail"; customerId: string };
 
 type AppProps = {

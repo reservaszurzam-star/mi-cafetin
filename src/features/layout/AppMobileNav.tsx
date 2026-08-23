@@ -4,7 +4,7 @@ import {
   ArrowLeft, Building2, Utensils, Ticket, Lock, CreditCard,
   Calendar, Package, ShoppingCart, ClipboardList, BarChart3,
   TrendingUp, FileText, Users, Crown, UsersRound, Printer,
-  ShieldAlert, Bell, Settings as SettingsIcon, LogOut
+  ShieldAlert, Bell, Settings as SettingsIcon, LogOut, Trophy
 } from 'lucide-react';
 import { ViewState, AppSegment } from '../../App';
 import { Settings, AppModuleKey } from '../../types';
@@ -321,6 +321,24 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
                     </button>
                   )}
 
+                  {hasPermission('dish_ranking') && (
+                    <button
+                      onClick={() => handleNav({ name: "dish_ranking" })}
+                      className={`w-full p-2.5 rounded-2xl text-left flex items-center justify-between border cursor-pointer ${
+                        view.name === "dish_ranking" ? "bg-stone-900 text-white border-stone-900 shadow-md" : "bg-stone-50/80 text-stone-800 border-stone-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Trophy className={`w-4 h-4 ${view.name === "dish_ranking" ? "text-amber-400" : "text-amber-600"}`} />
+                        <div>
+                          <div className="font-bold text-xs">Ranking de Platos</div>
+                          <div className={`text-[10px] ${view.name === "dish_ranking" ? "text-stone-400" : "text-stone-500"}`}>Top más vendidos y recaudación</div>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-amber-500 text-stone-950">Top Platos</span>
+                    </button>
+                  )}
+
                   {hasPermission('promotions') && (
                     <button
                       onClick={() => handleNav({ name: "promotions" })}
@@ -424,10 +442,28 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
                       <div className="flex items-center gap-3">
                         <BarChart3 className={`w-4 h-4 ${view.name === "reports" ? "text-amber-400" : "text-stone-600"}`} />
                         <div>
-                          <div className="font-bold text-xs">Reportes & Estadísticas</div>
-                          <div className={`text-[10px] ${view.name === "reports" ? "text-stone-400" : "text-stone-500"}`}>Ranking y balance diario</div>
+                          <div className="font-bold text-xs">Reportes Diarios & Ventas</div>
+                          <div className={`text-[10px] ${view.name === "reports" ? "text-stone-400" : "text-stone-500"}`}>Arqueo y balance de caja</div>
                         </div>
                       </div>
+                    </button>
+                  )}
+
+                  {hasPermission('dish_ranking') && (
+                    <button
+                      onClick={() => handleNav({ name: "dish_ranking" })}
+                      className={`w-full p-2.5 rounded-2xl text-left flex items-center justify-between border cursor-pointer ${
+                        view.name === "dish_ranking" ? "bg-stone-900 text-white border-stone-900 shadow-md" : "bg-stone-50/80 text-stone-800 border-stone-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Trophy className={`w-4 h-4 ${view.name === "dish_ranking" ? "text-amber-400" : "text-amber-600"}`} />
+                        <div>
+                          <div className="font-bold text-xs">Ranking de Platos</div>
+                          <div className={`text-[10px] ${view.name === "dish_ranking" ? "text-stone-400" : "text-stone-500"}`}>Top más vendidos y demanda</div>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-amber-500 text-stone-950">Top Platos</span>
                     </button>
                   )}
 

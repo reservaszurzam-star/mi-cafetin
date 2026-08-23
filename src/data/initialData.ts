@@ -453,25 +453,25 @@ export const DEFAULT_DAILY_MENU_ITEMS: DailyMenuItem[] = [
 export const DEFAULT_ROLE_PERMISSIONS: RolePermissionConfig = {
   Owner: [
     'dashboard', 'pos', 'billing', 'cash_register', 'delivery', 'reservations',
-    'kds', 'products', 'daily_menu', 'promotions', 'inventory', 'suppliers',
+    'kds', 'products', 'daily_menu', 'dish_ranking', 'promotions', 'inventory', 'suppliers',
     'recipes', 'reports', 'expenses', 'sunat', 'users', 'role_permissions', 'staff', 'customers',
     'printers', 'audit_log', 'notifications', 'settings'
   ],
   Administrador: [
     'dashboard', 'pos', 'billing', 'cash_register', 'delivery', 'reservations',
-    'kds', 'products', 'daily_menu', 'promotions', 'inventory', 'suppliers',
+    'kds', 'products', 'daily_menu', 'dish_ranking', 'promotions', 'inventory', 'suppliers',
     'recipes', 'reports', 'expenses', 'sunat', 'users', 'role_permissions', 'customers',
     'printers', 'audit_log', 'notifications', 'settings'
   ],
   Cajero: [
     'dashboard', 'pos', 'billing', 'cash_register', 'delivery', 'reservations',
-    'customers', 'sunat', 'expenses', 'printers', 'notifications'
+    'customers', 'dish_ranking', 'sunat', 'expenses', 'printers', 'notifications'
   ],
   Mozo: [
     'pos', 'reservations', 'notifications'
   ],
   Cocinero: [
-    'kds', 'recipes', 'notifications'
+    'kds', 'dish_ranking', 'recipes', 'notifications'
   ],
   Repartidor: [
     'delivery', 'notifications'

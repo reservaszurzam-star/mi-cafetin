@@ -4,7 +4,7 @@ import {
   LayoutGrid, Receipt, CreditCard, Lock, Truck, Calendar,
   Utensils, BookOpen, Ticket, Layers, Package, ShoppingCart,
   BarChart3, TrendingUp, FileText, UsersRound, Users, Printer,
-  ShieldAlert, Bell, Settings, Crown
+  ShieldAlert, Bell, Settings, Crown, Trophy
 } from 'lucide-react';
 import { RoleType, AppModuleKey } from '../../types';
 
@@ -103,6 +103,7 @@ export const MODULE_DEFINITIONS: ModuleDef[] = [
   { key: 'kds', name: 'Monitor KDS Cocina', desc: 'Pantalla de cocina y tiempos de preparación', category: 'cocina_carta', icon: ChefHat },
   { key: 'products', name: 'Gestión de Carta', desc: 'Platos, categorías, fotos y precios', category: 'cocina_carta', icon: Utensils },
   { key: 'daily_menu', name: 'Menú del Día Digital', desc: 'Configuración de entradas, fondos y bebidas', category: 'cocina_carta', icon: BookOpen },
+  { key: 'dish_ranking', name: 'Ranking de Platos', desc: 'Top de platos más vendidos, recaudación y demanda', category: 'cocina_carta', icon: Trophy },
   { key: 'promotions', name: 'Promociones & Ofertas', desc: 'Descuentos, combos y precios especiales', category: 'cocina_carta', icon: Ticket },
   { key: 'recipes', name: 'Recetas & Rendimiento', desc: 'Fichas técnicas y costos de preparación', category: 'cocina_carta', icon: Layers },
 

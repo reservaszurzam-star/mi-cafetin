@@ -29,6 +29,7 @@ import StaffView from '../staff/StaffView';
 import UsersView from '../users/UsersView';
 import RolePermissionsView from '../users/RolePermissionsView';
 import DailyMenuAdminView from '../daily-menu/DailyMenuAdminView';
+import DishRankingView from '../dishes/DishRankingView';
 
 interface AppViewRouterProps {
   view: ViewState;
@@ -114,6 +115,7 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
       )}
       {view.name === "promotions" && <PromotionsView />}
       {view.name === "daily_menu" && <DailyMenuAdminView onBack={() => onNavigate({ name: "products" })} />}
+      {view.name === "dish_ranking" && <DishRankingView onNavigate={onNavigate} />}
       {view.name === "suppliers" && <SuppliersView />}
       {view.name === "recipes" && <RecipesView />}
       {view.name === "sunat" && <SunatView />}

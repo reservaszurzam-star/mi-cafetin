@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import { ViewState } from "../../App";
-import { PackagePlus, Trash2, Edit2, Search, X, CheckCircle2, UtensilsCrossed } from 'lucide-react';
+import { PackagePlus, Trash2, Edit2, Search, X, CheckCircle2, UtensilsCrossed, Trophy } from 'lucide-react';
 import { cn } from "../../lib/utils";
 
 export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState) => void }) {
@@ -70,11 +70,21 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
           <h1 className="text-3xl font-black text-stone-900 dark:text-white tracking-tight">Gestión de Carta</h1>
           <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Administra tus productos, precios e inventario.</p>
         </div>
-        <button onClick={() => setIsAdding(true)} 
-          className="h-11 px-5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-500/30"
-        >
-          <PackagePlus className="w-5 h-5" /> Añadir Producto
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button 
+            onClick={() => onNavigate({ name: "dish_ranking" })} 
+            className="h-11 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xs"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" /> 
+            <span>Ranking de Platos</span>
+          </button>
+
+          <button onClick={() => setIsAdding(true)} 
+            className="h-11 px-5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-500/30"
+          >
+            <PackagePlus className="w-5 h-5" /> Añadir Producto
+          </button>
+        </div>
       </div>
 
       {/* ── FILTROS Y BÚSQUEDA ── */}

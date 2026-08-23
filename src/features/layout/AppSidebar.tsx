@@ -4,7 +4,7 @@ import {
   Printer, Users, CreditCard, Building2, TrendingUp, BarChart3,
   Bell, Settings as SettingsIcon, LogOut, Package, Calendar,
   Truck, ShoppingCart, Ticket, FileText, ClipboardList,
-  UsersRound, ArrowLeft, BookOpen, ShieldCheck, Sliders, Crown
+  UsersRound, ArrowLeft, BookOpen, ShieldCheck, Sliders, Crown, Trophy
 } from 'lucide-react';
 import { ViewState, AppSegment } from '../../App';
 import { Settings, AppModuleKey } from '../../types';
@@ -145,6 +145,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             <div className="space-y-1.5">
               {hasPermission('products') && <NavItem icon={Utensils} title="Gestión de Carta" subtitle="Platos, combos, categorías y precios" active={view.name === "products"} onClick={() => onNavigate({ name: "products" })} />}
               {hasPermission('daily_menu') && <NavItem icon={BookOpen} title="Menú del Día" subtitle="Agregar y quitar platos del menú digital" active={view.name === "daily_menu"} onClick={() => onNavigate({ name: "daily_menu" })} />}
+              {hasPermission('dish_ranking') && <NavItem icon={Trophy} title="Ranking de Platos" subtitle="Top más vendidos y recaudación" badge="Top Platos" badgeType="gold" active={view.name === "dish_ranking"} onClick={() => onNavigate({ name: "dish_ranking" })} />}
               {hasPermission('promotions') && <NavItem icon={Ticket} title="Promociones & Ofertas" subtitle="Descuentos y combos" active={view.name === "promotions"} onClick={() => onNavigate({ name: "promotions" })} />}
             </div>
           </div>
@@ -200,7 +201,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               Análisis y Finanzas
             </div>
             <div className="space-y-1.5">
-              {hasPermission('reports') && <NavItem icon={BarChart3} title="Reportes Diarios & Ranking" subtitle="Descarga Excel/PDF y cierre" active={view.name === "reports"} onClick={() => onNavigate({ name: "reports" })} />}
+              {hasPermission('reports') && <NavItem icon={BarChart3} title="Reportes Diarios & Ventas" subtitle="Descarga Excel/PDF y arqueo" active={view.name === "reports"} onClick={() => onNavigate({ name: "reports" })} />}
+              {hasPermission('dish_ranking') && <NavItem icon={Trophy} title="Ranking de Platos" subtitle="Top más vendidos y demanda" badge="Top Platos" badgeType="gold" active={view.name === "dish_ranking"} onClick={() => onNavigate({ name: "dish_ranking" })} />}
               {hasPermission('expenses') && <NavItem icon={TrendingUp} title="Ingresos & Gastos" subtitle="Flujo de caja" active={view.name === "expenses"} onClick={() => onNavigate({ name: "expenses" })} />}
               {hasPermission('sunat') && <NavItem icon={FileText} title="Facturación SUNAT" subtitle="Boletas y Facturas B001/F001" active={view.name === "sunat"} onClick={() => onNavigate({ name: "sunat" })} />}
               {hasPermission('cash_register') && <NavItem icon={Lock} title="Cierre de Caja" subtitle="Arqueo físico y conciliación" badge="Cierre Diario" badgeType="gold" active={view.name === "cash_register"} onClick={() => onNavigate({ name: "cash_register" })} />}
