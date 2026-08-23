@@ -46,6 +46,8 @@ import {
   DEFAULT_DAILY_MENU_ITEMS,
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_SETTINGS,
+  DEFAULT_SETTINGS_LASLOMAS,
+  DEFAULT_SETTINGS_PARADERO,
   DEFAULT_PROMOTIONS,
 } from "../data/initialData";
 
@@ -260,6 +262,7 @@ export function useStore(tenantId: string) {
 
   const [settings, setSettings] = useState<Settings>(() => {
     const isParadero = tenantId === 'paradero';
+    const defaultSettings = isParadero ? DEFAULT_SETTINGS_PARADERO : DEFAULT_SETTINGS_LASLOMAS;
     const defaultLogo = isParadero ? '/assets/logos/logo-104.png' : '/assets/logos/logo-lomas.png';
     const defaultName = isParadero ? 'Paradero 104' : 'Las Lomas Grill';
     const defaultTerminal = isParadero ? 'POS-PARADERO-01' : 'POS-LOMAS-01';
@@ -275,7 +278,7 @@ export function useStore(tenantId: string) {
       
       const logo = isLegacyLogo ? defaultLogo : parsed.logoUrl;
       return { 
-        ...DEFAULT_SETTINGS, 
+        ...defaultSettings, 
         companyName: parsed.companyName || defaultName,
         logoUrl: logo,
         posTerminalId: parsed.posTerminalId || defaultTerminal,
@@ -285,7 +288,7 @@ export function useStore(tenantId: string) {
     }
 
     return {
-      ...DEFAULT_SETTINGS,
+      ...defaultSettings,
       companyName: defaultName,
       logoUrl: defaultLogo,
       posTerminalId: defaultTerminal,

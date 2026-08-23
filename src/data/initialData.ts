@@ -478,30 +478,69 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissionConfig = {
   ]
 };
 
-export const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS_LASLOMAS: Settings = {
   theme: "light",
-  companyName: "Cafetín Don Grill",
+  companyName: "Las Lomas Grill",
+  slogan: "Sabor a la Leña & Tradición",
+  phone: "995 881 303 / 953 034 562",
   currency: "S/",
   lowStockThreshold: 5,
   overdueDaysThreshold: 30,
   autoSendToKitchen: false,
-  posTerminalId: "POS-CAJA-01",
+  posTerminalId: "POS-LOMAS-01",
+  showPaymentQR: true,
+  defaultDeliveryCost: 5.00,
+  whatsappOrdersPhone: "51995881303",
+  whatsappMessageGreeting: "¡Hola Las Lomas Grill! Quisiera realizar el siguiente pedido delivery:",
+  whatsappCustomFooter: "Por favor confirmar el pedido a los números de delivery: 995 881 303 / 953 034 562. ¡Muchas gracias!",
+  whatsappIncludeAddress: true,
+  whatsappIncludePayment: true,
+  whatsappIncludeNotes: true,
+  paymentDetails: {
+    yape: "995 881 303 / 953 034 562",
+    yapeHolder: "Las Lomas Grill",
+    yapeActive: true,
+    yapeImage: "",
+    plin: "995 881 303 / 953 034 562",
+    plinHolder: "Las Lomas Grill",
+    plinActive: true,
+    plinImage: "",
+    transferencia: "BCP: 191-98765432-0-01 (CCI: 0021910098765432001)",
+    bankActive: true,
+  },
+};
+
+export const DEFAULT_SETTINGS_PARADERO: Settings = {
+  theme: "light",
+  companyName: "Paradero 104",
+  slogan: "Cevichería & Mariscos",
+  phone: "987 654 321",
+  currency: "S/",
+  lowStockThreshold: 5,
+  overdueDaysThreshold: 30,
+  autoSendToKitchen: false,
+  posTerminalId: "POS-PARADERO-01",
   showPaymentQR: true,
   defaultDeliveryCost: 5.00,
   whatsappOrdersPhone: "51987654321",
-  whatsappMessageGreeting: "¡Hola! Quisiera realizar el siguiente pedido:",
+  whatsappMessageGreeting: "¡Hola Paradero 104! Quisiera realizar el siguiente pedido:",
   whatsappCustomFooter: "Por favor confirmar el tiempo estimado. ¡Muchas gracias!",
   whatsappIncludeAddress: true,
   whatsappIncludePayment: true,
   whatsappIncludeNotes: true,
   paymentDetails: {
     yape: "987-654-321",
+    yapeActive: true,
     yapeImage: "",
     plin: "987-654-321",
+    plinActive: true,
     plinImage: "",
     transferencia: "BCP: 191-98765432-0-01 (CCI: 0021910098765432001)",
+    bankActive: true,
   },
 };
+
+export const DEFAULT_SETTINGS: Settings = DEFAULT_SETTINGS_LASLOMAS;
 
 export const DEFAULT_PROMOTIONS = [
   { id: '1', title: 'Happy Hour Cócteles', type: '2x1' as const, description: 'Todos los jueves y viernes de 6pm a 8pm. Aplica en Pisco Sour y Chilcanos.', status: 'Activo' as const, usageCount: 145 },
