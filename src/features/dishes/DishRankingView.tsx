@@ -37,12 +37,19 @@ interface RankedDish {
 }
 
 export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
-  const { products, sales, orders, settings } = useAppStore();
+  const { products, sales, orders, settings, tenantId } = useAppStore();
+  const isParadero = tenantId === 'paradero';
 
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const handleSwitchTenant = (target: 'laslomas' | 'paradero') => {
+    if (tenantId === target) return;
+    localStorage.setItem('cafetin_tenantId', target);
+    window.location.reload();
+  };
 
   // 1. Obtener categorías de la carta
   const categories = useMemo(() => {
@@ -268,21 +275,79 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
+      {/* ── SELECTOR DE NEGOCIO / SEDE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-3xl border border-stone-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-2xl flex items-center justify-center font-black text-lg shadow-xs",
+            isParadero ? "bg-blue-600 text-white" : "bg-amber-500 text-white"
+          )}>
+            {isParadero ? "🐟" : "🥩"}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">Negocio Seleccionado:</span>
+              <span className={cn(
+                "px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wide border",
+                isParadero ? "bg-blue-50 text-blue-800 border-blue-200" : "bg-amber-50 text-amber-900 border-amber-200"
+              )}>
+                {settings.companyName}
+              </span>
+            </div>
+            <p className="text-xs font-bold text-stone-500">
+              {isParadero ? "Especialidad en Ceviches, Tríos Marinos, Parihuelas & Chicharrones" : "Especialidad en Pollos a la Brasa, Combos, Parrillas & Mostros"}
+            </p>
+          </div>
+        </div>
+
+        {/* Botones de Cambio Rápido entre Negocios */}
+        <div className="flex items-center bg-stone-100 p-1 rounded-2xl border border-stone-200 text-xs font-black self-start sm:self-auto">
+          <button
+            onClick={() => handleSwitchTenant('laslomas')}
+            className={cn(
+              "px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer",
+              !isParadero 
+                ? "bg-amber-500 text-white shadow-sm font-black" 
+                : "text-stone-600 hover:text-stone-900"
+            )}
+          >
+            <span>🥩 Las Lomas Grill</span>
+            {!isParadero && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+          </button>
+          
+          <button
+            onClick={() => handleSwitchTenant('paradero')}
+            className={cn(
+              "px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer",
+              isParadero 
+                ? "bg-blue-600 text-white shadow-sm font-black" 
+                : "text-stone-600 hover:text-stone-900"
+            )}
+          >
+            <span>🐟 Paradero 104</span>
+            {isParadero && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+          </button>
+        </div>
+      </div>
+
       {/* ── ENCABEZADO SUPERIOR ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-stone-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
-              Ingeniería de Menú & Popularidad
+            <span className={cn(
+              "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
+              isParadero ? "bg-blue-100 text-blue-900 border-blue-200" : "bg-amber-100 text-amber-900 border-amber-200"
+            )}>
+              {isParadero ? "🐟 Ranking Marino Separado" : "🥩 Ranking Criollo & Brasas Separado"}
             </span>
             <span className="text-xs text-stone-400 font-bold">· {settings.companyName}</span>
           </div>
           <h2 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2.5">
-            <Trophy className="w-7 h-7 text-amber-500" />
+            <Trophy className={cn("w-7 h-7", isParadero ? "text-blue-600" : "text-amber-500")} />
             Ranking Oficial de Platos Más Vendidos
           </h2>
           <p className="text-xs font-semibold text-stone-500 mt-0.5">
-            Descubre los platos favoritos de tus clientes, rentabilidad y demanda en tiempo real
+            Métricas de ventas, salida de carta y rentabilidad exclusivas de <strong className="text-stone-800">{settings.companyName}</strong>
           </p>
         </div>
 
@@ -293,7 +358,7 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
             <button
               onClick={() => setTimeRange('today')}
               className={cn(
-                "px-3 py-1.5 rounded-xl transition",
+                "px-3 py-1.5 rounded-xl transition cursor-pointer",
                 timeRange === 'today' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               )}
             >
@@ -302,7 +367,7 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
             <button
               onClick={() => setTimeRange('week')}
               className={cn(
-                "px-3 py-1.5 rounded-xl transition",
+                "px-3 py-1.5 rounded-xl transition cursor-pointer",
                 timeRange === 'week' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               )}
             >
@@ -311,7 +376,7 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
             <button
               onClick={() => setTimeRange('month')}
               className={cn(
-                "px-3 py-1.5 rounded-xl transition",
+                "px-3 py-1.5 rounded-xl transition cursor-pointer",
                 timeRange === 'month' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               )}
             >
@@ -320,7 +385,7 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
             <button
               onClick={() => setTimeRange('all')}
               className={cn(
-                "px-3 py-1.5 rounded-xl transition",
+                "px-3 py-1.5 rounded-xl transition cursor-pointer",
                 timeRange === 'all' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
               )}
             >
@@ -331,7 +396,7 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
           {/* Botones de Descarga */}
           <button
             onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-white hover:bg-stone-50 text-stone-700 border border-stone-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
+            className="px-3.5 py-2 bg-white hover:bg-stone-50 text-stone-700 border border-stone-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
           >
             <Download className="w-4 h-4 text-emerald-600" />
             <span>Excel / CSV</span>
@@ -340,7 +405,12 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
           <button
             onClick={handleExportPDF}
             disabled={isExportingPdf}
-            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-xs font-black flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95"
+            className={cn(
+              "px-3.5 py-2 text-white rounded-2xl text-xs font-black flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer",
+              isParadero 
+                ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20" 
+                : "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20"
+            )}
           >
             <FileDown className="w-4 h-4" />
             <span>{isExportingPdf ? "Generando..." : "Descargar PDF"}</span>
@@ -352,20 +422,28 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Top 1 Plato Más Pedido */}
-        <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between">
+        <div className={cn(
+          "text-white p-5 rounded-3xl shadow-md relative overflow-hidden flex flex-col justify-between",
+          isParadero 
+            ? "bg-gradient-to-br from-blue-600 to-cyan-600" 
+            : "bg-gradient-to-br from-amber-500 to-amber-600"
+        )}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-200 bg-black/20 px-2 py-0.5 rounded-full">
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+              isParadero ? "text-blue-100 bg-black/20" : "text-amber-200 bg-black/20"
+            )}>
               👑 Plato #1 Más Vendido
             </span>
-            <Flame className="w-5 h-5 text-amber-200 animate-pulse" />
+            <Flame className={cn("w-5 h-5 animate-pulse", isParadero ? "text-cyan-200" : "text-amber-200")} />
           </div>
           <div className="mt-3">
             <h3 className="font-black text-lg leading-tight line-clamp-2">{top1?.name || "Sin registro"}</h3>
-            <p className="text-xs text-amber-100 mt-1 font-semibold">{top1?.category || "Carta"}</p>
+            <p className={cn("text-xs mt-1 font-semibold", isParadero ? "text-blue-100" : "text-amber-100")}>{top1?.category || "Carta"}</p>
           </div>
           <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between">
-            <span className="font-black text-2xl">{top1?.quantitySold || 0} <span className="text-xs font-bold text-amber-200">pedidos</span></span>
-            <span className="font-mono font-black text-sm text-amber-100">{settings.currency} {top1?.totalRevenue.toFixed(2) || "0.00"}</span>
+            <span className="font-black text-2xl">{top1?.quantitySold || 0} <span className={cn("text-xs font-bold", isParadero ? "text-blue-100" : "text-amber-200")}>pedidos</span></span>
+            <span className={cn("font-mono font-black text-sm", isParadero ? "text-cyan-100" : "text-amber-100")}>{settings.currency} {top1?.totalRevenue.toFixed(2) || "0.00"}</span>
           </div>
         </div>
 
@@ -461,18 +539,44 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
           </div>
 
           {/* #1 PUESTO (ORO - MÁS GRANDE) */}
-          <div className="bg-gradient-to-b from-amber-50 to-orange-50 border-2 border-amber-400 rounded-3xl p-6 text-center flex flex-col justify-between min-h-[260px] relative order-1 md:order-2 shadow-lg shadow-amber-500/10">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white font-black text-xs px-4 py-1.5 rounded-full border border-amber-300 shadow-md flex items-center gap-1.5">
+          <div className={cn(
+            "border-2 rounded-3xl p-6 text-center flex flex-col justify-between min-h-[260px] relative order-1 md:order-2 shadow-lg",
+            isParadero
+              ? "bg-gradient-to-b from-blue-50 to-cyan-50 border-blue-400 shadow-blue-500/10"
+              : "bg-gradient-to-b from-amber-50 to-orange-50 border-amber-400 shadow-amber-500/10"
+          )}>
+            <div className={cn(
+              "absolute -top-4 left-1/2 -translate-x-1/2 text-white font-black text-xs px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5",
+              isParadero ? "bg-blue-600 border border-blue-300" : "bg-amber-500 border border-amber-300"
+            )}>
               👑 🥇 Campeón #1
             </div>
             <div className="mt-4">
-              <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider block">{top1?.category || "Carta"}</span>
-              <h4 className="font-black text-lg text-amber-950 mt-1 leading-tight">{top1?.name || "Sin datos"}</h4>
-              <p className="text-xs font-black text-amber-700 mt-1">{settings.currency} {top1?.price.toFixed(2)}</p>
+              <span className={cn(
+                "text-[10px] font-black uppercase tracking-wider block",
+                isParadero ? "text-blue-800" : "text-amber-800"
+              )}>{top1?.category || "Carta"}</span>
+              <h4 className={cn(
+                "font-black text-lg mt-1 leading-tight",
+                isParadero ? "text-blue-950" : "text-amber-950"
+              )}>{top1?.name || "Sin datos"}</h4>
+              <p className={cn(
+                "text-xs font-black mt-1",
+                isParadero ? "text-blue-700" : "text-amber-700"
+              )}>{settings.currency} {top1?.price.toFixed(2)}</p>
             </div>
-            <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-amber-200 mt-4 shadow-sm">
-              <div className="text-3xl font-black text-amber-900">{top1?.quantitySold || 0} <span className="text-xs font-bold text-amber-700">pedidos</span></div>
-              <div className="text-xs font-mono font-black text-amber-800 mt-0.5">Recaudación: {settings.currency} {top1?.totalRevenue.toFixed(2) || "0.00"}</div>
+            <div className={cn(
+              "backdrop-blur-sm p-4 rounded-2xl border mt-4 shadow-sm",
+              isParadero ? "bg-white/90 border-blue-200" : "bg-white/90 border-amber-200"
+            )}>
+              <div className={cn(
+                "text-3xl font-black",
+                isParadero ? "text-blue-900" : "text-amber-900"
+              )}>{top1?.quantitySold || 0} <span className={cn("text-xs font-bold", isParadero ? "text-blue-700" : "text-amber-700")}>pedidos</span></div>
+              <div className={cn(
+                "text-xs font-mono font-black mt-0.5",
+                isParadero ? "text-blue-800" : "text-amber-800"
+              )}>Recaudación: {settings.currency} {top1?.totalRevenue.toFixed(2) || "0.00"}</div>
             </div>
           </div>
 
@@ -525,11 +629,15 @@ export default function DishRankingView({ onNavigate }: DishRankingViewProps) {
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName || ''}
                 contentStyle={{ borderRadius: '16px', border: '1px solid #e5e7eb', fontWeight: 700 }}
               />
-              <Bar dataKey="Vendidos" fill="#f59e0b" radius={[8, 8, 0, 0]} maxBarSize={48}>
+              <Bar dataKey="Vendidos" fill={isParadero ? "#2563eb" : "#f59e0b"} radius={[8, 8, 0, 0]} maxBarSize={48}>
                 {topChartData.map((_, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={index === 0 ? '#d97706' : index === 1 ? '#f59e0b' : index === 2 ? '#fbbf24' : '#fb923c'} 
+                    fill={
+                      isParadero
+                        ? (index === 0 ? '#1d4ed8' : index === 1 ? '#2563eb' : index === 2 ? '#0284c7' : '#06b6d4')
+                        : (index === 0 ? '#d97706' : index === 1 ? '#f59e0b' : index === 2 ? '#fbbf24' : '#fb923c')
+                    } 
                   />
                 ))}
               </Bar>

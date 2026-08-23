@@ -16,223 +16,96 @@ import {
   KitchenScreen,
 } from "../types";
 
-export const DEFAULT_PRODUCTS: Product[] = [
-  // ── Combos & Promos ───────────────────────────────────────────
-  {
-    id: "1",
-    name: "Combo Familiar: 1 Pollo + Papas + Ensalada + Gaseosa 1.5L",
-    price: 72.0,
-    category: "Combos & Promos",
-    station: "Horno & Pollos",
-    stock: 50,
-  },
-  {
-    id: "promo-2",
-    name: "Combo Pareja: 1/2 Pollo + Papas + 2 Gaseosas",
-    price: 52.0,
-    category: "Combos & Promos",
-    station: "Horno & Pollos",
-    stock: 30,
-  },
-  {
-    id: "promo-3",
-    name: "Combo Ejecutivo: 1/4 Pollo + Papas + Refresco",
-    price: 28.0,
-    category: "Combos & Promos",
-    station: "Horno & Pollos",
-    stock: 40,
-  },
-  // ── Pollos a la Brasa ─────────────────────────────────────────
-  {
-    id: "2",
-    name: "1/2 Pollo a la Brasa + Papas Fritas + Ensalada",
-    price: 38.0,
-    category: "Pollos a la Brasa",
-    station: "Horno & Pollos",
-    stock: 40,
-  },
-  {
-    id: "3",
-    name: "1/4 Pollo a la Brasa (Pecho/Pierna) + Papas + Ensalada",
-    price: 22.0,
-    category: "Pollos a la Brasa",
-    station: "Horno & Pollos",
-    stock: 60,
-  },
-  {
-    id: "pollo-3",
-    name: "Pollo Entero a la Brasa + Papas + Ensalada",
-    price: 68.0,
-    category: "Pollos a la Brasa",
-    station: "Horno & Pollos",
-    stock: 15,
-  },
-  // ── Parrillas & Mostros ───────────────────────────────────────
-  {
-    id: "4",
-    name: "Mostro Especial (1/4 Pollo + Arroz Chaufa + Papas)",
-    price: 26.0,
-    category: "Parrillas & Mostros",
-    station: "Horno & Pollos",
-    stock: 35,
-  },
-  {
-    id: "5",
-    name: "Anticuchos de Corazón (2 Palitos) + Papas + Choclo",
-    price: 24.0,
-    category: "Parrillas & Mostros",
-    station: "Cocina & Parrilla",
-    stock: 25,
-  },
-  {
-    id: "6",
-    name: "Mollejitas a la Parrilla con Papas Doradas",
-    price: 22.0,
-    category: "Parrillas & Mostros",
-    station: "Cocina & Parrilla",
-    stock: 20,
-  },
-  // ── Platos de Carta — Cevichería (CARTA REAL) ─────────────────
-  {
-    id: "cv-1",
-    name: "Ceviche de Pescado",
-    price: 27.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 40,
-  },
-  {
-    id: "cv-2",
-    name: "Arroz con Mariscos",
-    price: 27.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 30,
-  },
-  {
-    id: "cv-3",
-    name: "Leche de Tigre",
-    price: 15.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 35,
-  },
-  {
-    id: "cv-4",
-    name: "Causa de Atún",
-    price: 13.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 25,
-  },
-  {
-    id: "7",
-    name: "Arroz Chaufa de Pollo Familiar",
-    price: 20.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 30,
-  },
-  {
-    id: "8",
-    name: "Tequeños Rellenos de Queso / Pollo (8 un.)",
-    price: 15.0,
-    category: "Entradas & Chaufa",
-    station: "Cocina & Parrilla",
-    stock: 25,
-  },
-  // ── Guarniciones & Salsas ─────────────────────────────────────
-  {
-    id: "9",
-    name: "Porción de Papas Fritas Amarillas Crocantes",
-    price: 10.0,
-    category: "Guarniciones & Salsas",
-    station: "Horno & Pollos",
-    stock: 80,
-  },
-  {
-    id: "10",
-    name: "Ensalada Fresca de la Casa con Vinagreta",
-    price: 8.0,
-    category: "Guarniciones & Salsas",
-    station: "Horno & Pollos",
-    stock: 50,
-  },
-  {
-    id: "guar-3",
-    name: "Salsa Huancaína / Ocopa (porción)",
-    price: 5.0,
-    category: "Guarniciones & Salsas",
-    station: "Horno & Pollos",
-    stock: 60,
-  },
-  // ── Bebidas & Refrescos (CARTA REAL) ──────────────────────────
-  {
-    id: "beb-1",
-    name: "Jarra de Chicha (1 L)",
-    price: 15.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 50,
-  },
-  {
-    id: "beb-2",
-    name: "Jarra de Maracuyá (1 L)",
-    price: 15.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 50,
-  },
-  {
-    id: "beb-3",
-    name: "Limonada (1 L)",
-    price: 15.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 50,
-  },
-  {
-    id: "beb-4",
-    name: "Chicha Morada Casera (Jarra 1.5L)",
-    price: 14.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 40,
-  },
-  {
-    id: "beb-5",
-    name: "Inka Kola / Coca Cola 1.5L",
-    price: 11.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 60,
-  },
-  {
-    id: "beb-6",
-    name: "Agua Mineral / Sin Gas (500 ml)",
-    price: 4.0,
-    category: "Bebidas & Refrescos",
-    station: "Barra & Bebidas",
-    stock: 80,
-  },
-  // ── Postres ───────────────────────────────────────────────────
-  {
-    id: "11",
-    name: "Picarones Criollos con Miel de Chancaca (4 un.)",
-    price: 12.0,
-    category: "Postres",
-    station: "Estación Postres",
-    stock: 20,
-  },
-  {
-    id: "post-2",
-    name: "Mazamorra Morada con Arroz con Leche",
-    price: 8.0,
-    category: "Postres",
-    station: "Estación Postres",
-    stock: 25,
-  },
+// ═══════════════════════════════════════════════════════════════════════════
+// ── CARTA OFICIAL: LAS LOMAS GRILL (Pollos a la Brasa & Parrillas) ──────
+// ═══════════════════════════════════════════════════════════════════════════
+export const DEFAULT_PRODUCTS_LASLOMAS: Product[] = [
+  // ── Combos & Promos ──
+  { id: "1", name: "Combo Familiar: 1 Pollo + Papas + Ensalada + Gaseosa 1.5L", price: 72.0, category: "Combos & Promos", station: "Horno & Pollos", stock: 50 },
+  { id: "promo-2", name: "Combo Pareja: 1/2 Pollo + Papas + 2 Gaseosas", price: 52.0, category: "Combos & Promos", station: "Horno & Pollos", stock: 30 },
+  { id: "promo-3", name: "Combo Ejecutivo: 1/4 Pollo + Papas + Refresco", price: 28.0, category: "Combos & Promos", station: "Horno & Pollos", stock: 40 },
+  
+  // ── Pollos a la Brasa ──
+  { id: "pollo-3", name: "Pollo Entero a la Brasa + Papas + Ensalada", price: 68.0, category: "Pollos a la Brasa", station: "Horno & Pollos", stock: 25 },
+  { id: "2", name: "1/2 Pollo a la Brasa + Papas Fritas + Ensalada", price: 38.0, category: "Pollos a la Brasa", station: "Horno & Pollos", stock: 40 },
+  { id: "3", name: "1/4 Pollo a la Brasa (Pecho/Pierna) + Papas + Ensalada", price: 22.0, category: "Pollos a la Brasa", station: "Horno & Pollos", stock: 60 },
+  
+  // ── Parrillas & Mostros ──
+  { id: "4", name: "Mostro Especial (1/4 Pollo + Arroz Chaufa + Papas)", price: 26.0, category: "Parrillas & Mostros", station: "Horno & Pollos", stock: 35 },
+  { id: "5", name: "Anticuchos de Corazón (2 Palitos) + Papas + Choclo", price: 24.0, category: "Parrillas & Mostros", station: "Cocina & Parrilla", stock: 25 },
+  { id: "6", name: "Mollejitas a la Parrilla con Papas Doradas", price: 22.0, category: "Parrillas & Mostros", station: "Cocina & Parrilla", stock: 20 },
+  { id: "parr-1", name: "Parrilla Mixta Familiar (Anticucho + Chuleta + Pollo + Chorizo)", price: 55.0, category: "Parrillas & Mostros", station: "Cocina & Parrilla", stock: 15 },
+  
+  // ── Entradas & Chaufa ──
+  { id: "7", name: "Arroz Chaufa de Pollo Familiar al Wok", price: 20.0, category: "Entradas & Chaufa", station: "Cocina & Parrilla", stock: 30 },
+  { id: "8", name: "Tequeños Rellenos de Queso con Guacamole (8 un.)", price: 15.0, category: "Entradas & Chaufa", station: "Cocina & Parrilla", stock: 25 },
+  { id: "ent-pap", name: "Papa a la Huancaína Tradicional", price: 12.0, category: "Entradas & Chaufa", station: "Cocina & Parrilla", stock: 30 },
+  
+  // ── Guarniciones & Salsas ──
+  { id: "9", name: "Porción de Papas Fritas Amarillas Crocantes", price: 10.0, category: "Guarniciones & Salsas", station: "Horno & Pollos", stock: 80 },
+  { id: "10", name: "Ensalada Fresca de la Casa con Vinagreta", price: 8.0, category: "Guarniciones & Salsas", station: "Horno & Pollos", stock: 50 },
+  { id: "guar-3", name: "Salsa Huancaína / Ocopa Especial", price: 5.0, category: "Guarniciones & Salsas", station: "Horno & Pollos", stock: 60 },
+  
+  // ── Bebidas & Refrescos ──
+  { id: "beb-1", name: "Jarra de Chicha Morada Casera (1 L)", price: 15.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-2", name: "Jarra de Maracuyá Fruta (1 L)", price: 15.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-3", name: "Limonada Natural con Menta (1 L)", price: 15.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-5", name: "Inka Kola / Coca Cola 1.5L", price: 11.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 60 },
+  { id: "beb-6", name: "Gaseosa Personal 500 ml", price: 5.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 80 },
+  
+  // ── Postres ──
+  { id: "11", name: "Picarones Criollos con Miel de Chancaca (4 un.)", price: 12.0, category: "Postres", station: "Estación Postres", stock: 20 },
+  { id: "post-2", name: "Mazamorra Morada con Arroz con Leche", price: 8.0, category: "Postres", station: "Estación Postres", stock: 25 },
+  { id: "post-3", name: "Crema Volteada Casera", price: 7.0, category: "Postres", station: "Estación Postres", stock: 20 },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── CARTA OFICIAL: PARADERO 104 (Cevichería & Mariscos) ──────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+export const DEFAULT_PRODUCTS_PARADERO: Product[] = [
+  // ── Ceviches ──
+  { id: "cv-1", name: "Ceviche de Pescado", price: 27.0, category: "Ceviches", station: "Cocina & Parrilla", stock: 40 },
+  { id: "cv-2", name: "Ceviche Mixto", price: 30.0, category: "Ceviches", station: "Cocina & Parrilla", stock: 35 },
+  { id: "cv-3", name: "Ceviche de Conchas Negras (12 und.)", price: 35.0, category: "Ceviches", station: "Cocina & Parrilla", stock: 20 },
+  { id: "cv-4", name: "Ceviche de Pota / Pescado", price: 22.0, category: "Ceviches", station: "Cocina & Parrilla", stock: 30 },
+  { id: "cv-5", name: "Ceviche de Pescado Familiar", price: 65.0, category: "Familiar", station: "Cocina & Parrilla", stock: 15 },
+  { id: "cv-6", name: "Ceviche Mixto Familiar", price: 75.0, category: "Familiar", station: "Cocina & Parrilla", stock: 15 },
+  
+  // ── Tríos Marinos ──
+  { id: "trio-1", name: "Trío Marino: Ceviche + Arroz con Mariscos + Chicharrón de Pota", price: 38.0, category: "Tríos", station: "Cocina & Parrilla", stock: 30 },
+  { id: "trio-2", name: "Trío Marino: Ceviche + Chaufa de Mariscos + Chicharrón de Pota", price: 38.0, category: "Tríos", station: "Cocina & Parrilla", stock: 30 },
+  { id: "trio-3", name: "Trío Marino: Ceviche + Arroz con Mariscos + Chicharrón de Pescado", price: 42.0, category: "Tríos", station: "Cocina & Parrilla", stock: 25 },
+  { id: "trio-4", name: "Trío Marino: Ceviche + Chaufa de Mariscos + Chicharrón de Pescado", price: 42.0, category: "Tríos", station: "Cocina & Parrilla", stock: 25 },
+  { id: "trio-5", name: "Combina tu Trío Marino (Todo Vale)", price: 45.0, category: "Tríos", station: "Cocina & Parrilla", stock: 20 },
+  
+  // ── Platos Familiares ──
+  { id: "fam-1", name: "Arroz con Mariscos Familiar", price: 60.0, category: "Familiar", station: "Cocina & Parrilla", stock: 20 },
+  { id: "fam-2", name: "Chaufa de Mariscos Familiar", price: 55.0, category: "Familiar", station: "Cocina & Parrilla", stock: 20 },
+  
+  // ── Sopas Marinas ──
+  { id: "sop-1", name: "Chilcano Especial", price: 18.0, category: "Sopas", station: "Cocina & Parrilla", stock: 30 },
+  { id: "sop-2", name: "Parihuela de Cabrilla", price: 35.0, category: "Sopas", station: "Cocina & Parrilla", stock: 20 },
+  { id: "sop-3", name: "Parihuela de Pescado (Filete)", price: 28.0, category: "Sopas", station: "Cocina & Parrilla", stock: 25 },
+  { id: "sop-4", name: "Sudado de Cabrilla", price: 35.0, category: "Sopas", station: "Cocina & Parrilla", stock: 20 },
+  { id: "sop-5", name: "Sudado de Pescado (Filete)", price: 28.0, category: "Sopas", station: "Cocina & Parrilla", stock: 25 },
+  { id: "sop-6", name: "Chupe de Camarones", price: 38.0, category: "Sopas", station: "Cocina & Parrilla", stock: 20 },
+  
+  // ── Chicharrones & Entradas ──
+  { id: "chich-1", name: "Chicharrón de Pescado con Yuca y Tártara", price: 28.0, category: "Chicharrones", station: "Cocina & Parrilla", stock: 30 },
+  { id: "chich-2", name: "Chicharrón de Calamar", price: 32.0, category: "Chicharrones", station: "Cocina & Parrilla", stock: 25 },
+  { id: "chich-3", name: "Chicharrón Mixto de Mariscos", price: 35.0, category: "Chicharrones", station: "Cocina & Parrilla", stock: 25 },
+  { id: "ent-1", name: "Leche de Tigre Clásica", price: 15.0, category: "Entradas & Chaufa", station: "Cocina & Parrilla", stock: 40 },
+  { id: "ent-2", name: "Causa de Atún Rellena", price: 13.0, category: "Entradas & Chaufa", station: "Cocina & Parrilla", stock: 25 },
+  
+  // ── Bebidas & Refrescos ──
+  { id: "beb-p1", name: "Jarra de Chicha Morada (1 L)", price: 15.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-p2", name: "Jarra de Maracuyá (1 L)", price: 15.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-p3", name: "Limonada Frozen (1 L)", price: 16.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 50 },
+  { id: "beb-p4", name: "Inka Kola / Coca Cola 1.5L", price: 11.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 60 },
+  { id: "beb-p5", name: "Cerveza Cusqueña / Pilsen 650 ml", price: 12.0, category: "Bebidas & Refrescos", station: "Barra & Bebidas", stock: 70 },
+];
+
+export const DEFAULT_PRODUCTS: Product[] = DEFAULT_PRODUCTS_LASLOMAS;
 
 export const DEFAULT_CUSTOMERS: Customer[] = [
   { id: "cust-1", name: "Carlos Mendoza", phone: "987654321", docType: "DNI", docNumber: "45892147", points: 320, tier: "Oro", creditLimit: 500, birthday: "1988-09-15", email: "carlos.mendoza@gmail.com", notes: "Prefiere mesa en terraza y pollo bien dorado.", createdAt: new Date(Date.now() - 1000 * 3600 * 24 * 40).toISOString() },
@@ -425,30 +298,64 @@ export const DEFAULT_ZONES: DeliveryZone[] = [
 
 export const DEFAULT_SUNAT_INVOICES: SunatInvoice[] = [];
 
-export const DEFAULT_DAILY_MENU_ITEMS: DailyMenuItem[] = [
+// ═══════════════════════════════════════════════════════════════════════════
+// ── MENÚ DEL DÍA: LAS LOMAS GRILL (Criollo & Brasas) ─────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+export const DEFAULT_DAILY_MENU_ITEMS_LASLOMAS: DailyMenuItem[] = [
   // ── ENTRADAS & SOPAS ──
   { id: 'ent-1', name: 'Sopa Criolla Especial con Huevo', course: 'entrada', description: 'Sopa caliente de carne molida, fideos cabello de ángel, leche y tostadas.', available: true, popular: true },
   { id: 'ent-2', name: 'Papa a la Huancaína Tradicional', course: 'entrada', description: 'Papas nativas bañadas en crema de ají amarillo, queso fresco y aceituna.', available: true, popular: true },
   { id: 'ent-3', name: 'Causa Limeña Rellena de Pollo', course: 'entrada', description: 'Masa suave de papa amarilla con limón, palta y pechuga deshilachada.', available: true },
   { id: 'ent-4', name: 'Tequeños Crocantes con Guacamole (4 un.)', course: 'entrada', description: 'Tequeños rellenos de queso andino acompañados de crema de palta.', available: true },
   { id: 'ent-5', name: 'Ensalada Fresca de la Casa', course: 'entrada', description: 'Lechuga orgánica, tomate, pepinillo, choclo y vinagreta clásica.', available: true },
+  
   // ── PLATOS DE FONDO ──
   { id: 'fon-1', name: '1/4 Pollo al Horno con Papas & Arroz', course: 'fondo', description: 'Pollo marinado a las finas hierbas con papas doradas crocantes y arroz.', available: true, popular: true },
   { id: 'fon-2', name: 'Lomo Saltado Criollo al Wok', course: 'fondo', description: 'Trozos de carne flameados con cebolla, tomate, ají amarillo y papas fritas.', available: true, popular: true },
   { id: 'fon-3', name: 'Seco de Res con Frijoles Canario & Arroz', course: 'fondo', description: 'Guiso tierno de res al culantro con porción de frijoles cremosos y arroz blanco.', available: true },
   { id: 'fon-4', name: 'Milanesa de Pollo con Tallarines Verdes', course: 'fondo', description: 'Pechuga apanada dorada sobre pasta con crema de albahaca, espinaca y queso.', available: true },
-  { id: 'fon-5', name: 'Pescado Frito con Yuca Dorada & Salsa Criolla', course: 'fondo', description: 'Filete de pescado fresco frito al punto, con yucas y sarsa de cebolla y ají.', available: true },
   { id: 'fon-6', name: 'Arroz Chaufa Especial con Trozos de Pollo', course: 'fondo', description: 'Arroz salteado al wok con cebolla china, huevo, pimientos y sillao oriental.', available: true },
+  
   // ── BEBIDAS ──
   { id: 'beb-1', name: 'Vaso de Chicha Morada Casera (500 ml)', course: 'bebida', description: 'Preparada con maíz morado, piña, manzana, canela y gotas de limón.', available: true, popular: true },
   { id: 'beb-2', name: 'Vaso de Refresco de Maracuyá Fruta', course: 'bebida', description: 'Refrescante jugo natural de maracuyá bien helado.', available: true },
   { id: 'beb-3', name: 'Limonada Natural con Menta & Hielo', course: 'bebida', description: 'Limonada recién exprimida con hojas frescas de menta.', available: true },
   { id: 'beb-4', name: 'Gaseosa Personal (Inka Kola / Coca Cola)', course: 'bebida', description: 'Botella personal de 500 ml fría.', available: true },
+  
   // ── POSTRES ──
   { id: 'pos-1', name: 'Mazamorra Morada con Canela', course: 'postre', description: 'Postre tradicional limeño caliente o frío.', available: true, extraPrice: 3.50 },
   { id: 'pos-2', name: 'Crema Volteada Casera', course: 'postre', description: 'Suave flan con caramelo tostado.', available: true, extraPrice: 4.00 },
   { id: 'pos-3', name: 'Gelatina con Flan Bicolor', course: 'postre', description: 'Copa refrescante de gelatina de fresa y flan de vainilla.', available: true, extraPrice: 3.00 },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── MENÚ DEL DÍA: PARADERO 104 (Marino & Cevichería) ─────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+export const DEFAULT_DAILY_MENU_ITEMS_PARADERO: DailyMenuItem[] = [
+  // ── ENTRADAS ──
+  { id: 'ent-p1', name: 'Chilcano Caliente de Pescado', course: 'entrada', description: 'Concentrado marino de pescado fresco con limón y culantro.', available: true, popular: true },
+  { id: 'ent-p2', name: 'Causa Rellena de Atún', course: 'entrada', description: 'Papa amarilla prensada con ají amarillo, atún y palta.', available: true, popular: true },
+  { id: 'ent-p3', name: 'Choritos a la Chalaca (3 un.)', course: 'entrada', description: 'Choros cocidos con salsa chalaca criolla y limón.', available: true },
+  { id: 'ent-p4', name: 'Ceviche Clásico en Copa', course: 'entrada', description: 'Filete de pescado fresco marinado al momento.', available: true },
+  
+  // ── FONDOS ──
+  { id: 'fon-p1', name: 'Pescado Frito con Yuca Dorada & Salsa Criolla', course: 'fondo', description: 'Filete de pescado frito al punto, con yuca crocante y arroz blanco.', available: true, popular: true },
+  { id: 'fon-p2', name: 'Arroz con Mariscos Criollo', course: 'fondo', description: 'Arroz sazonado al ají amarillo con mixtura de mariscos y queso parmesano.', available: true, popular: true },
+  { id: 'fon-p3', name: 'Chicharrón de Pescado con Tártara', course: 'fondo', description: 'Trozos crocantes de pescado con salsa tártara y ensalada fresca.', available: true },
+  { id: 'fon-p4', name: 'Chaufa de Mariscos al Wok', course: 'fondo', description: 'Arroz salteado al fuego vivo con mariscos y cebolla china.', available: true },
+  { id: 'fon-p5', name: 'Sudado de Filete de Pescado', course: 'fondo', description: 'Pescado guisado con tomate, cebolla, chicha de jora y yuca.', available: true },
+  
+  // ── BEBIDAS ──
+  { id: 'beb-p1', name: 'Vaso de Chicha Morada (500 ml)', course: 'bebida', description: 'Refresco casero preparado con maíz morado y frutas.', available: true, popular: true },
+  { id: 'beb-p2', name: 'Vaso de Maracuyá Helado', course: 'bebida', description: 'Refresco natural de maracuyá.', available: true },
+  { id: 'beb-p3', name: 'Limonada Frozen', course: 'bebida', description: 'Limonada batida con hielo.', available: true },
+  
+  // ── POSTRES ──
+  { id: 'pos-p1', name: 'Gelatina con Flan Bicolor', course: 'postre', description: 'Copa refrescante.', available: true, extraPrice: 3.00 },
+  { id: 'pos-p2', name: 'Crema Volteada Casera', course: 'postre', description: 'Flan con caramelo.', available: true, extraPrice: 4.00 },
+];
+
+export const DEFAULT_DAILY_MENU_ITEMS: DailyMenuItem[] = DEFAULT_DAILY_MENU_ITEMS_LASLOMAS;
 
 export const DEFAULT_ROLE_PERMISSIONS: RolePermissionConfig = {
   Owner: [

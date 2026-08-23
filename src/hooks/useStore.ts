@@ -28,6 +28,8 @@ import {
 
 import {
   DEFAULT_PRODUCTS,
+  DEFAULT_PRODUCTS_LASLOMAS,
+  DEFAULT_PRODUCTS_PARADERO,
   DEFAULT_CUSTOMERS,
   DEFAULT_TRANSACTIONS,
   DEFAULT_EXPENSES,
@@ -44,6 +46,8 @@ import {
   DEFAULT_ZONES,
   DEFAULT_SUNAT_INVOICES,
   DEFAULT_DAILY_MENU_ITEMS,
+  DEFAULT_DAILY_MENU_ITEMS_LASLOMAS,
+  DEFAULT_DAILY_MENU_ITEMS_PARADERO,
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_SETTINGS,
   DEFAULT_SETTINGS_LASLOMAS,
@@ -88,8 +92,20 @@ export function useStore(tenantId: string) {
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
+    const isParadero = tenantId === 'paradero';
+    const defaultProds = isParadero ? DEFAULT_PRODUCTS_PARADERO : DEFAULT_PRODUCTS_LASLOMAS;
     const saved = localStorage.getItem(`${tenantId}_cafetin_products`);
-    return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+    if (!saved) return defaultProds;
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed) || parsed.length === 0) return defaultProds;
+      // Sanity check: ensure dishes in storage match the business type
+      if (isParadero && parsed.some(p => p.name.toLowerCase().includes('pollo a la brasa'))) return defaultProds;
+      if (!isParadero && parsed.some(p => p.name.toLowerCase().includes('ceviche') && !p.name.toLowerCase().includes('chaufa'))) return defaultProds;
+      return parsed;
+    } catch {
+      return defaultProds;
+    }
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
@@ -186,8 +202,19 @@ export function useStore(tenantId: string) {
   });
 
   const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>(() => {
+    const isParadero = tenantId === 'paradero';
+    const defaultMenu = isParadero ? DEFAULT_DAILY_MENU_ITEMS_PARADERO : DEFAULT_DAILY_MENU_ITEMS_LASLOMAS;
     const saved = localStorage.getItem(`${tenantId}_cafetin_daily_menu`);
-    return saved && JSON.parse(saved).length > 0 ? JSON.parse(saved) : DEFAULT_DAILY_MENU_ITEMS;
+    if (!saved) return defaultMenu;
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed) || parsed.length === 0) return defaultMenu;
+      if (isParadero && parsed.some(m => m.name.toLowerCase().includes('pollo al horno'))) return defaultMenu;
+      if (!isParadero && parsed.some(m => m.name.toLowerCase().includes('chilcano'))) return defaultMenu;
+      return parsed;
+    } catch {
+      return defaultMenu;
+    }
   });
 
   const [promotions, setPromotions] = useState<Promotion[]>(() => {
@@ -1171,6 +1198,7 @@ export function useStore(tenantId: string) {
     hasPermission,
     ownerSimulatedRole,
     setOwnerSimulatedRole: changeOwnerSimulatedRole,
+    tenantId,
     isLoadingFromDB,
     syncWithSupabase,
     isManualSyncing,
