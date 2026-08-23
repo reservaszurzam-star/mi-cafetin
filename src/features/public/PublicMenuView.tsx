@@ -29,6 +29,9 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
     });
   }, [products, searchTerm, activeCategory]);
 
+  const isParadero = settings.companyName.toLowerCase().includes('paradero');
+  const logoImage = isParadero ? '/Logo/logo-paradero-104.png' : (settings.logoUrl && settings.logoUrl !== '/icono.png' ? settings.logoUrl : '/Logo/logo-lomas-grill.png');
+
   // Modo 1: Interfaz Limpia por Cuadros (Nombre + Precio + Agregar)
   if (viewMode === 'mobile_app') {
     return (
@@ -65,25 +68,25 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
               <span className="font-bold text-sm hidden sm:inline">Volver</span>
             </button>
           ) : (
-            <div className="w-10"></div> /* Spacer para centrar el logo si no hay botón volver */
+            <div className="w-10"></div>
           )}
 
-          <div className="flex items-center space-x-3 text-stone-900 dark:text-white font-display font-bold text-lg md:text-xl absolute left-1/2 -translate-x-1/2">
+          <div className="flex items-center space-x-3 text-stone-900 dark:text-white font-display font-bold text-lg md:text-xl">
             <img 
-              src={settings.logoUrl && settings.logoUrl !== "/icono.png" ? settings.logoUrl : "/Logo/logo-lomas-grill.png"} 
+              src={logoImage} 
               alt="Logo" 
-              className="w-8 h-8 rounded-full object-cover shadow-sm border border-stone-100 dark:border-stone-700 bg-white"
-              onError={(e) => { e.currentTarget.src = '/Logo/logo-lomas-grill.png'; }}
+              className="w-8 h-8 rounded-full object-contain shadow-sm border border-stone-100 dark:border-stone-700 bg-white"
+              onError={(e) => { e.currentTarget.src = '/LOGO OFICIAL.png'; }}
             />
-            <span className="tracking-tight hidden sm:inline">{settings.companyName}</span>
+            <span className="tracking-tight">{settings.companyName}</span>
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('mobile_app')}
-              className="px-3 py-1.5 bg-stone-900 text-white rounded-xl text-xs font-black transition shadow-sm flex items-center gap-1"
+              className="px-3 py-1.5 bg-stone-900 text-white rounded-xl text-xs font-black transition shadow-sm flex items-center gap-1 hover:bg-stone-800"
             >
-              <span>Ver en Cuadros</span>
+              <span>Ver Tienda Delivery</span>
             </button>
           </div>
         </div>

@@ -270,10 +270,10 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
           {totalItems > 0 && (
             <button
               onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }}
-              className="relative shrink-0 w-11 h-11 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-md"
+              className={`relative shrink-0 w-11 h-11 ${isParadero ? 'bg-teal-600' : 'bg-amber-500 text-stone-950'} rounded-xl flex items-center justify-center text-white shadow-md active:scale-95 transition`}
             >
-              <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+              <ShoppingBag className={`w-5 h-5 ${isParadero ? 'text-white' : 'text-stone-950'}`} />
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-stone-950 text-white text-[10px] font-black rounded-full flex items-center justify-center border border-white">
                 {totalItems}
               </span>
             </button>
@@ -289,7 +289,7 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
               placeholder="Buscar un plato..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-stone-100 border border-stone-200 rounded-xl pl-10 pr-9 py-2.5 text-sm font-medium text-stone-800 placeholder:text-stone-400 outline-none focus:border-teal-400 focus:bg-white transition"
+              className={`w-full bg-stone-100 border border-stone-200 rounded-xl pl-10 pr-9 py-2.5 text-sm font-medium text-stone-800 placeholder:text-stone-400 outline-none transition focus:bg-white ${isParadero ? 'focus:border-teal-400' : 'focus:border-amber-400'}`}
             />
             {searchTerm && (
               <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
@@ -308,8 +308,8 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
               className={cn(
                 'whitespace-nowrap px-3.5 py-2 rounded-full text-[11px] font-black transition-all shrink-0 flex items-center gap-1.5 border',
                 activeCategory === cat
-                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-teal-400'
+                  ? (isParadero ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'bg-amber-500 text-stone-950 border-amber-500 shadow-sm')
+                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
               )}
             >
               {getCategoryIcon(cat, 'w-3 h-3')}

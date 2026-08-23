@@ -5,11 +5,11 @@ import {
   Utensils, Coffee, Cake, Soup, Sparkles,
   User, Phone, MapPin, ArrowRight, Info,
   ChefHat, Flame, Waves, Star, Clock, ShoppingBag,
-  ExternalLink, Share2, Copy
+  ExternalLink, Share2, Copy, Plus, Minus, X, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "../../lib/utils";
-import { DailyMenuItem } from "../../types";
+import { DailyMenuItem, DailyMenuCourse } from "../../types";
 import { formatMoney, createWhatsAppUrl } from "../../lib/formatters";
 
 interface DailyMenuViewProps {
@@ -41,8 +41,9 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         accent: '#0284c7', // sky-600
         accentLight: 'bg-sky-50 text-sky-800 border-sky-200',
         accentBtn: 'bg-sky-600 hover:bg-sky-700 text-white',
-        borderSelected: 'border-sky-500 ring-2 ring-sky-400/30',
-        badgeBg: 'bg-sky-500 text-white',
+        borderSelected: 'border-sky-500 ring-2 ring-sky-400/30 bg-sky-50/40',
+        badgeSelected: 'bg-sky-600 text-white',
+        stepperBtn: 'bg-sky-600 text-white hover:bg-sky-700',
         logo: '/Logo/logo-paradero-104.png',
         phone: settings.whatsappOrdersPhone || settings.phone || '51987654321',
       };
@@ -57,8 +58,9 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       accent: '#f59e0b', // amber-500
       accentLight: 'bg-amber-50 text-amber-900 border-amber-200',
       accentBtn: 'bg-amber-500 hover:bg-amber-600 text-stone-950 font-black',
-      borderSelected: 'border-amber-500 ring-2 ring-amber-400/30',
-      badgeBg: 'bg-amber-500 text-stone-950',
+      borderSelected: 'border-amber-500 ring-2 ring-amber-400/30 bg-amber-50/40',
+      badgeSelected: 'bg-amber-500 text-stone-950 font-black',
+      stepperBtn: 'bg-amber-500 text-stone-950 font-black hover:bg-amber-600',
       logo: '/Logo/logo-lomas-grill.png',
       phone: settings.whatsappOrdersPhone || settings.phone || '51995881303',
     };
@@ -69,10 +71,40 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const drinks   = useMemo(() => dailyMenuItems.filter(i => i.course === 'bebida'  && i.available), [dailyMenuItems]);
   const desserts = useMemo(() => dailyMenuItems.filter(i => i.course === 'postre'  && i.available), [dailyMenuItems]);
 
-  const [selectedStarter, setSelectedStarter] = useState<DailyMenuItem | null>(starters[0] ?? null);
-  const [selectedMain,    setSelectedMain]    = useState<DailyMenuItem | null>(mains[0]    ?? null);
-  const [selectedDrink,   setSelectedDrink]   = useState<DailyMenuItem | null>(drinks[0]   ?? null);
-  const [selectedDessert, setSelectedDessert] = useState<DailyMenuItem | null>(null);
+  // Estado flexible de cantidades: Record<itemId, number>
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {};
+    if (mains.length > 0 && mains[0]) initial[mains[0].id] = 1;
+    if (starters.length > 0 && starters[0]) initial[starters[0].id] = 1;
+    if (drinks.length > 0 && drinks[0]) initial[drinks[0].id] = 1;
+    return initial;
+  });
+
+  const getQty = (id: string) => quantities[id] || 0;
+
+  const updateQty = (id: string, delta: number) => {
+    setQuantities(prev => {
+      const current = prev[id] || 0;
+      const next = Math.max(0, current + delta);
+      const updated = { ...prev };
+      if (next === 0) {
+        delete updated[id];
+      } else {
+        updated[id] = next;
+      }
+      return updated;
+    });
+  };
+
+  const clearCourse = (course: DailyMenuCourse) => {
+    setQuantities(prev => {
+      const updated = { ...prev };
+      dailyMenuItems.filter(i => i.course === course).forEach(i => {
+        delete updated[i.id];
+      });
+      return updated;
+    });
+  };
 
   const [customerName,    setCustomerName]    = useState('');
   const [customerPhone,   setCustomerPhone]   = useState('');
@@ -90,14 +122,74 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     return `${d[now.getDay()]}, ${now.getDate()} de ${m[now.getMonth()]}`;
   }, []);
 
-  const totalPrice = useMemo(() => {
-    let t = BASE_PRICE;
-    if (selectedDessert?.extraPrice) t += selectedDessert.extraPrice;
-    if (selectedMain?.extraPrice)    t += selectedMain.extraPrice;
-    return t;
-  }, [selectedDessert, selectedMain]);
+  // Conteos por categoría
+  const totalMains    = useMemo(() => mains.reduce((acc, i) => acc + getQty(i.id), 0), [mains, quantities]);
+  const totalStarters = useMemo(() => starters.reduce((acc, i) => acc + getQty(i.id), 0), [starters, quantities]);
+  const totalDrinks   = useMemo(() => drinks.reduce((acc, i) => acc + getQty(i.id), 0), [drinks, quantities]);
+  const totalDesserts = useMemo(() => desserts.reduce((acc, i) => acc + getQty(i.id), 0), [desserts, quantities]);
+  const totalItems    = totalMains + totalStarters + totalDrinks + totalDesserts;
 
-  const isReady = !!(selectedStarter && selectedMain && selectedDrink);
+  // Cálculo inteligente del total
+  const totalPrice = useMemo(() => {
+    if (totalMains > 0) {
+      let total = totalMains * BASE_PRICE;
+      // Adicionales por platos de fondo premium
+      mains.forEach(m => {
+        const q = getQty(m.id);
+        if (q > 0 && m.extraPrice) total += q * m.extraPrice;
+      });
+      // Si el cliente pide más entradas que platos de fondo, las extras se cobran a S/ 5.00
+      if (totalStarters > totalMains) {
+        total += (totalStarters - totalMains) * 5.00;
+      }
+      // Si pide más bebidas que fondos, las extras se cobran a S/ 3.00
+      if (totalDrinks > totalMains) {
+        total += (totalDrinks - totalMains) * 3.00;
+      }
+      // Postres
+      desserts.forEach(d => {
+        const q = getQty(d.id);
+        if (q > 0) total += q * (d.extraPrice ?? 3.50);
+      });
+      return total;
+    } else {
+      // Pedido individual a la carta si no escogió fondo
+      let total = 0;
+      starters.forEach(s => { total += getQty(s.id) * (s.extraPrice ?? 6.00); });
+      drinks.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? 3.00); });
+      desserts.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? 3.50); });
+      return total;
+    }
+  }, [quantities, totalMains, totalStarters, totalDrinks, totalDesserts, mains, starters, drinks, desserts]);
+
+  // Lista detallada de ítems seleccionados para resumen
+  const selectedItemsList = useMemo(() => {
+    const list: { course: DailyMenuCourse; item: DailyMenuItem; qty: number; courseLabel: string }[] = [];
+    
+    mains.forEach(item => {
+      const q = getQty(item.id);
+      if (q > 0) list.push({ course: 'fondo', item, qty: q, courseLabel: '🍲 Fondo' });
+    });
+
+    starters.forEach(item => {
+      const q = getQty(item.id);
+      if (q > 0) list.push({ course: 'entrada', item, qty: q, courseLabel: '🥣 Entrada' });
+    });
+
+    drinks.forEach(item => {
+      const q = getQty(item.id);
+      if (q > 0) list.push({ course: 'bebida', item, qty: q, courseLabel: '🥤 Bebida' });
+    });
+
+    desserts.forEach(item => {
+      const q = getQty(item.id);
+      if (q > 0) list.push({ course: 'postre', item, qty: q, courseLabel: '🍰 Postre' });
+    });
+
+    return list;
+  }, [quantities, mains, starters, drinks, desserts]);
+
+  const isReady = totalItems > 0;
 
   const handleCopyMenuLink = () => {
     const url = `${window.location.origin}/menu/${tenantKey}`;
@@ -109,35 +201,24 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const handleSend = () => {
     if (!isReady || !customerName.trim()) return;
 
-    const orderItems = [
-      {
-        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-1`,
-        productId: selectedStarter?.id || 'ent-1',
-        productName: `[Menú] Entrada: ${selectedStarter?.name}`,
-        quantity: 1, price: 0, station: 'Cocina', sentToKitchen: false, batchNumber: 1,
-      },
-      {
-        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-2`,
-        productId: selectedMain?.id || 'fnd-1',
-        productName: `[Menú] Fondo: ${selectedMain?.name}`,
-        quantity: 1, price: BASE_PRICE + (selectedMain?.extraPrice || 0), station: 'Cocina', sentToKitchen: false, batchNumber: 1,
-      },
-      {
-        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-3`,
-        productId: selectedDrink?.id || 'beb-1',
-        productName: `[Menú] Bebida: ${selectedDrink?.name}`,
-        quantity: 1, price: 0, station: 'Barra', sentToKitchen: false, batchNumber: 1,
-      },
-    ];
+    // Crear ítems del pedido para la comanda interna
+    const orderItems: any[] = [];
+    selectedItemsList.forEach(({ item, qty, course }) => {
+      let unitPrice = 0;
+      if (course === 'fondo') unitPrice = BASE_PRICE + (item.extraPrice || 0);
+      else if (course === 'postre') unitPrice = item.extraPrice || 3.50;
 
-    if (selectedDessert) {
       orderItems.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-4`,
-        productId: selectedDessert.id,
-        productName: `[Menú] Postre: ${selectedDessert.name}`,
-        quantity: 1, price: selectedDessert.extraPrice || 0, station: 'Cocina', sentToKitchen: false, batchNumber: 1,
+        id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${item.id}`,
+        productId: item.id,
+        productName: `[Menú] ${item.name}`,
+        quantity: qty,
+        price: unitPrice,
+        station: course === 'bebida' ? 'Barra' : 'Cocina',
+        sentToKitchen: false,
+        batchNumber: 1,
       });
-    }
+    });
 
     const dOrders = orders.filter(o => o.tableNumber.startsWith("D-") || o.type === "delivery");
     const nums = dOrders.map(o => parseInt(o.tableNumber.split("-")[1] || "0")).filter(n => !isNaN(n));
@@ -165,9 +246,9 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       deliveryType === 'delivery' ? `🛵 Delivery a: ${deliveryAddress}` :
       deliveryType === 'salon'    ? '🍽️ Consumo en Salón' : '🥡 Para Llevar (Recojo en local)';
 
-    const greeting = `🍽️ *PEDIDO MENÚ DEL DÍA — ${theme.name.toUpperCase()}*`;
-    const msg = [
-      greeting,
+    // Construcción limpia del mensaje de WhatsApp
+    const lines = [
+      `🍽️ *PEDIDO MENÚ DEL DÍA — ${theme.name.toUpperCase()}*`,
       `📅 *Fecha:* ${todayFormatted}`,
       ``,
       `👤 *Cliente:* ${customerName}`,
@@ -176,17 +257,53 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       `💳 *Método de Pago:* ${payMethod}`,
       orderNotes ? `📝 *Observaciones:* ${orderNotes}` : '',
       ``,
-      `🍽️ *ELECCIÓN DEL MENÚ:*`,
-      `🥣 *1. Entrada:* ${selectedStarter?.name}`,
-      `🍲 *2. Segundo:* ${selectedMain?.name}`,
-      `🥤 *3. Bebida:*  ${selectedDrink?.name}`,
-      selectedDessert ? `🍰 *4. Postre:*  ${selectedDessert.name} (+${settings.currency} ${selectedDessert.extraPrice?.toFixed(2)})` : '',
-      ``,
-      `💰 *TOTAL A PAGAR: ${settings.currency} ${totalPrice.toFixed(2)}*`,
-      ``,
-      `_Por favor confirmar la recepción de mi pedido. ¡Muchas gracias!_`,
-    ].filter(l => l !== '').join('\n');
+      `🍽️ *DETALLE DE PLATOS ESCOGIDOS:*`,
+    ];
 
+    if (totalMains > 0) {
+      lines.push(`🍲 *Platos de Fondo (${totalMains}):*`);
+      mains.forEach(m => {
+        const q = getQty(m.id);
+        if (q > 0) lines.push(`  • ${q}x ${m.name}${m.extraPrice ? ` (+S/ ${m.extraPrice.toFixed(2)})` : ''}`);
+      });
+    } else {
+      lines.push(`🍲 *Platos de Fondo:* (Sin plato de fondo)`);
+    }
+
+    if (totalStarters > 0) {
+      lines.push(`🥣 *Entradas / Sopas (${totalStarters}):*`);
+      starters.forEach(s => {
+        const q = getQty(s.id);
+        if (q > 0) lines.push(`  • ${q}x ${s.name}`);
+      });
+    } else {
+      lines.push(`🥣 *Entradas:* (Sin entrada)`);
+    }
+
+    if (totalDrinks > 0) {
+      lines.push(`🥤 *Bebidas (${totalDrinks}):*`);
+      drinks.forEach(d => {
+        const q = getQty(d.id);
+        if (q > 0) lines.push(`  • ${q}x ${d.name}`);
+      });
+    } else {
+      lines.push(`🥤 *Bebidas:* (Sin bebida)`);
+    }
+
+    if (totalDesserts > 0) {
+      lines.push(`🍰 *Postres (${totalDesserts}):*`);
+      desserts.forEach(d => {
+        const q = getQty(d.id);
+        if (q > 0) lines.push(`  • ${q}x ${d.name} (+S/ ${(d.extraPrice ?? 3.50).toFixed(2)})`);
+      });
+    }
+
+    lines.push(``);
+    lines.push(`💰 *TOTAL A PAGAR: ${settings.currency} ${totalPrice.toFixed(2)}*`);
+    lines.push(``);
+    lines.push(`_Por favor confirmar la recepción de mi pedido. ¡Muchas gracias!_`);
+
+    const msg = lines.filter(l => l !== '').join('\n');
     const waUrl = createWhatsAppUrl(theme.phone, msg);
     window.open(waUrl, '_blank');
     setShowCheckout(false);
@@ -195,6 +312,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-stone-900 font-sans flex flex-col selection:bg-amber-500 selection:text-white">
 
+      {/* ── BARRA SUPERIOR ADMIN (Si viene desde el panel) ── */}
       {onBack && (
         <div className="bg-stone-950 text-stone-300 px-4 py-2 text-xs font-bold flex items-center justify-between border-b border-stone-800">
           <div className="flex items-center gap-2">
@@ -220,6 +338,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         </div>
       )}
 
+      {/* ── HEADER PÚBLICO ── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -262,7 +381,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         </div>
       </header>
 
-      <section className={`relative overflow-hidden bg-gradient-to-br ${theme.heroBg} text-white px-4 py-8 sm:py-10`}>
+      {/* ── HERO BANNER ── */}
+      <section className={`relative overflow-hidden bg-gradient-to-br ${theme.heroBg} text-white px-4 py-8 sm:py-10 shadow-inner`}>
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -281,42 +401,48 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
           </p>
 
           <div className="pt-2">
-            <div className="inline-flex items-baseline gap-1.5 bg-white/15 backdrop-blur-md px-6 py-2.5 rounded-2xl border border-white/20 shadow-lg">
-              <span className="text-xs font-black uppercase text-amber-300 tracking-wider">Precio Menú</span>
+            <div className="inline-flex items-baseline gap-1.5 bg-white/15 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/20 shadow-lg">
+              <span className="text-xs font-black uppercase text-amber-300 tracking-wider">Menú Ejecutivo Completo</span>
               <span className="text-2xl sm:text-3xl font-black text-white ml-1">S/ {BASE_PRICE.toFixed(2)}</span>
             </div>
+            <p className="text-[11px] text-stone-300 font-medium mt-1.5">
+              💡 Puedes armar varios menús, pedir varios platos o prescindir de algún tiempo según tu preferencia.
+            </p>
           </div>
         </div>
       </section>
 
+      {/* ── BARRA RESUMEN PASOS ── */}
       <nav className="sticky top-[57px] z-20 bg-white/95 backdrop-blur-md border-b border-stone-200 px-4 py-2.5 shadow-xs">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {[
-            { step: 1, label: 'Entrada', done: !!selectedStarter, active: true },
-            { step: 2, label: 'Segundo', done: !!selectedMain, active: true },
-            { step: 3, label: 'Bebida', done: !!selectedDrink, active: true },
-            { step: 4, label: 'Postre', done: !!selectedDessert, optional: true },
+            { step: '1', label: 'Fondos', count: totalMains, color: 'bg-amber-500 text-stone-950' },
+            { step: '2', label: 'Entradas', count: totalStarters, color: 'bg-emerald-600 text-white' },
+            { step: '3', label: 'Bebidas', count: totalDrinks, color: 'bg-sky-600 text-white' },
+            { step: '4', label: 'Postres', count: totalDesserts, color: 'bg-rose-500 text-white' },
           ].map((s) => (
             <div
               key={s.label}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0",
-                s.done ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-stone-100 text-stone-500"
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 border",
+                s.count > 0 ? "bg-white border-stone-300 shadow-2xs text-stone-900" : "bg-stone-50 border-stone-200 text-stone-400"
               )}
             >
               <span className={cn(
                 "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black",
-                s.done ? "bg-emerald-600 text-white" : "bg-stone-300 text-stone-700"
+                s.count > 0 ? s.color : "bg-stone-200 text-stone-600"
               )}>
-                {s.done ? <Check className="w-3 h-3" /> : s.step}
+                {s.count > 0 ? s.count : s.step}
               </span>
               <span>{s.label}</span>
+              {s.count > 0 && <span className="text-[10px] text-stone-500 font-semibold">({s.count})</span>}
             </div>
           ))}
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto w-full px-4 py-6 space-y-8 flex-1 pb-40">
+      {/* ── CONTENIDO PRINCIPAL: SECCIONES EN 2 COLUMNAS ── */}
+      <main className="max-w-4xl mx-auto w-full px-4 py-6 space-y-8 flex-1 pb-44">
 
         {dailyMenuItems.length === 0 && (
           <div className="py-16 text-center space-y-3 bg-white rounded-3xl p-8 border border-stone-200 shadow-sm">
@@ -338,51 +464,190 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
           </div>
         )}
 
+        {/* ── 1. PLATOS DE FONDO (EL PLATO PRINCIPAL) ── */}
+        {mains.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-black text-xs">
+                  1
+                </div>
+                <div>
+                  <h3 className="font-black text-sm sm:text-base text-stone-900">Platos de Fondo</h3>
+                  <p className="text-[11px] text-stone-500 font-medium">Elige la cantidad de platos de fondo que deseas</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {totalMains > 0 ? (
+                  <button
+                    onClick={() => clearCourse('fondo')}
+                    className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition"
+                    title="No deseo plato de fondo"
+                  >
+                    Omitir Fondo
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    Omitido
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Grilla 2 Columnas */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+              {mains.map((item) => {
+                const qty = getQty(item.id);
+                const isSelected = qty > 0;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "relative rounded-2xl p-3 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2 shadow-2xs",
+                      isSelected
+                        ? `${theme.borderSelected} shadow-md`
+                        : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-xs"
+                    )}
+                  >
+                    {/* Badge de favorito o contador */}
+                    <div className="flex items-start justify-between gap-1">
+                      {item.popular ? (
+                        <span className="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md border border-amber-200">
+                          🔥 Especial
+                        </span>
+                      ) : <div />}
+
+                      {qty > 0 && (
+                        <span className="text-[11px] font-black bg-amber-500 text-stone-950 px-2 py-0.5 rounded-full shadow-2xs">
+                          {qty}x
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="cursor-pointer" onClick={() => updateQty(item.id, 1)}>
+                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.2rem]">
+                        {item.name}
+                      </p>
+                      {item.description && (
+                        <p className="text-[10px] text-stone-400 mt-1 line-clamp-2 leading-relaxed">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Barra inferior: Precio + Stepper de Cantidad */}
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 w-full mt-auto">
+                      <div>
+                        <span className="text-[10px] font-black text-stone-700 block leading-none">
+                          {item.extraPrice ? `+S/ ${item.extraPrice.toFixed(2)}` : 'Incluido'}
+                        </span>
+                      </div>
+
+                      {/* Stepper de Cantidad */}
+                      {qty > 0 ? (
+                        <div className="flex items-center gap-1.5 bg-stone-900 text-white rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-stone-800 hover:bg-stone-700 text-white transition active:scale-95"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-black text-xs min-w-[14px] text-center text-white">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-stone-800 hover:bg-stone-700 text-white transition active:scale-95"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.id, 1)}
+                          className="w-7 h-7 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-500 hover:text-stone-950 flex items-center justify-center transition shadow-2xs font-black"
+                          title="Agregar plato"
+                        >
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── 2. ENTRADAS & SOPAS ── */}
         {starters.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between border-b border-stone-200 pb-2">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs">
-                  1
+                  2
                 </div>
                 <div>
-                  <h3 className="font-black text-sm sm:text-base text-stone-900">Elige tu Entrada o Sopa</h3>
-                  <p className="text-[11px] text-stone-500 font-medium">Incluido en el menú</p>
+                  <h3 className="font-black text-sm sm:text-base text-stone-900">Entradas o Sopas</h3>
+                  <p className="text-[11px] text-stone-500 font-medium">Incluido con cada menú (puedes elegir varias o ninguna)</p>
                 </div>
               </div>
-              {selectedStarter && (
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  {selectedStarter.name}
-                </span>
-              )}
+
+              <div className="flex items-center gap-2">
+                {totalStarters > 0 ? (
+                  <button
+                    onClick={() => clearCourse('entrada')}
+                    className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition"
+                    title="No deseo entrada"
+                  >
+                    Omitir Entrada
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    Omitido
+                  </span>
+                )}
+              </div>
             </div>
 
+            {/* Grilla 2 Columnas */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
               {starters.map((item) => {
-                const isSelected = selectedStarter?.id === item.id;
+                const qty = getQty(item.id);
+                const isSelected = qty > 0;
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => setSelectedStarter(item)}
                     className={cn(
-                      "relative rounded-2xl p-3.5 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2",
+                      "relative rounded-2xl p-3 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2 shadow-2xs",
                       isSelected
-                        ? `${theme.borderSelected} bg-white shadow-md`
+                        ? "border-emerald-500 ring-2 ring-emerald-400/30 bg-emerald-50/40 shadow-md"
                         : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-xs"
                     )}
                   >
-                    {item.popular && (
-                      <span className="absolute top-2.5 right-2.5 text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md border border-amber-200">
-                        ⭐ Favorito
-                      </span>
-                    )}
+                    <div className="flex items-start justify-between gap-1">
+                      {item.popular ? (
+                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                          ⭐ Favorito
+                        </span>
+                      ) : <div />}
 
-                    <div className="pr-2">
-                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug">
+                      {qty > 0 && (
+                        <span className="text-[11px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                          {qty}x
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="cursor-pointer" onClick={() => updateQty(item.id, 1)}>
+                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.2rem]">
                         {item.name}
                       </p>
                       {item.description && (
-                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-2 leading-relaxed">
+                        <p className="text-[10px] text-stone-400 mt-1 line-clamp-2 leading-relaxed">
                           {item.description}
                         </p>
                       )}
@@ -392,92 +657,44 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                       <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">
                         Incluido
                       </span>
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center transition-all",
-                          isSelected ? "bg-emerald-600 text-white" : "border-2 border-stone-300"
-                        )}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
-        {mains.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between border-b border-stone-200 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-black text-xs">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-black text-sm sm:text-base text-stone-900">Elige tu Plato de Fondo</h3>
-                  <p className="text-[11px] text-stone-500 font-medium">El plato fuerte de tu almuerzo</p>
-                </div>
-              </div>
-              {selectedMain && (
-                <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  {selectedMain.name}
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
-              {mains.map((item) => {
-                const isSelected = selectedMain?.id === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedMain(item)}
-                    className={cn(
-                      "relative rounded-2xl p-3.5 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2",
-                      isSelected
-                        ? `${theme.borderSelected} bg-white shadow-md`
-                        : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-xs"
-                    )}
-                  >
-                    {item.popular && (
-                      <span className="absolute top-2.5 right-2.5 text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md border border-amber-200">
-                        🔥 Más pedido
-                      </span>
-                    )}
-
-                    <div className="pr-2">
-                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug">
-                        {item.name}
-                      </p>
-                      {item.description && (
-                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-2 leading-relaxed">
-                          {item.description}
-                        </p>
+                      {qty > 0 ? (
+                        <div className="flex items-center gap-1.5 bg-emerald-700 text-white rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-emerald-800 hover:bg-emerald-600 text-white transition active:scale-95"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-black text-xs min-w-[14px] text-center text-white">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-emerald-800 hover:bg-emerald-600 text-white transition active:scale-95"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.id, 1)}
+                          className="w-7 h-7 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition shadow-2xs font-black"
+                          title="Agregar entrada"
+                        >
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                        </button>
                       )}
                     </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 w-full mt-auto">
-                      <span className="text-[10px] font-black text-stone-600">
-                        {item.extraPrice ? `+S/ ${item.extraPrice.toFixed(2)}` : 'Incluido'}
-                      </span>
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center transition-all",
-                          isSelected ? "bg-amber-500 text-stone-950 font-black" : "border-2 border-stone-300"
-                        )}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           </section>
         )}
 
+        {/* ── 3. BEBIDAS & REFRESCOS ── */}
         {drinks.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between border-b border-stone-200 pb-2">
@@ -486,37 +703,58 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                   3
                 </div>
                 <div>
-                  <h3 className="font-black text-sm sm:text-base text-stone-900">Elige tu Bebida o Refresco</h3>
-                  <p className="text-[11px] text-stone-500 font-medium">Refresco casero preparado en el día</p>
+                  <h3 className="font-black text-sm sm:text-base text-stone-900">Bebidas y Refrescos</h3>
+                  <p className="text-[11px] text-stone-500 font-medium">Bebidas caseras frescas del día</p>
                 </div>
               </div>
-              {selectedDrink && (
-                <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
-                  {selectedDrink.name}
-                </span>
-              )}
+
+              <div className="flex items-center gap-2">
+                {totalDrinks > 0 ? (
+                  <button
+                    onClick={() => clearCourse('bebida')}
+                    className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition"
+                    title="No deseo bebida"
+                  >
+                    Omitir Bebida
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-black uppercase text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                    Omitido
+                  </span>
+                )}
+              </div>
             </div>
 
+            {/* Grilla 2 Columnas */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
               {drinks.map((item) => {
-                const isSelected = selectedDrink?.id === item.id;
+                const qty = getQty(item.id);
+                const isSelected = qty > 0;
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => setSelectedDrink(item)}
                     className={cn(
-                      "relative rounded-2xl p-3.5 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2",
+                      "relative rounded-2xl p-3 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2 shadow-2xs",
                       isSelected
-                        ? `${theme.borderSelected} bg-white shadow-md`
+                        ? "border-sky-500 ring-2 ring-sky-400/30 bg-sky-50/40 shadow-md"
                         : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-xs"
                     )}
                   >
-                    <div className="pr-2">
-                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug">
+                    <div className="flex items-start justify-between gap-1">
+                      <div />
+                      {qty > 0 && (
+                        <span className="text-[11px] font-black bg-sky-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                          {qty}x
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="cursor-pointer" onClick={() => updateQty(item.id, 1)}>
+                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.2rem]">
                         {item.name}
                       </p>
                       {item.description && (
-                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-1 leading-relaxed">
+                        <p className="text-[10px] text-stone-400 mt-1 line-clamp-1 leading-relaxed">
                           {item.description}
                         </p>
                       )}
@@ -526,22 +764,44 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                       <span className="text-[10px] font-black text-sky-700 uppercase tracking-wider">
                         Incluido
                       </span>
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center transition-all",
-                          isSelected ? "bg-sky-600 text-white" : "border-2 border-stone-300"
-                        )}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
+
+                      {qty > 0 ? (
+                        <div className="flex items-center gap-1.5 bg-sky-600 text-white rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-sky-700 hover:bg-sky-800 text-white transition active:scale-95"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-black text-xs min-w-[14px] text-center text-white">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-sky-700 hover:bg-sky-800 text-white transition active:scale-95"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.id, 1)}
+                          className="w-7 h-7 rounded-xl bg-sky-50 border border-sky-300 text-sky-800 hover:bg-sky-600 hover:text-white flex items-center justify-center transition shadow-2xs font-black"
+                          title="Agregar bebida"
+                        >
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           </section>
         )}
 
+        {/* ── 4. POSTRES & ADICIONALES ── */}
         {desserts.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between border-b border-stone-200 pb-2">
@@ -551,60 +811,55 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-sm sm:text-base text-stone-900">¿Deseas agregar un Postre?</h3>
+                    <h3 className="font-black text-sm sm:text-base text-stone-900">Postres Caseros</h3>
                     <span className="text-[10px] font-black bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full uppercase">
                       Opcional
                     </span>
                   </div>
-                  <p className="text-[11px] text-stone-500 font-medium">Endulza tu almuerzo con un postre casero</p>
+                  <p className="text-[11px] text-stone-500 font-medium">Endulza tu almuerzo con un postre del día</p>
                 </div>
               </div>
+
+              {totalDesserts > 0 && (
+                <button
+                  onClick={() => clearCourse('postre')}
+                  className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition"
+                >
+                  Limpiar Postres
+                </button>
+              )}
             </div>
 
+            {/* Grilla 2 Columnas */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
-              <button
-                onClick={() => setSelectedDessert(null)}
-                className={cn(
-                  "rounded-2xl p-3.5 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2",
-                  !selectedDessert
-                    ? "border-stone-400 bg-stone-100 shadow-xs"
-                    : "border-stone-200 bg-white hover:border-stone-300"
-                )}
-              >
-                <div>
-                  <p className="font-black text-xs sm:text-sm text-stone-800">🚫 Sin Postre</p>
-                  <p className="text-[11px] text-stone-500 mt-1">Solo el menú ejecutivo estándar</p>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-stone-200 w-full mt-auto">
-                  <span className="text-[10px] font-bold text-stone-500">+S/ 0.00</span>
-                  <div className={cn(
-                    "w-5 h-5 rounded-full flex items-center justify-center",
-                    !selectedDessert ? "bg-stone-700 text-white" : "border-2 border-stone-300"
-                  )}>
-                    {!selectedDessert && <Check className="w-3 h-3" />}
-                  </div>
-                </div>
-              </button>
-
               {desserts.map((item) => {
-                const isSelected = selectedDessert?.id === item.id;
+                const qty = getQty(item.id);
+                const isSelected = qty > 0;
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => setSelectedDessert(item)}
                     className={cn(
-                      "relative rounded-2xl p-3.5 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2",
+                      "relative rounded-2xl p-3 sm:p-4 text-left transition-all duration-200 flex flex-col justify-between gap-2.5 border-2 shadow-2xs",
                       isSelected
-                        ? `${theme.borderSelected} bg-white shadow-md`
+                        ? "border-rose-500 ring-2 ring-rose-400/30 bg-rose-50/40 shadow-md"
                         : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-xs"
                     )}
                   >
-                    <div>
-                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug">
+                    <div className="flex items-start justify-between gap-1">
+                      <div />
+                      {qty > 0 && (
+                        <span className="text-[11px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                          {qty}x
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="cursor-pointer" onClick={() => updateQty(item.id, 1)}>
+                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.2rem]">
                         {item.name}
                       </p>
                       {item.description && (
-                        <p className="text-[11px] text-stone-500 mt-1 line-clamp-1 leading-relaxed">
+                        <p className="text-[10px] text-stone-400 mt-1 line-clamp-1 leading-relaxed">
                           {item.description}
                         </p>
                       )}
@@ -612,18 +867,39 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
 
                     <div className="flex items-center justify-between pt-2 border-t border-stone-100 w-full mt-auto">
                       <span className="text-[10px] font-black text-rose-700">
-                        +{settings.currency} {item.extraPrice?.toFixed(2) || '3.50'}
+                        +{settings.currency} {(item.extraPrice ?? 3.50).toFixed(2)}
                       </span>
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center transition-all",
-                          isSelected ? "bg-rose-600 text-white" : "border-2 border-stone-300"
-                        )}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
+
+                      {qty > 0 ? (
+                        <div className="flex items-center gap-1.5 bg-rose-600 text-white rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-rose-700 hover:bg-rose-800 text-white transition active:scale-95"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-black text-xs min-w-[14px] text-center text-white">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }}
+                            className="w-5 h-5 flex items-center justify-center rounded-lg bg-rose-700 hover:bg-rose-800 text-white transition active:scale-95"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.id, 1)}
+                          className="w-7 h-7 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 hover:bg-rose-600 hover:text-white flex items-center justify-center transition shadow-2xs font-black"
+                          title="Agregar postre"
+                        >
+                          <Plus className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -632,18 +908,17 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
 
       </main>
 
+      {/* ── BARRA FLOTANTE INFERIOR DE PEDIDO ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-stone-200 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">Tu Menú</span>
-              {isReady && (
-                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.2 rounded-full">
-                  Listo
-                </span>
-              )}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">Tu Selección:</span>
+              <span className="text-[10px] font-black bg-stone-900 text-white px-2 py-0.5 rounded-md">
+                {totalMains} Fondos · {totalStarters} Entradas · {totalDrinks} Bebidas
+              </span>
             </div>
-            <p className="font-black text-lg sm:text-xl text-stone-900 leading-none mt-0.5">
+            <p className="font-black text-lg sm:text-2xl text-stone-900 leading-none mt-1">
               S/ {totalPrice.toFixed(2)}
             </p>
           </div>
@@ -652,7 +927,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
             onClick={() => setShowCheckout(true)}
             disabled={!isReady}
             className={cn(
-              "px-5 sm:px-7 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 transition-all shadow-lg",
+              "px-5 sm:px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 transition-all shadow-lg",
               isReady
                 ? `${theme.accentBtn} shadow-amber-500/25 active:scale-95 cursor-pointer`
                 : "bg-stone-200 text-stone-400 cursor-not-allowed"
@@ -665,11 +940,12 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         </div>
       </div>
 
+      {/* ── MODAL DE CONFIRMACIÓN Y DATOS DE ENTREGA ── */}
       <AnimatePresence>
         {showCheckout && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             <div
-              className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-stone-200 space-y-4 animate-in slide-in-from-bottom duration-300"
+              className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-stone-200 space-y-4 animate-in slide-in-from-bottom duration-300"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-5 border-b border-stone-100 flex items-center justify-between sticky top-0 bg-white z-10">
@@ -681,35 +957,39 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                   onClick={() => setShowCheckout(false)}
                   className="p-2 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="p-5 space-y-4 pt-0">
-                <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-2">
-                  <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider block">Resumen del Menú</span>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-stone-500">🥣 Entrada:</span>
-                      <span className="font-bold text-stone-900">{selectedStarter?.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-stone-500">🍲 Segundo:</span>
-                      <span className="font-bold text-stone-900">{selectedMain?.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-stone-500">🥤 Bebida:</span>
-                      <span className="font-bold text-stone-900">{selectedDrink?.name}</span>
-                    </div>
-                    {selectedDessert && (
-                      <div className="flex justify-between text-rose-700">
-                        <span>🍰 Postre:</span>
-                        <span className="font-bold">{selectedDessert.name} (+S/ {selectedDessert.extraPrice?.toFixed(2)})</span>
+
+                {/* Resumen detallado */}
+                <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-2.5">
+                  <span className="text-[10px] font-black text-stone-500 uppercase tracking-wider block">
+                    Resumen de Platos Seleccionados
+                  </span>
+
+                  <div className="space-y-1.5 text-xs divide-y divide-stone-100">
+                    {selectedItemsList.map(({ item, qty, courseLabel }) => (
+                      <div key={item.id} className="flex items-center justify-between pt-1.5 first:pt-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-black text-stone-900 bg-stone-200 px-1.5 py-0.2 rounded text-[11px]">
+                            {qty}x
+                          </span>
+                          <span className="font-bold text-stone-800 truncate">{item.name}</span>
+                          <span className="text-[10px] text-stone-400">({courseLabel})</span>
+                        </div>
+                        {item.extraPrice ? (
+                          <span className="text-amber-800 font-black shrink-0">+S/ {(item.extraPrice * qty).toFixed(2)}</span>
+                        ) : (
+                          <span className="text-stone-400 font-bold shrink-0">Incluido</span>
+                        )}
                       </div>
-                    )}
-                    <div className="flex justify-between pt-2 border-t border-stone-200 font-black text-sm">
-                      <span>Total a pagar:</span>
-                      <span className="text-amber-700 text-base">S/ {totalPrice.toFixed(2)}</span>
+                    ))}
+
+                    <div className="flex justify-between pt-2.5 border-t border-stone-200 font-black text-sm">
+                      <span>Total a Pagar:</span>
+                      <span className="text-amber-800 text-lg">S/ {totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
