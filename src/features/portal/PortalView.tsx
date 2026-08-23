@@ -18,7 +18,13 @@ import {
   Menu,
   X,
   Truck,
-  Trophy
+  Trophy,
+  Share2,
+  Copy,
+  ExternalLink,
+  Check,
+  Globe,
+  Link2
 } from 'lucide-react';
 import { useAppStore } from "../../hooks/StoreContext";
 import { UniversalSyncButton } from "../../components/UniversalSyncButton";
@@ -33,13 +39,25 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
   const { settings, hasPermission } = useAppStore();
   const [animate, setAnimate] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const isParadero = tenantId === 'paradero';
+  const tenantKey = isParadero ? 'paradero' : 'laslomas';
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimate(true), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleCopyLink = (url: string, key: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const deliveryUrl = `${window.location.origin}/carta/${tenantKey}`;
+  const menuDailyUrl = `${window.location.origin}/menu/${tenantKey}`;
 
   const accent = isParadero ? 'text-blue-600' : 'text-amber-700';
   const accentBg = isParadero ? 'bg-blue-600' : 'bg-amber-500';
@@ -64,6 +82,7 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
           { label: 'Ranking de Platos', show: hasPermission('dish_ranking'), iconEl: <Trophy className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'dish_ranking' }, 'menu_admin'); onClose?.(); } },
           { label: 'Rastreo GPS en Vivo', show: hasPermission('delivery'), iconEl: <Truck className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('tracking' as any); onClose?.(); } },
           { label: 'Administrar Carta & Precios', show: hasPermission('products'), iconEl: <ChefHat className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'products' }, 'menu_admin'); onClose?.(); } },
+          { label: '🔗 Ver / Copiar Enlaces Clientes', show: true, iconEl: <Share2 className={`w-4 h-4 text-emerald-600`} />, action: () => { setShowLinksModal(true); onClose?.(); } },
         ].filter(i => i.show).map((item) => (
           <button
             key={item.label}
@@ -327,6 +346,103 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
           </div>
         </main>
       </div>
+
+      {/* ── MODAL: ENLACES PARA CLIENTES & WHATSAPP ── */}
+      {showLinksModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-stone-200 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black ${isParadero ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-stone-900 leading-tight">Enlaces Públicos para Clientes</h3>
+                  <p className="text-xs text-stone-500 font-semibold">{settings.companyName} · Listos para WhatsApp y Redes</p>
+                </div>
+              </div>
+              <button onClick={() => setShowLinksModal(false)} className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Enlace 1: Tienda Delivery / Carta */}
+              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-amber-600" />
+                    <span className="font-black text-sm text-stone-900">App Delivery & Carta Completa</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Rappi / PedidosYa</span>
+                </div>
+                <p className="text-xs text-stone-500 font-medium">El cliente arma su carrito con platos de toda la carta y envía el pedido a tu WhatsApp.</p>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-stone-200 text-xs font-mono text-stone-700 select-all overflow-x-auto">
+                  <Globe className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  <span className="truncate flex-1">{deliveryUrl}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleCopyLink(deliveryUrl, 'delivery')}
+                    className="flex-1 py-2 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    {copiedKey === 'delivery' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === 'delivery' ? '¡Link Copiado!' : 'Copiar Link'}</span>
+                  </button>
+                  <button
+                    onClick={() => window.open(deliveryUrl, '_blank')}
+                    className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Enlace 2: Menú Ejecutivo del Día */}
+              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Utensils className="w-4 h-4 text-emerald-600" />
+                    <span className="font-black text-sm text-stone-900">Menú Ejecutivo del Día</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Almuerzos</span>
+                </div>
+                <p className="text-xs text-stone-500 font-medium">Vista guiada paso a paso: Entrada + Fondo + Bebida + Postre.</p>
+                <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-stone-200 text-xs font-mono text-stone-700 select-all overflow-x-auto">
+                  <Globe className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  <span className="truncate flex-1">{menuDailyUrl}</span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleCopyLink(menuDailyUrl, 'menu')}
+                    className="flex-1 py-2 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    {copiedKey === 'menu' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === 'menu' ? '¡Link Copiado!' : 'Copiar Link'}</span>
+                  </button>
+                  <button
+                    onClick={() => window.open(menuDailyUrl, '_blank')}
+                    className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-stone-100 flex justify-end">
+              <button
+                onClick={() => setShowLinksModal(false)}
+                className="px-5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

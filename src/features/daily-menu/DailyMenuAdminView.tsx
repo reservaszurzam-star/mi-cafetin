@@ -3,7 +3,7 @@ import { useAppStore } from "../../hooks/StoreContext";
 import {
   Plus, Trash2, Edit3, Check, X, Eye, EyeOff, Star,
   ChevronDown, ChevronUp, Utensils, Coffee, UtensilsCrossed,
-  Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle
+  Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle, Copy, ExternalLink
 } from 'lucide-react';
 import { cn, generateUUID } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
@@ -49,7 +49,7 @@ const EMPTY_ITEM: Omit<DailyMenuItem, 'id'> = {
 };
 
 export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
-  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems } = useAppStore();
+  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems, settings } = useAppStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState<DailyMenuCourse | null>(null);
@@ -126,6 +126,21 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     setShowResetConfirm(false);
   };
 
+  const [copiedLink, setCopiedLink] = useState(false);
+  const isParadero = settings.companyName.toLowerCase().includes('paradero');
+  const tenantKey = isParadero ? 'paradero' : 'laslomas';
+  const clientMenuUrl = `${window.location.origin}/menu/${tenantKey}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(clientMenuUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleOpenClientMenu = () => {
+    window.open(clientMenuUrl, '_blank');
+  };
+
   const totalItems = dailyMenuItems.length;
   const availableItems = dailyMenuItems.filter(i => i.available).length;
 
@@ -145,18 +160,38 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
             <div>
               <h1 className="font-black text-stone-900 text-base leading-none">Administrar Menú del Día</h1>
               <p className="text-[11px] text-stone-500 font-semibold mt-0.5">
-                {availableItems} disponibles · {totalItems} en total
+                {availableItems} disponibles · {totalItems} en total · <span className="font-bold text-stone-700">{settings.companyName}</span>
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowResetConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border border-stone-200 transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Restaurar predeterminados
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 transition"
+              title="Copiar enlace para enviar por WhatsApp a clientes"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink ? '¡Link Copiado!' : 'Copiar Link WhatsApp'}</span>
+            </button>
+
+            <button
+              onClick={handleOpenClientMenu}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition shadow-xs"
+              title="Abrir vista interactiva que ven los comensales"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Ver Vista Cliente</span>
+            </button>
+
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="p-1.5 rounded-xl text-xs text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
+              title="Restaurar platos predeterminados"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 

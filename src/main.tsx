@@ -18,24 +18,65 @@ type AuthState =
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
+function parsePublicRoute(): { isPublic: boolean; tenantId: string; mode: 'mobile_app' | 'daily' } | null {
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '');
+  const searchParams = new URLSearchParams(window.location.search);
+
+  const fullRaw = `${path} ${hash} ${window.location.search.toLowerCase()}`;
+
+  const hasCarta = fullRaw.includes('carta') || fullRaw.includes('delivery') || searchParams.get('view') === 'carta' || searchParams.get('view') === 'delivery';
+  const hasMenu = fullRaw.includes('menu') || searchParams.get('view') === 'menu' || searchParams.get('mode') === 'daily' || searchParams.get('menu') === 'daily';
+
+  const isPublic = hasCarta || hasMenu;
+  if (!isPublic) return null;
+
+  const isDaily = searchParams.get('mode') === 'daily' || path.startsWith('/menu') || hash.startsWith('menu') || searchParams.get('menu') === 'daily' || searchParams.get('view') === 'menu';
+
+  let tenantId = 'laslomas';
+  if (fullRaw.includes('paradero') || searchParams.get('tenant') === 'paradero' || searchParams.get('sede') === 'paradero') {
+    tenantId = 'paradero';
+  } else if (fullRaw.includes('laslomas') || fullRaw.includes('lomas') || searchParams.get('tenant') === 'laslomas' || searchParams.get('sede') === 'laslomas') {
+    tenantId = 'laslomas';
+  } else {
+    const saved = localStorage.getItem('cafetin_tenantId');
+    if (saved === 'paradero') tenantId = 'paradero';
+  }
+
+  return {
+    isPublic: true,
+    tenantId,
+    mode: isDaily ? 'daily' : 'mobile_app',
+  };
+}
+
 function Root() {
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' });
-  const path = window.location.pathname;
+  const [locationKey, setLocationKey] = useState<string>(() => `${window.location.pathname}${window.location.search}${window.location.hash}`);
 
-  // Rutas públicas: /carta/* o /menu/* muestra la carta o menú del día al cliente sin login
-  const isPublicMenu = path.startsWith('/carta') || path.startsWith('/menu');
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setLocationKey(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
-  if (isPublicMenu) {
-    // Extraer tenantId: /carta/laslomas → 'laslomas', /menu/laslomas → 'laslomas'
-    const parts = path.split('/');
-    const urlParams = new URLSearchParams(window.location.search);
-    const tenantParam = urlParams.get('tenant');
-    const tenantId = parts[2] || tenantParam || (parts[1] === 'laslomas' ? 'laslomas' : 'laslomas');
-    const isDaily = path.startsWith('/menu') || urlParams.get('mode') === 'daily';
+  const publicRoute = parsePublicRoute();
 
+  if (publicRoute) {
     return (
-      <StoreProvider tenantId={tenantId} key={`public-${tenantId}`}>
-        <PublicMenuView initialMode={isDaily ? 'daily' : 'mobile_app'} />
+      <StoreProvider tenantId={publicRoute.tenantId} key={`public-${publicRoute.tenantId}-${publicRoute.mode}`}>
+        <PublicMenuView
+          initialMode={publicRoute.mode}
+          onBack={() => {
+            window.location.href = '/';
+          }}
+        />
       </StoreProvider>
     );
   }
