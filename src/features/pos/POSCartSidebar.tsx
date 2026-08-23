@@ -19,6 +19,7 @@ interface POSCartSidebarProps {
   onSaveCustomerName: (name: string) => void;
   onBackToCatalog?: () => void;
   onSaveDraft?: () => void;
+  onDeleteOrder?: () => void;
   settings: Settings;
 }
 
@@ -34,6 +35,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   onSaveCustomerName,
   onBackToCatalog,
   onSaveDraft,
+  onDeleteOrder,
   settings,
 }) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -301,6 +303,21 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
           >
             <Save className="w-3.5 h-3.5 text-amber-600" />
             <span>Guardar Borrador & Atender Otra Mesa</span>
+          </button>
+        )}
+
+        {onDeleteOrder && activeOrder && (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`¿Estás seguro de que deseas cancelar la comanda y liberar la Mesa ${selectedTable}?`)) {
+                onDeleteOrder();
+              }
+            }}
+            className="w-full py-1.5 text-stone-400 hover:text-rose-600 text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Liberar / Cancelar comanda de esta mesa</span>
           </button>
         )}
       </div>

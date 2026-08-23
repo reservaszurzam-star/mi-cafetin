@@ -4,7 +4,7 @@ import { ViewState } from "../../App";
 import { 
   CreditCard, FileCheck, Split, Receipt, ArrowRight, 
   Wallet, CheckCircle2, QrCode, Clock, User, Printer,
-  Eye, ShoppingBag, DollarSign, ArrowUpRight
+  Eye, ShoppingBag, DollarSign, ArrowUpRight, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,11 +17,12 @@ interface BillingViewProps {
 }
 
 export default function BillingView({ onNavigate }: BillingViewProps) {
-  const { orders, sales, sunatInvoices, settings } = useAppStore();
+  const { orders, sales, sunatInvoices, settings, deleteOrder } = useAppStore();
   const [selectedOrderForPrint, setSelectedOrderForPrint] = useState<RestaurantOrder | null>(null);
 
   const activeOrdersTotal = orders.reduce((sum, o) => sum + o.total, 0);
   const todaySalesTotal = sales.reduce((sum, s) => sum + s.total, 0);
+  const emptyOrders = orders.filter((o) => o.items.length === 0 || o.total === 0);
 
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-300 pb-20 md:pb-8 space-y-6">
@@ -99,10 +100,42 @@ export default function BillingView({ onNavigate }: BillingViewProps) {
 
       {/* ── CUENTAS EN CURSO (MESAS) ── */}
       <div className="bg-white rounded-3xl border border-stone-200 shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
           <div>
             <h2 className="text-base font-black text-stone-900">Detalle de Mesas y Cuentas en Consumo</h2>
             <p className="text-xs text-stone-500 font-semibold">Revisa lo que va sumando cada mesa antes de cerrar la cuenta</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {emptyOrders.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  emptyOrders.forEach(o => deleteOrder(o.id));
+                }}
+                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Eliminar borradores vacíos o con S/ 0.00"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                <span>Limpiar ({emptyOrders.length}) vacías</span>
+              </button>
+            )}
+
+            {orders.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("¿Estás seguro de que deseas liberar TODAS las mesas y pedidos abiertos?")) {
+                    orders.forEach(o => deleteOrder(o.id));
+                  }
+                }}
+                className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Liberar todas las mesas activas"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-stone-500" />
+                <span>Liberar Todas</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -125,23 +158,41 @@ export default function BillingView({ onNavigate }: BillingViewProps) {
                       </span>
                     )}
                   </div>
-                  <span className="font-mono font-black text-lg text-amber-700">
-                    {formatMoney(ord.total, settings.currency)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-lg text-amber-700">
+                      {formatMoney(ord.total, settings.currency)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`¿Deseas eliminar/liberar la cuenta de la Mesa ${ord.tableNumber}?`)) {
+                          deleteOrder(ord.id);
+                        }
+                      }}
+                      className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition cursor-pointer"
+                      title="Eliminar o cancelar esta mesa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Lista de platos consumidos */}
                 <div className="bg-white rounded-xl p-3 border border-stone-200 space-y-1.5 text-xs max-h-40 overflow-y-auto custom-scrollbar">
-                  {ord.items.map((i, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-stone-700 font-semibold">
-                      <span className="truncate pr-2">
-                        <strong className="text-stone-900 font-black">{i.quantity}x</strong> {i.productName}
-                      </span>
-                      <span className="font-mono text-[11px] text-stone-500 shrink-0">
-                        {formatMoney(i.price * i.quantity, settings.currency)}
-                      </span>
-                    </div>
-                  ))}
+                  {ord.items.length === 0 ? (
+                    <p className="text-stone-400 italic text-[11px] text-center py-2">Sin platos añadidos (Borrador vacío)</p>
+                  ) : (
+                    ord.items.map((i, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-stone-700 font-semibold">
+                        <span className="truncate pr-2">
+                          <strong className="text-stone-900 font-black">{i.quantity}x</strong> {i.productName}
+                        </span>
+                        <span className="font-mono text-[11px] text-stone-500 shrink-0">
+                          {formatMoney(i.price * i.quantity, settings.currency)}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-1">

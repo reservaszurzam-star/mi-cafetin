@@ -16,7 +16,7 @@ export default function POSView() {
   const {
     products, settings, customers, orders,
     saveOrderDraft, sendOrderToKitchen, closeOrderAndPay,
-    updateOrder, printers, updateOrderStatus,
+    updateOrder, deleteOrder, printers, updateOrderStatus,
     currentUser
   } = useAppStore();
 
@@ -370,6 +370,7 @@ export default function POSView() {
             onSaveCustomerName={handleSaveCustomerName}
             onBackToCatalog={() => setMobileTab('catalog')}
             onSaveDraft={handleSaveDraft}
+            onDeleteOrder={() => activeOrder && deleteOrder(activeOrder.id)}
             settings={settings}
           />
         </div>
