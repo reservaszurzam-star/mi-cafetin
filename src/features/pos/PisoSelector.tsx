@@ -22,7 +22,7 @@ export const RESTAURANT_FLOORS: FloorDefinition[] = [
 type Status = "libre" | "borrador" | "cocina" | "servido";
 
 function getStatus(tbl: string, orders: RestaurantOrder[]): Status {
-  const o = orders.find((o) => o.tableNumber === tbl);
+  const o = orders.find((o) => o.tableNumber === tbl && o.status !== 'paid' && o.status !== 'cancelled');
   if (!o || o.items.length === 0) return "libre";
   if (o.status === "draft") return "borrador";
   if (o.status === "sent" || o.status === "partially_sent") return "cocina";
@@ -200,7 +200,8 @@ export function PisoSelector({
 
           return tableList.map((tbl) => {
             const s = getStatus(tbl, orders);
-            const ord = orders.find((o) => o.tableNumber === tbl);
+            const ord = orders.find((o) => o.tableNumber === tbl && o.status !== 'paid' && o.status !== 'cancelled');
+            const ordTotal = ord && ord.items ? ord.items.reduce((sum, item) => sum + item.price * item.quantity, 0) : 0;
             const sel = selectedTable === tbl;
             const hasCustomerName = ord?.dinerName && !ord.dinerName.toLowerCase().startsWith("mesa");
 
@@ -246,13 +247,13 @@ export function PisoSelector({
                       sel ? "text-amber-300" : "text-stone-900"
                     )}>
                       <User className="w-3 h-3 shrink-0" />
-                      {ord.dinerName}
+                      {ord?.dinerName}
                     </span>
                     <span className={cn(
                       "text-[10px] font-mono font-bold leading-none mt-1",
                       sel ? "text-stone-300" : "text-stone-500"
                     )}>
-                      Mesa {tbl} · {currency} {ord.total.toFixed(0)}
+                      Mesa {tbl} · {currency} {ordTotal.toFixed(0)}
                     </span>
                   </div>
                 ) : (
@@ -261,7 +262,7 @@ export function PisoSelector({
                       Mesa {tbl}
                     </span>
                     <span className={cn("text-[10px] font-bold leading-none mt-1", sel ? "text-stone-300" : "text-stone-500")}>
-                      {ord && ord.total > 0 ? `${currency} ${ord.total.toFixed(0)}` : "Libre"}
+                      {ordTotal > 0 ? `${currency} ${ordTotal.toFixed(0)}` : "Libre"}
                     </span>
                   </div>
                 )}

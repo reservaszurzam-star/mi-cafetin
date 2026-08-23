@@ -362,7 +362,7 @@ function mapDbOrder(o: Record<string, unknown>): RestaurantOrder {
     driverName:         o.driver_name as string | undefined,
     status:             o.status as RestaurantOrder['status'],
     items,
-    total:              (o.total as number) ?? 0,
+    total:              items.length > 0 ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) : 0,
     notes:              o.notes as string | undefined,
     waiterName:         o.waiter_name as string | undefined,
     posTerminalId:      o.pos_terminal_id as string | undefined,
