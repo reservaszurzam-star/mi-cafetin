@@ -31,26 +31,25 @@ export const UniversalSyncButton: React.FC<UniversalSyncButtonProps> = ({
   if (variant === 'floating') {
     return (
       <>
-        <div className={`fixed bottom-20 right-4 z-40 md:bottom-6 md:right-6 ${className}`}>
+        {/* Pestaña lateral semi-oculta en el borde derecho (mitad de pantalla, no estorba a Grace) */}
+        <div className={`fixed top-1/2 -translate-y-1/2 right-0 z-40 group ${className}`}>
           <button
             type="button"
             onClick={handleSync}
             disabled={isBusy}
             title="Sincronizar datos con Supabase ahora (Celular ↔ Web)"
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-stone-900/90 hover:bg-stone-900 text-white rounded-2xl shadow-xl border border-stone-700/80 backdrop-blur-md transition-all active:scale-95 cursor-pointer group"
+            className="flex items-center gap-2.5 py-2.5 pl-3 pr-4 bg-stone-900/90 hover:bg-stone-950 text-white rounded-l-2xl shadow-2xl border-y border-l border-stone-700/80 backdrop-blur-md transition-all duration-300 transform translate-x-[calc(100%-36px)] hover:translate-x-0 group-hover:translate-x-0 cursor-pointer active:scale-95"
           >
-            <div className="relative flex items-center justify-center">
-              <RefreshCw className={`w-4 h-4 text-amber-400 transition-transform ${isBusy ? 'animate-spin' : 'group-hover:rotate-180 duration-500'}`} />
-              {!isBusy && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              )}
+            <div className="relative flex items-center justify-center shrink-0">
+              <RefreshCw className={`w-4 h-4 text-amber-400 ${isBusy ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
-            <div className="text-left leading-none hidden sm:block">
-              <span className="text-[11px] font-black block">
+            <div className="text-left leading-tight pr-1 whitespace-nowrap">
+              <span className="text-[11px] font-black block text-white">
                 {isBusy ? 'Sincronizando...' : 'Sincronizar'}
               </span>
-              <span className="text-[9px] text-amber-400/90 font-bold block">
-                Supabase En Vivo
+              <span className="text-[9px] text-amber-400 font-bold block">
+                Supabase Live
               </span>
             </div>
           </button>
