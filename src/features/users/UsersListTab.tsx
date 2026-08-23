@@ -144,6 +144,7 @@ export const UsersListTab: React.FC<UsersListTabProps> = ({
               key={user.id}
               user={user}
               isSelf={user.id === currentUser.id}
+              isOwner={currentUser.role === 'Owner'}
               isPinVisible={!!showPins[user.id]}
               onTogglePin={() => togglePinVisibility(user.id)}
               onToggleActive={() => onToggleUserActive(user)}

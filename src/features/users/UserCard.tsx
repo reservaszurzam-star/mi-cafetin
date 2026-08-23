@@ -10,6 +10,7 @@ import { ROLES_INFO } from './userConstants';
 interface UserCardProps {
   user: User;
   isSelf: boolean;
+  isOwner: boolean;
   isPinVisible: boolean;
   onTogglePin: () => void;
   onToggleActive: () => void;
@@ -22,6 +23,7 @@ interface UserCardProps {
 export const UserCard: React.FC<UserCardProps> = ({
   user,
   isSelf,
+  isOwner,
   isPinVisible,
   onTogglePin,
   onToggleActive,
@@ -151,17 +153,18 @@ export const UserCard: React.FC<UserCardProps> = ({
           <Edit2 className="w-3.5 h-3.5" /> Editar
         </button>
 
-        {!isSelf && (
+        {/* Solo el rol Owner puede cambiar o usar perfiles directamente */}
+        {!isSelf && isOwner && (
           <button
             onClick={onUseProfile}
             className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-black transition"
-            title="Iniciar sesión rápida como este usuario"
+            title="Iniciar sesión rápida como este usuario (Solo visible para Owner)"
           >
             Usar Perfil
           </button>
         )}
 
-        {!isSelf && canDelete && (
+        {!isSelf && canDelete && (isOwner || user.role !== 'Owner') && (
           <button
             onClick={onDelete}
             className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
