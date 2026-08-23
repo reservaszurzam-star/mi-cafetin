@@ -421,13 +421,16 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
     return;
   }
 
-  // 2. Sincronizar items de la comanda
-  const currentItemIds = (order.items || []).map(i => ensureUUID(i.id));
+  // 2. Limpiar e insertar de forma completa todos los platos (soporta 50+ platos sin límites)
+  const { error: delErr } = await client
+    .from('order_items')
+    .delete()
+    .eq('order_id', validOrderId);
+  if (delErr) handleError('upsertOrder:cleanItems', delErr);
 
-  // Insertar o actualizar los platos actuales
   if (order.items && order.items.length > 0) {
-    const itemRows = order.items.map((i, idx) => ({
-      id:             currentItemIds[idx],
+    const itemRows = order.items.map((i) => ({
+      id:             ensureUUID(i.id),
       order_id:       validOrderId,
       product_id:     i.productId && UUID_REGEX.test(i.productId) ? i.productId : null,
       product_name:   i.productName,
@@ -439,24 +442,8 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
       sent_at:        i.sentAt ?? null,
       batch_number:   i.batchNumber ?? 1,
     }));
-    const { error: itemErr } = await client.from('order_items').upsert(itemRows, { onConflict: 'id' });
+    const { error: itemErr } = await client.from('order_items').insert(itemRows);
     if (itemErr) handleError('upsertOrder:items', itemErr);
-  }
-
-  // Limpiar items eliminados
-  if (currentItemIds.length > 0) {
-    const { error: delErr } = await client
-      .from('order_items')
-      .delete()
-      .eq('order_id', validOrderId)
-      .not('id', 'in', `(${currentItemIds.join(',')})`);
-    if (delErr) handleError('upsertOrder:cleanItems', delErr);
-  } else {
-    const { error: delAllErr } = await client
-      .from('order_items')
-      .delete()
-      .eq('order_id', validOrderId);
-    if (delAllErr) handleError('upsertOrder:clearItems', delAllErr);
   }
 }
 

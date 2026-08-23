@@ -36,7 +36,10 @@ export default function POSView() {
   const [ticketOrderToPrint, setTicketOrderToPrint] = useState<RestaurantOrder | null>(null);
   const [lastBatchNumber, setLastBatchNumber] = useState(1);
 
-  const activeOrder = useMemo(() => orders.find((o) => o.tableNumber === selectedTable), [orders, selectedTable]);
+  const activeOrder = useMemo(
+    () => orders.find((o) => o.tableNumber === selectedTable && o.status !== 'paid' && o.status !== 'cancelled'),
+    [orders, selectedTable]
+  );
   const currentItems = activeOrder?.items ?? [];
   const currentTotal = currentItems.reduce((s, i) => s + i.price * i.quantity, 0);
   const totalItemCount = currentItems.reduce((s, i) => s + i.quantity, 0);
