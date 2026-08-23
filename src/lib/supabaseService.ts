@@ -386,7 +386,42 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
   const client = db(tenantId);
   const validOrderId = ensureUUID(order.id);
 
-  // 1. Sincronizar items de la comanda primero
+  // 1. Guardar la orden principal primero (necesario para satisfacer la clave foránea order_items -> orders)
+  const orderRow = {
+    id:                validOrderId,
+    tenant_id:         tenantId,
+    type:              order.type,
+    floor:             order.floor,
+    table_number:      order.tableNumber,
+    custom_table_name: order.customTableName ?? null,
+    diner_name:        order.dinerName ?? null,
+    customer_id:       order.customerId && UUID_REGEX.test(order.customerId) ? order.customerId : null,
+    customer_phone:    order.customerPhone ?? null,
+    delivery_address:  order.deliveryAddress ?? null,
+    delivery_lat:      order.deliveryLat ?? null,
+    delivery_lng:      order.deliveryLng ?? null,
+    route_distance_km: order.routeDistanceKm ?? null,
+    route_duration_mins: order.routeDurationMins ?? null,
+    delivery_cost:     order.deliveryCost ?? null,
+    delivery_platform: order.deliveryPlatform ?? null,
+    driver_id:         order.driverId && UUID_REGEX.test(order.driverId) ? order.driverId : null,
+    driver_name:       order.driverName ?? null,
+    status:            order.status,
+    total:             order.total,
+    notes:             order.notes ?? null,
+    waiter_name:       order.waiterName ?? null,
+    pos_terminal_id:   order.posTerminalId ?? null,
+    pre_count_printed: order.preCountPrinted ?? false,
+    updated_at:        order.updatedAt || new Date().toISOString(),
+  };
+
+  const { error: orderErr } = await client.from('orders').upsert(orderRow, { onConflict: 'id' });
+  if (orderErr) {
+    handleError('upsertOrder:order', orderErr);
+    return;
+  }
+
+  // 2. Sincronizar items de la comanda
   const currentItemIds = (order.items || []).map(i => ensureUUID(i.id));
 
   // Insertar o actualizar los platos actuales
@@ -423,38 +458,6 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
       .eq('order_id', validOrderId);
     if (delAllErr) handleError('upsertOrder:clearItems', delAllErr);
   }
-
-  // 2. Guardar la orden principal (dispara Realtime cuando los items ya existen)
-  const orderRow = {
-    id:                validOrderId,
-    tenant_id:         tenantId,
-    type:              order.type,
-    floor:             order.floor,
-    table_number:      order.tableNumber,
-    custom_table_name: order.customTableName ?? null,
-    diner_name:        order.dinerName ?? null,
-    customer_id:       order.customerId && UUID_REGEX.test(order.customerId) ? order.customerId : null,
-    customer_phone:    order.customerPhone ?? null,
-    delivery_address:  order.deliveryAddress ?? null,
-    delivery_lat:      order.deliveryLat ?? null,
-    delivery_lng:      order.deliveryLng ?? null,
-    route_distance_km: order.routeDistanceKm ?? null,
-    route_duration_mins: order.routeDurationMins ?? null,
-    delivery_cost:     order.deliveryCost ?? null,
-    delivery_platform: order.deliveryPlatform ?? null,
-    driver_id:         order.driverId && UUID_REGEX.test(order.driverId) ? order.driverId : null,
-    driver_name:       order.driverName ?? null,
-    status:            order.status,
-    total:             order.total,
-    notes:             order.notes ?? null,
-    waiter_name:       order.waiterName ?? null,
-    pos_terminal_id:   order.posTerminalId ?? null,
-    pre_count_printed: order.preCountPrinted ?? false,
-    updated_at:        order.updatedAt || new Date().toISOString(),
-  };
-
-  const { error: orderErr } = await client.from('orders').upsert(orderRow, { onConflict: 'id' });
-  if (orderErr) handleError('upsertOrder:order', orderErr);
 }
 
 export async function updateOrderStatus(tenantId: string, orderId: string, status: RestaurantOrder['status']): Promise<void> {

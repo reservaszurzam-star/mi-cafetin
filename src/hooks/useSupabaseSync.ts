@@ -144,12 +144,11 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
 
     const channel = client
       .channel(`realtime:${tenantId}`)
-      // Cambios en órdenes
+      // Cambios en órdenes y comanda
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
         () => {
-          // Recarga órdenes activas combinando cambios sin sobreescribir ediciones locales recientes
           svc.fetchOrders(tenantId).then(remoteOrders => {
             if (!remoteOrders) return;
             setters.setOrders((prevOrders: RestaurantOrder[]) => {
@@ -159,11 +158,16 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
                 const local = prevMap.get(rem.id);
                 if (!local) return rem;
 
+                // Si la orden local tiene más platos, conservarla siempre
+                if (local.items.length > rem.items.length) {
+                  return local;
+                }
+
                 const localTime = new Date(local.updatedAt || local.createdAt).getTime();
                 const remTime = new Date(rem.updatedAt || rem.createdAt).getTime();
 
-                // Si la versión local tiene ítems y es más reciente, preservarla
-                if (localTime > remTime && local.items.length >= rem.items.length) {
+                // Si la versión local es más reciente
+                if (localTime > remTime) {
                   return local;
                 }
                 return rem;
@@ -178,6 +182,30 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
 
               return merged;
             });
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_items' },
+        () => {
+          svc.fetchOrders(tenantId).then(remoteOrders => {
+            if (remoteOrders && remoteOrders.length > 0) {
+              setters.setOrders((prevOrders: RestaurantOrder[]) => {
+                if (!prevOrders || prevOrders.length === 0) return remoteOrders;
+                const prevMap = new Map(prevOrders.map(o => [o.id, o]));
+                const merged = remoteOrders.map(rem => {
+                  const local = prevMap.get(rem.id);
+                  if (!local) return rem;
+                  if (local.items.length > rem.items.length) return local;
+                  return rem;
+                });
+                for (const [id, local] of prevMap.entries()) {
+                  if (!merged.some(m => m.id === id)) merged.push(local);
+                }
+                return merged;
+              });
+            }
           });
         }
       )
