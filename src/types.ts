@@ -24,6 +24,15 @@ export type Settings = {
   whatsappIncludeAddress?: boolean; // Si incluir dirección en delivery
   whatsappIncludePayment?: boolean; // Si incluir método de pago
   whatsappIncludeNotes?: boolean; // Si incluir notas especiales de los platos
+  dailyMenuPrice?: number; // Precio base del menú ejecutivo (ej. 16.00)
+  dailyMenuEnabled?: boolean; // Si el menú del día está activo para clientes
+  dailyMenuStartTime?: string; // Horario inicio (ej. "12:00")
+  dailyMenuEndTime?: string; // Horario fin (ej. "16:30")
+  dailyMenuTitle?: string; // Título promocional (ej. "Almuerzo Criollo & Brasas")
+  dailyMenuSubtitle?: string; // Subtítulo (ej. "Entrada + Fondo + Bebida")
+  dailyMenuExtraStarterPrice?: number; // Precio de entrada extra (ej. 5.00)
+  dailyMenuExtraDrinkPrice?: number; // Precio de bebida extra (ej. 3.00)
+  dailyMenuDefaultDessertPrice?: number; // Precio sugerido de postres (ej. 3.50)
   paymentDetails?: {
     yape?: string;
     yapeHolder?: string;

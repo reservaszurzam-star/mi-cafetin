@@ -8,7 +8,7 @@ import {
   CheckCircle2, Store, CreditCard, Building2, Smartphone, 
   Plus, Trash2, Edit3, Wifi, Usb, Bluetooth, Bell, Volume2, 
   Clock, DollarSign, Receipt, Sparkles, Check, X, Sliders,
-  HelpCircle, ShieldCheck, MessageCircle, Send, Eye
+  HelpCircle, ShieldCheck, MessageCircle, Send, Eye, UtensilsCrossed
 } from 'lucide-react';
 
 const AVAILABLE_CATEGORIES = [
@@ -78,7 +78,7 @@ export default function SettingsView() {
   const [printerList, setPrinterList] = useState<StationPrinter[]>(printers);
   const [editingPrinterId, setEditingPrinterId] = useState<string | null>(null);
   const [showAddPrinterModal, setShowAddPrinterModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'whatsapp' | 'payments' | 'restaurant' | 'alerts'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'daily_menu' | 'whatsapp' | 'payments' | 'restaurant' | 'alerts'>('general');
   const [testPrintSuccess, setTestPrintSuccess] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -129,6 +129,11 @@ export default function SettingsView() {
     }
   };
 
+  const handleTestPrint = (p: StationPrinter) => {
+    setTestPrintSuccess(p.id);
+    setTimeout(() => setTestPrintSuccess(null), 2500);
+  };
+
   const handleAddPrinter = () => {
     if (!newPrinter.name.trim()) return;
     const printer: StationPrinter = {
@@ -150,48 +155,58 @@ export default function SettingsView() {
   };
 
   const handleDeletePrinter = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta estación de impresión?')) {
-      setPrinterList(printerList.filter(p => p.id !== id));
+    setPrinterList(printerList.filter(p => p.id !== id));
+  };
+
+  const handleToggleCategory = (cat: string) => {
+    if (newPrinter.categories.includes(cat)) {
+      setNewPrinter({ ...newPrinter, categories: newPrinter.categories.filter(c => c !== cat) });
+    } else {
+      setNewPrinter({ ...newPrinter, categories: [...newPrinter.categories, cat] });
     }
   };
 
-  const handleTestPrint = (p: StationPrinter) => {
-    setTestPrintSuccess(p.id);
-    setTimeout(() => setTestPrintSuccess(null), 2500);
-  };
-
   return (
-    <div className="flex flex-col h-full animate-in fade-in duration-300 pb-20 md:pb-8">
-      
+    <div className="space-y-6 animate-in fade-in duration-300 pb-24">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-stone-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <Settings className="w-7 h-7 text-amber-500" />
-            Centro de Configuración Global
-          </h1>
-          <p className="text-xs md:text-sm text-stone-500 dark:text-stone-400 mt-1 font-medium">
-            Personaliza métodos de pago, ruteo de impresoras, alertas operativas y apariencia.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-800">
+              <Settings className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-black text-stone-900 tracking-tight">Configuración del Sistema</h1>
+              <p className="text-xs text-stone-500 font-medium mt-0.5">Control global de marca, pasarelas de pago, menú del día, impresoras y WhatsApp.</p>
+            </div>
+          </div>
         </div>
-        <button 
-          onClick={handleSubmit} 
-          className={cn(
-            "h-11 px-6 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all shadow-md",
-            savedSuccess 
-              ? "bg-emerald-600 text-white shadow-emerald-500/30" 
-              : "bg-stone-900 hover:bg-black text-white active:scale-95 shadow-stone-900/20"
+
+        {/* Global Save Button */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {savedSuccess && (
+            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl text-xs font-black border border-emerald-200 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>¡Cambios Guardados!</span>
+            </div>
           )}
-        >
-          {savedSuccess ? <Check className="w-4 h-4 text-emerald-200" /> : <CheckCircle2 className="w-4 h-4 text-amber-400" />}
-          <span>{savedSuccess ? '¡Cambios Guardados!' : 'Guardar Todo'}</span>
-        </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-stone-900 hover:bg-stone-800 active:scale-98 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-md shadow-stone-900/10 cursor-pointer"
+          >
+            <Check className="w-4 h-4" />
+            <span>Guardar Configuración</span>
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      {/* ── MAIN LAYOUT (TABS + CONTENT) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         
         {/* ── SIDEBAR TABS ── */}
-        <div className="lg:w-64 shrink-0">
+        <div className="lg:col-span-1 bg-transparent">
           <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 custom-scrollbar">
             
             <button 
@@ -205,6 +220,19 @@ export default function SettingsView() {
             >
               <Store className={cn("w-4 h-4", activeTab === 'general' ? "text-amber-400" : "text-stone-400")} /> 
               <span>General & Marca</span>
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('daily_menu')} 
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs md:text-sm transition-all whitespace-nowrap", 
+                activeTab === 'daily_menu' 
+                  ? "bg-amber-500 text-stone-950 shadow-md shadow-amber-500/20 font-black" 
+                  : "bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80 shadow-2xs"
+              )}
+            >
+              <UtensilsCrossed className={cn("w-4 h-4", activeTab === 'daily_menu' ? "text-stone-950" : "text-amber-500")} /> 
+              <span>Menú del Día & Precios</span>
             </button>
 
             <button 
@@ -385,6 +413,158 @@ export default function SettingsView() {
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ TAB: MENÚ DEL DÍA & PRECIOS ══════════════ */}
+          {activeTab === 'daily_menu' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="border-b border-stone-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg md:text-xl font-black text-stone-900 flex items-center gap-2.5">
+                    <UtensilsCrossed className="w-5 h-5 text-amber-500" />
+                    Menú del Día: Precios y Presentación
+                  </h2>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Configura el precio base del menú, precios de porciones extras y títulos para la vista pública de comensales.
+                  </p>
+                </div>
+              </div>
+
+              {/* Estructura de Precios */}
+              <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-6 space-y-6 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-black text-stone-900 text-sm">Precio Base del Menú Ejecutivo (S/)</h3>
+                    <p className="text-xs text-stone-600 mt-0.5">
+                      Tarifa completa que incluye 1 Plato de Fondo + 1 Entrada + 1 Bebida.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-amber-800 text-lg">S/</span>
+                    <input
+                      type="number"
+                      step={0.50}
+                      min={1}
+                      value={formData.dailyMenuPrice || 16.00}
+                      onChange={e => setFormData({ ...formData, dailyMenuPrice: parseFloat(e.target.value) || 0 })}
+                      className="w-28 bg-white border-2 border-amber-400 focus:border-amber-600 rounded-xl px-3 py-2 font-black text-lg text-stone-900 outline-none text-center shadow-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Precios de Porciones Adicionales */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-amber-200/60">
+                  <div className="bg-white/80 border border-amber-200/80 rounded-2xl p-4 space-y-1.5">
+                    <label className="text-xs font-black text-stone-800 block">🥣 Entrada Extra (S/)</label>
+                    <p className="text-[10px] text-stone-500">Cobro si piden entradas de más.</p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-xs font-bold text-stone-500">S/</span>
+                      <input
+                        type="number"
+                        step={0.50}
+                        value={formData.dailyMenuExtraStarterPrice ?? 5.00}
+                        onChange={e => setFormData({ ...formData, dailyMenuExtraStarterPrice: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-stone-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-stone-900 outline-none text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 border border-amber-200/80 rounded-2xl p-4 space-y-1.5">
+                    <label className="text-xs font-black text-stone-800 block">🥤 Bebida Extra (S/)</label>
+                    <p className="text-[10px] text-stone-500">Cobro si piden vasos extras.</p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-xs font-bold text-stone-500">S/</span>
+                      <input
+                        type="number"
+                        step={0.50}
+                        value={formData.dailyMenuExtraDrinkPrice ?? 3.00}
+                        onChange={e => setFormData({ ...formData, dailyMenuExtraDrinkPrice: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-stone-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-stone-900 outline-none text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 border border-amber-200/80 rounded-2xl p-4 space-y-1.5">
+                    <label className="text-xs font-black text-stone-800 block">🍰 Postre Sugerido (S/)</label>
+                    <p className="text-[10px] text-stone-500">Precio base para postres.</p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-xs font-bold text-stone-500">S/</span>
+                      <input
+                        type="number"
+                        step={0.50}
+                        value={formData.dailyMenuDefaultDessertPrice ?? 3.50}
+                        onChange={e => setFormData({ ...formData, dailyMenuDefaultDessertPrice: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white border border-stone-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-stone-900 outline-none text-center"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Textos y Horarios */}
+              <div className="bg-stone-50 border border-stone-200 rounded-3xl p-6 space-y-4">
+                <h3 className="font-black text-sm text-stone-900">Personalización de Textos y Horario</h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">Título del Menú</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Almuerzo Criollo & Brasas"
+                      value={formData.dailyMenuTitle || ''}
+                      onChange={e => setFormData({ ...formData, dailyMenuTitle: e.target.value })}
+                      className="w-full bg-white border border-stone-200 focus:border-stone-900 rounded-xl px-3.5 py-2.5 text-xs font-bold text-stone-900 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">Subtítulo / ¿Qué incluye?</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Sopa o Entrada + Plato de Fondo + Bebida"
+                      value={formData.dailyMenuSubtitle || ''}
+                      onChange={e => setFormData({ ...formData, dailyMenuSubtitle: e.target.value })}
+                      className="w-full bg-white border border-stone-200 focus:border-stone-900 rounded-xl px-3.5 py-2.5 text-xs font-medium text-stone-900 outline-none transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">Hora Inicio</label>
+                    <input
+                      type="time"
+                      value={formData.dailyMenuStartTime || '12:00'}
+                      onChange={e => setFormData({ ...formData, dailyMenuStartTime: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">Hora Fin</label>
+                    <input
+                      type="time"
+                      value={formData.dailyMenuEndTime || '16:30'}
+                      onChange={e => setFormData({ ...formData, dailyMenuEndTime: e.target.value })}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between border-t border-stone-200">
+                  <div>
+                    <p className="text-xs font-bold text-stone-900">Menú del Día Activo para Clientes</p>
+                    <p className="text-[10px] text-stone-500">Habilita o pausa temporalmente el menú en la vista pública.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.dailyMenuEnabled !== false}
+                    onChange={e => setFormData({ ...formData, dailyMenuEnabled: e.target.checked })}
+                    className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                  />
                 </div>
               </div>
             </div>

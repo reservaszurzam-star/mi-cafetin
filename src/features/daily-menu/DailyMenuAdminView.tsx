@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, Check, X, Eye, EyeOff, Star,
   ChevronDown, ChevronUp, Utensils, Coffee, UtensilsCrossed,
   Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle, Copy, ExternalLink,
-  Search, Sparkles, CheckCircle2, XCircle
+  Search, Sparkles, CheckCircle2, XCircle, Sliders, Settings as SettingsIcon, Clock, Phone
 } from 'lucide-react';
 import { cn, generateUUID } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
@@ -50,8 +50,29 @@ const EMPTY_ITEM: Omit<DailyMenuItem, 'id'> = {
 };
 
 export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
-  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems, settings } = useAppStore();
+  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems, settings, updateSettings } = useAppStore();
 
+  const isParadero = settings.companyName.toLowerCase().includes('paradero');
+  const tenantKey = isParadero ? 'paradero' : 'laslomas';
+  const clientMenuUrl = `${window.location.origin}/menu/${tenantKey}`;
+
+  // Vista activa: 'dishes' (Platos) o 'pricing_config' (Precios y Configuración)
+  const [activeViewMode, setActiveViewMode] = useState<'dishes' | 'pricing_config'>('dishes');
+
+  // Estado del formulario de Configuración y Precios
+  const [cfgBasePrice, setCfgBasePrice] = useState<number>(settings.dailyMenuPrice || (isParadero ? 18.00 : 16.00));
+  const [cfgExtraStarter, setCfgExtraStarter] = useState<number>(settings.dailyMenuExtraStarterPrice ?? 5.00);
+  const [cfgExtraDrink, setCfgExtraDrink] = useState<number>(settings.dailyMenuExtraDrinkPrice ?? 3.00);
+  const [cfgDefaultDessert, setCfgDefaultDessert] = useState<number>(settings.dailyMenuDefaultDessertPrice ?? 3.50);
+  const [cfgTitle, setCfgTitle] = useState<string>(settings.dailyMenuTitle || (isParadero ? 'Almuerzo Marino Ejecutivo' : 'Almuerzo Criollo & Brasas'));
+  const [cfgSubtitle, setCfgSubtitle] = useState<string>(settings.dailyMenuSubtitle || (isParadero ? 'Chilcano o Causa + Plato Marino + Refresco Natural' : 'Sopa o Entrada + Plato de Fondo + Bebida'));
+  const [cfgStartTime, setCfgStartTime] = useState<string>(settings.dailyMenuStartTime || '12:00');
+  const [cfgEndTime, setCfgEndTime] = useState<string>(settings.dailyMenuEndTime || '16:30');
+  const [cfgEnabled, setCfgEnabled] = useState<boolean>(settings.dailyMenuEnabled !== false);
+  const [cfgPhone, setCfgPhone] = useState<string>(settings.whatsappOrdersPhone || settings.phone || '');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Estados de platos
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState<DailyMenuCourse | null>(null);
   const [formData, setFormData] = useState<Omit<DailyMenuItem, 'id'>>(EMPTY_ITEM);
@@ -59,6 +80,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | DailyMenuCourse>('all');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const courses: DailyMenuCourse[] = ['entrada', 'fondo', 'bebida', 'postre'];
 
@@ -141,11 +163,6 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     setShowResetConfirm(false);
   };
 
-  const [copiedLink, setCopiedLink] = useState(false);
-  const isParadero = settings.companyName.toLowerCase().includes('paradero');
-  const tenantKey = isParadero ? 'paradero' : 'laslomas';
-  const clientMenuUrl = `${window.location.origin}/menu/${tenantKey}`;
-
   const handleCopyLink = () => {
     navigator.clipboard.writeText(clientMenuUrl);
     setCopiedLink(true);
@@ -156,9 +173,35 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     window.open(clientMenuUrl, '_blank');
   };
 
+  // Guardar configuración general y precio en Supabase
+  const handleSaveAllSettings = () => {
+    updateSettings({
+      dailyMenuPrice: Number(cfgBasePrice),
+      dailyMenuExtraStarterPrice: Number(cfgExtraStarter),
+      dailyMenuExtraDrinkPrice: Number(cfgExtraDrink),
+      dailyMenuDefaultDessertPrice: Number(cfgDefaultDessert),
+      dailyMenuTitle: cfgTitle.trim(),
+      dailyMenuSubtitle: cfgSubtitle.trim(),
+      dailyMenuStartTime: cfgStartTime,
+      dailyMenuEndTime: cfgEndTime,
+      dailyMenuEnabled: cfgEnabled,
+      whatsappOrdersPhone: cfgPhone.trim(),
+    });
+
+    setSaveSuccessMsg('¡Configuración guardada y sincronizada en Supabase con éxito!');
+    setTimeout(() => setSaveSuccessMsg(null), 3000);
+  };
+
+  // Cambio rápido de precio base desde la barra superior
+  const handleQuickSetPrice = (p: number) => {
+    setCfgBasePrice(p);
+    updateSettings({ dailyMenuPrice: p });
+    setSaveSuccessMsg(`¡Precio del menú actualizado a S/ ${p.toFixed(2)}!`);
+    setTimeout(() => setSaveSuccessMsg(null), 2500);
+  };
+
   const totalItems = dailyMenuItems.length;
   const availableItems = dailyMenuItems.filter(i => i.available).length;
-
   const filteredCourses = courses.filter(c => activeTab === 'all' || activeTab === c);
 
   return (
@@ -182,7 +225,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                 </span>
               </div>
               <p className="text-[11px] text-stone-500 font-semibold mt-0.5">
-                {availableItems} disponibles · {totalItems} platos en total
+                Precio actual: <span className="font-black text-amber-800">S/ {cfgBasePrice.toFixed(2)}</span> · {availableItems} platos disponibles
               </p>
             </div>
           </div>
@@ -217,262 +260,564 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      {/* ── BARRA DE BÚSQUEDA Y ACCIONES RÁPIDAS ── */}
-      <div className="bg-white border-b border-stone-200/80 px-4 py-3 shadow-2xs">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Tabs por Tiempo */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
-            {[
-              { id: 'all', label: '🍽️ Todos' },
-              { id: 'entrada', label: '🥣 Entradas' },
-              { id: 'fondo', label: '🍲 Fondos' },
-              { id: 'bebida', label: '🥤 Bebidas' },
-              { id: 'postre', label: '🍰 Postres' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border",
-                  activeTab === tab.id
-                    ? "bg-stone-900 text-white border-stone-900 shadow-xs"
-                    : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
+      {/* ── BARRA DE SELECCIÓN DE VISTA (PLATOS VS CONFIGURACIÓN GENERAL) ── */}
+      <div className="bg-white border-b border-stone-200 px-4 py-2.5">
+        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveViewMode('dishes')}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 border",
+                activeViewMode === 'dishes'
+                  ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+                  : "bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200"
+              )}
+            >
+              <Utensils className="w-3.5 h-3.5" />
+              <span>Platos del Menú ({totalItems})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveViewMode('pricing_config')}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 border",
+                activeViewMode === 'pricing_config'
+                  ? "bg-amber-500 text-stone-950 border-amber-500 shadow-xs"
+                  : "bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200"
+              )}
+            >
+              <SettingsIcon className="w-3.5 h-3.5" />
+              <span>⚙️ Precios y Configuración del Menú</span>
+            </button>
           </div>
 
-          {/* Buscador & Botones Bulk */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-56">
-              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar plato..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:bg-white focus:border-stone-900 transition"
-              />
+          {/* Selector de Precio Rápido */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-black text-stone-500 uppercase">Precio Base:</span>
+            <div className="flex items-center gap-1">
+              {[14, 15, 16, 18, 20].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handleQuickSetPrice(p)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-black transition-all border",
+                    cfgBasePrice === p
+                      ? "bg-amber-500 text-stone-950 border-amber-600 shadow-xs"
+                      : "bg-stone-50 text-stone-700 border-stone-200 hover:bg-amber-100"
+                  )}
+                >
+                  S/ {p}
+                </button>
+              ))}
             </div>
-
-            <button
-              onClick={handleEnableAll}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition whitespace-nowrap"
-              title="Habilitar todos los platos"
-            >
-              ✓ Activar Todos
-            </button>
-            <button
-              onClick={handleDisableAll}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-stone-100 text-stone-600 border border-stone-200 hover:bg-stone-200 transition whitespace-nowrap"
-              title="Pausar todos los platos"
-            >
-              ⏸ Pausar Todos
-            </button>
           </div>
         </div>
       </div>
 
-      {/* ── RESET CONFIRM ── */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="font-black text-stone-900">¿Restaurar menú?</h3>
-                <p className="text-xs text-stone-500">Se cargarán los 12 platos predeterminados según la sede activa.</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-bold text-sm hover:bg-stone-200 transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleReset}
-                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 transition"
-              >
-                Sí, restaurar
-              </button>
-            </div>
-          </div>
+      {/* Alerta de guardado exitoso */}
+      {saveSuccessMsg && (
+        <div className="bg-emerald-600 text-white text-xs font-black py-2.5 px-4 text-center animate-in fade-in duration-200 flex items-center justify-center gap-2 shadow-xs">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{saveSuccessMsg}</span>
         </div>
       )}
 
-      {/* ── CONTENIDO POR CATEGORÍAS ── */}
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      {/* ── MÓDULO 1: CONFIGURACIÓN GENERAL Y PRECIOS DEL MENÚ ── */}
+      {activeViewMode === 'pricing_config' ? (
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          {/* Tarjeta de Precios Base y Adicionales */}
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 text-stone-950 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <DollarSign className="w-5 h-5 stroke-[2.5]" />
+                <div>
+                  <h2 className="font-black text-base leading-none">Estructura de Precios del Menú</h2>
+                  <p className="text-[11px] font-bold text-stone-900 mt-0.5">Configura el costo base y los cobros de porciones adicionales</p>
+                </div>
+              </div>
+              <span className="text-xs font-black bg-stone-950 text-white px-3 py-1 rounded-full">
+                S/ Soles Peruanos
+              </span>
+            </div>
 
-        {filteredCourses.map(course => {
-          const cfg = COURSE_CONFIG[course];
-          let items = dailyMenuItems.filter(i => i.course === course);
-          if (searchTerm) {
-            items = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || (i.description && i.description.toLowerCase().includes(searchTerm.toLowerCase())));
-          }
-          const collapsed = collapsedCourses.has(course);
-          const isAddingHere = showAddForm === course;
-
-          return (
-            <section key={course} className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
-
-              {/* ─ Encabezado de categoría ─ */}
-              <div
-                className={cn('flex items-center justify-between px-5 py-4 border-b cursor-pointer', cfg.bg, cfg.border)}
-                onClick={() => toggleCollapse(course)}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center bg-white shadow-xs border", cfg.border)}>
-                    <cfg.icon className={cn("w-4 h-4", cfg.color)} />
-                  </div>
+            <div className="p-6 space-y-6">
+              {/* Precio Base */}
+              <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h2 className={cn('font-black text-sm', cfg.color)}>{cfg.label}</h2>
-                    <p className="text-[10px] text-stone-500 font-semibold">
-                      {items.length} plato{items.length !== 1 ? 's' : ''} · {items.filter(i => i.available).length} disponibles
+                    <label className="font-black text-stone-900 text-sm block">
+                      Precio Base del Menú Ejecutivo (S/) *
+                    </label>
+                    <p className="text-xs text-stone-500 font-medium">
+                      Precio estándar por comensal que incluye: 1 Plato de Fondo + 1 Entrada + 1 Bebida.
                     </p>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-amber-800 text-lg">S/</span>
+                    <input
+                      type="number"
+                      step={0.50}
+                      min={1}
+                      value={cfgBasePrice}
+                      onChange={e => setCfgBasePrice(parseFloat(e.target.value) || 0)}
+                      className="w-28 bg-white border-2 border-amber-400 rounded-xl px-3 py-2 text-lg font-black text-stone-900 outline-none text-center shadow-xs"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={e => { e.stopPropagation(); openAddForm(course); }}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs',
-                      cfg.color, 'bg-white border', cfg.border, 'hover:shadow-sm'
-                    )}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Agregar
-                  </button>
-                  {collapsed ? <ChevronDown className="w-4 h-4 text-stone-400" /> : <ChevronUp className="w-4 h-4 text-stone-400" />}
+
+                {/* Botones Presets */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-amber-200/60">
+                  <span className="text-[11px] font-bold text-stone-600 mr-1">Precios sugeridos rápidos:</span>
+                  {[12, 14, 15, 16, 17, 18, 20, 22, 25].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCfgBasePrice(p)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-black transition-all border",
+                        cfgBasePrice === p
+                          ? "bg-amber-500 text-stone-950 border-amber-600 shadow-xs"
+                          : "bg-white text-stone-700 border-stone-200 hover:bg-amber-100"
+                      )}
+                    >
+                      S/ {p}.00
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {!collapsed && (
-                <div className="divide-y divide-stone-100">
-
-                  {/* ─ Formulario AGREGAR ─ */}
-                  {isAddingHere && (
-                    <ItemForm
-                      formData={formData}
-                      onChange={setFormData}
-                      onSave={handleSaveNew}
-                      onCancel={cancelForm}
-                      course={course}
-                      isNew
+              {/* Precios de Extras */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-1.5">
+                  <label className="text-xs font-black text-stone-800 block">
+                    🥣 Entrada Adicional (S/)
+                  </label>
+                  <p className="text-[10px] text-stone-500 font-medium leading-tight">
+                    Cobro extra si piden más entradas que platos de fondo.
+                  </p>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-xs font-black text-stone-500">S/</span>
+                    <input
+                      type="number"
+                      step={0.50}
+                      value={cfgExtraStarter}
+                      onChange={e => setCfgExtraStarter(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm font-black text-stone-900 outline-none text-center"
                     />
-                  )}
+                  </div>
+                </div>
 
-                  {/* ─ Lista de ítems ─ */}
-                  {items.length === 0 && !isAddingHere && (
-                    <div className="py-10 text-center text-stone-400">
-                      <Utensils className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-xs font-bold">No hay platos en esta categoría</p>
-                      <button
-                        onClick={() => openAddForm(course)}
-                        className="mt-2 text-xs font-black text-amber-600 hover:underline"
-                      >
-                        + Agregar el primero
-                      </button>
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-1.5">
+                  <label className="text-xs font-black text-stone-800 block">
+                    🥤 Bebida Adicional (S/)
+                  </label>
+                  <p className="text-[10px] text-stone-500 font-medium leading-tight">
+                    Cobro extra si piden más vasos de refresco que fondos.
+                  </p>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-xs font-black text-stone-500">S/</span>
+                    <input
+                      type="number"
+                      step={0.50}
+                      value={cfgExtraDrink}
+                      onChange={e => setCfgExtraDrink(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm font-black text-stone-900 outline-none text-center"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-1.5">
+                  <label className="text-xs font-black text-stone-800 block">
+                    🍰 Postre Estándar (S/)
+                  </label>
+                  <p className="text-[10px] text-stone-500 font-medium leading-tight">
+                    Precio por defecto sugerido al agregar un postre.
+                  </p>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-xs font-black text-stone-500">S/</span>
+                    <input
+                      type="number"
+                      step={0.50}
+                      value={cfgDefaultDessert}
+                      onChange={e => setCfgDefaultDessert(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-white border border-stone-300 rounded-xl px-3 py-2 text-sm font-black text-stone-900 outline-none text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta de Información y Horarios */}
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
+            <div className="bg-stone-900 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Sliders className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h2 className="font-black text-base leading-none">Presentación & Horarios</h2>
+                  <p className="text-[11px] text-stone-400 mt-0.5">Personaliza los títulos y la información visual para tus comensales</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-black text-stone-800 block mb-1">
+                  Título Promocional del Menú
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Almuerzo Criollo & Brasas / Almuerzo Marino Ejecutivo"
+                  value={cfgTitle}
+                  onChange={e => setCfgTitle(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-stone-900 outline-none focus:bg-white focus:border-stone-900 transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-stone-800 block mb-1">
+                  Subtítulo / ¿Qué incluye el menú?
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Sopa o Entrada + Plato de Fondo + Bebida Casera"
+                  value={cfgSubtitle}
+                  onChange={e => setCfgSubtitle(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2.5 text-xs font-medium text-stone-900 outline-none focus:bg-white focus:border-stone-900 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-black text-stone-800 block mb-1">
+                    Horario de Inicio del Menú
+                  </label>
+                  <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
+                    <Clock className="w-4 h-4 text-stone-400" />
+                    <input
+                      type="time"
+                      value={cfgStartTime}
+                      onChange={e => setCfgStartTime(e.target.value)}
+                      className="w-full bg-transparent text-xs font-black text-stone-900 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black text-stone-800 block mb-1">
+                    Horario de Fin del Menú
+                  </label>
+                  <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
+                    <Clock className="w-4 h-4 text-stone-400" />
+                    <input
+                      type="time"
+                      value={cfgEndTime}
+                      onChange={e => setCfgEndTime(e.target.value)}
+                      className="w-full bg-transparent text-xs font-black text-stone-900 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-stone-800 block mb-1">
+                  WhatsApp Receptor de Pedidos del Menú
+                </label>
+                <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                  <input
+                    type="tel"
+                    placeholder="Ej: 51995881303"
+                    value={cfgPhone}
+                    onChange={e => setCfgPhone(e.target.value)}
+                    className="w-full bg-transparent text-xs font-bold text-stone-900 outline-none"
+                  />
+                </div>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Número que recibirá las comandas enviadas por los clientes vía WhatsApp (formato: 51995881303).
+                </p>
+              </div>
+
+              {/* Toggle Activo */}
+              <div className="pt-3 flex items-center justify-between border-t border-stone-100">
+                <div>
+                  <p className="text-xs font-black text-stone-900">Estado del Menú del Día</p>
+                  <p className="text-[11px] text-stone-500">
+                    {cfgEnabled ? '🟢 Menú disponible para clientes en la web' : '🔴 Menú pausado temporalmente'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCfgEnabled(!cfgEnabled)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-xs font-black transition-all border",
+                    cfgEnabled
+                      ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                      : "bg-stone-200 text-stone-600 border-stone-300"
+                  )}
+                >
+                  {cfgEnabled ? '✓ Menú Activo' : '⏸ Menú Pausado'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Botón Guardar en Supabase */}
+          <div className="pt-2">
+            <button
+              onClick={handleSaveAllSettings}
+              className="w-full py-4 bg-stone-900 hover:bg-stone-800 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2.5 shadow-xl transition-all active:scale-98 cursor-pointer"
+            >
+              <Save className="w-5 h-5 text-amber-400" />
+              <span>Guardar y Aplicar Configuración en Supabase</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── MÓDULO 2: GESTIÓN DE PLATOS ── */
+        <>
+          {/* ── BARRA DE BÚSQUEDA Y ACCIONES RÁPIDAS ── */}
+          <div className="bg-white border-b border-stone-200/80 px-4 py-3 shadow-2xs">
+            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Tabs por Tiempo */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
+                {[
+                  { id: 'all', label: '🍽️ Todos' },
+                  { id: 'entrada', label: '🥣 Entradas' },
+                  { id: 'fondo', label: '🍲 Fondos' },
+                  { id: 'bebida', label: '🥤 Bebidas' },
+                  { id: 'postre', label: '🍰 Postres' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border",
+                      activeTab === tab.id
+                        ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+                        : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Buscador & Botones Bulk */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-56">
+                  <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar plato..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:bg-white focus:border-stone-900 transition"
+                  />
+                </div>
+
+                <button
+                  onClick={handleEnableAll}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition whitespace-nowrap"
+                  title="Habilitar todos los platos"
+                >
+                  ✓ Activar Todos
+                </button>
+                <button
+                  onClick={handleDisableAll}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-stone-100 text-stone-600 border border-stone-200 hover:bg-stone-200 transition whitespace-nowrap"
+                  title="Pausar todos los platos"
+                >
+                  ⏸ Pausar Todos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── RESET CONFIRM ── */}
+          {showResetConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-stone-900">¿Restaurar menú?</h3>
+                    <p className="text-xs text-stone-500">Se cargarán los 12 platos predeterminados según la sede activa.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-bold text-sm hover:bg-stone-200 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 transition"
+                  >
+                    Sí, restaurar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── CONTENIDO POR CATEGORÍAS ── */}
+          <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+            {filteredCourses.map(course => {
+              const cfg = COURSE_CONFIG[course];
+              let items = dailyMenuItems.filter(i => i.course === course);
+              if (searchTerm) {
+                items = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || (i.description && i.description.toLowerCase().includes(searchTerm.toLowerCase())));
+              }
+              const collapsed = collapsedCourses.has(course);
+              const isAddingHere = showAddForm === course;
+
+              return (
+                <section key={course} className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
+
+                  {/* ─ Encabezado de categoría ─ */}
+                  <div
+                    className={cn('flex items-center justify-between px-5 py-4 border-b cursor-pointer', cfg.bg, cfg.border)}
+                    onClick={() => toggleCollapse(course)}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center bg-white shadow-xs border", cfg.border)}>
+                        <cfg.icon className={cn("w-4 h-4", cfg.color)} />
+                      </div>
+                      <div>
+                        <h2 className={cn('font-black text-sm', cfg.color)}>{cfg.label}</h2>
+                        <p className="text-[10px] text-stone-500 font-semibold">
+                          {items.length} plato{items.length !== 1 ? 's' : ''} · {items.filter(i => i.available).length} disponibles
+                        </p>
+                      </div>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={e => { e.stopPropagation(); openAddForm(course); }}
+                        className={cn(
+                          'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs',
+                          cfg.color, 'bg-white border', cfg.border, 'hover:shadow-sm'
+                        )}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Agregar
+                      </button>
+                      {collapsed ? <ChevronDown className="w-4 h-4 text-stone-400" /> : <ChevronUp className="w-4 h-4 text-stone-400" />}
+                    </div>
+                  </div>
 
-                  {items.map(item => (
-                    <React.Fragment key={item.id}>
-                      {editingId === item.id ? (
+                  {!collapsed && (
+                    <div className="divide-y divide-stone-100">
+
+                      {/* ─ Formulario AGREGAR ─ */}
+                      {isAddingHere && (
                         <ItemForm
                           formData={formData}
                           onChange={setFormData}
-                          onSave={handleSaveEdit}
+                          onSave={handleSaveNew}
                           onCancel={cancelForm}
                           course={course}
-                          isNew={false}
+                          isNew
                         />
-                      ) : (
-                        <div className={cn(
-                          'flex items-start gap-3 px-5 py-4 transition',
-                          !item.available && 'opacity-50 bg-stone-50'
-                        )}>
-                          {/* Indicador disponibilidad */}
+                      )}
+
+                      {/* ─ Lista de ítems ─ */}
+                      {items.length === 0 && !isAddingHere && (
+                        <div className="py-10 text-center text-stone-400">
+                          <Utensils className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-xs font-bold">No hay platos en esta categoría</p>
                           <button
-                            onClick={() => handleToggleAvailable(item)}
-                            className={cn(
-                              'mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 transition',
-                              item.available
-                                ? 'bg-emerald-500 border-emerald-500 text-white'
-                                : 'bg-white border-stone-300 text-stone-300'
-                            )}
-                            title={item.available ? 'Disponible – clic para deshabilitar' : 'No disponible – clic para habilitar'}
+                            onClick={() => openAddForm(course)}
+                            className="mt-2 text-xs font-black text-amber-600 hover:underline"
                           >
-                            {item.available && <Check className="w-3 h-3" />}
+                            + Agregar el primero
                           </button>
-
-                          {/* Datos del plato */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-black text-sm text-stone-900 leading-snug">{item.name}</span>
-                              {item.popular && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-orange-100 text-orange-700">
-                                  <Star className="w-2.5 h-2.5" /> Favorito
-                                </span>
-                              )}
-                              {!item.available && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-stone-200 text-stone-500">No disponible</span>
-                              )}
-                            </div>
-                            {item.description && (
-                              <p className="text-[11px] text-stone-500 font-medium mt-0.5 leading-snug line-clamp-2">{item.description}</p>
-                            )}
-                            {item.extraPrice != null && (
-                              <span className="inline-block mt-1 text-[11px] font-bold text-amber-700">
-                                +S/ {item.extraPrice.toFixed(2)} adicional
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Acciones */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleTogglePopular(item)}
-                              title={item.popular ? 'Quitar de favoritos' : 'Marcar como favorito'}
-                              className={cn(
-                                'p-1.5 rounded-lg transition',
-                                item.popular
-                                  ? 'text-orange-500 bg-orange-50 hover:bg-orange-100'
-                                  : 'text-stone-300 hover:text-orange-400 hover:bg-orange-50'
-                              )}
-                            >
-                              <Star className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => openEditForm(item)}
-                              className="p-1.5 rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition"
-                              title="Editar plato"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                              title="Eliminar plato"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
                         </div>
                       )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </div>
+
+                      {items.map(item => (
+                        <React.Fragment key={item.id}>
+                          {editingId === item.id ? (
+                            <ItemForm
+                              formData={formData}
+                              onChange={setFormData}
+                              onSave={handleSaveEdit}
+                              onCancel={cancelForm}
+                              course={course}
+                              isNew={false}
+                            />
+                          ) : (
+                            <div className={cn(
+                              'flex items-center justify-between px-5 py-3.5 transition-colors',
+                              !item.available && 'opacity-40 bg-stone-50/50'
+                            )}>
+                              <div className="flex-1 min-w-0 pr-4">
+                                <div className="flex items-center gap-2">
+                                  <span className={cn('text-xs font-black text-stone-900', !item.available && 'line-through text-stone-400')}>
+                                    {item.name}
+                                  </span>
+                                  {item.popular && (
+                                    <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded border border-orange-200">
+                                      ⭐ Favorito
+                                    </span>
+                                  )}
+                                  {item.extraPrice && (
+                                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                      +{settings.currency} {item.extraPrice.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.description && (
+                                  <p className="text-[11px] text-stone-400 font-medium mt-0.5 line-clamp-1">{item.description}</p>
+                                )}
+                              </div>
+
+                              {/* Acciones */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleTogglePopular(item)}
+                                  title={item.popular ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                                  className={cn(
+                                    'p-1.5 rounded-lg transition',
+                                    item.popular
+                                      ? 'text-orange-500 bg-orange-50 hover:bg-orange-100'
+                                      : 'text-stone-300 hover:text-orange-400 hover:bg-orange-50'
+                                  )}
+                                >
+                                  <Star className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => openEditForm(item)}
+                                  className="p-1.5 rounded-lg text-stone-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                                  title="Editar plato"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(item.id)}
+                                  className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  title="Eliminar plato"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

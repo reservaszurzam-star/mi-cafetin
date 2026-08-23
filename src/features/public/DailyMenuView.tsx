@@ -17,8 +17,6 @@ interface DailyMenuViewProps {
   onViewFullMenu?: () => void;
 }
 
-const BASE_PRICE = 16.00;
-
 type DeliveryType = 'recojo' | 'salon' | 'delivery';
 type PayMethod = 'Yape' | 'Plin' | 'Efectivo' | 'Tarjeta';
 
@@ -28,6 +26,12 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const isParadero = settings.companyName.toLowerCase().includes('paradero');
   const tenantKey = isParadero ? 'paradero' : 'laslomas';
 
+  // Precios configurables desde el panel de administración
+  const basePrice = (settings.dailyMenuPrice && settings.dailyMenuPrice > 0) ? settings.dailyMenuPrice : (isParadero ? 18.00 : 16.00);
+  const extraStarterPrice = settings.dailyMenuExtraStarterPrice ?? 5.00;
+  const extraDrinkPrice = settings.dailyMenuExtraDrinkPrice ?? 3.00;
+  const defaultDessertPrice = settings.dailyMenuDefaultDessertPrice ?? 3.50;
+
   // Configuración de Colores y Estilos según Sede
   const theme = useMemo(() => {
     if (isParadero) {
@@ -35,8 +39,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         name: 'Paradero 104',
         subtitle: 'Barra Cevichera & Mariscos',
         heroBadge: '🌊 MENÚ MARINO DEL DÍA',
-        heroTitle: 'Almuerzo Marino Ejecutivo',
-        heroDesc: 'Chilcano o Causa + Plato Marino + Refresco Natural',
+        heroTitle: settings.dailyMenuTitle || 'Almuerzo Marino Ejecutivo',
+        heroDesc: settings.dailyMenuSubtitle || 'Chilcano o Causa + Plato Marino + Refresco Natural',
         heroBg: 'from-[#0a192f] via-[#0f2d4a] to-[#1a4a6e]',
         accent: '#0284c7', // sky-600
         accentLight: 'bg-sky-50 text-sky-800 border-sky-200',
@@ -52,8 +56,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       name: 'Las Lomas Grill',
       subtitle: 'Brasas, Parrillas & Sabor Criollo',
       heroBadge: '🔥 MENÚ EJECUTIVO DEL DÍA',
-      heroTitle: 'Almuerzo Criollo & Brasas',
-      heroDesc: 'Sopa o Entrada + Plato de Fondo + Bebida',
+      heroTitle: settings.dailyMenuTitle || 'Almuerzo Criollo & Brasas',
+      heroDesc: settings.dailyMenuSubtitle || 'Sopa o Entrada + Plato de Fondo + Bebida',
       heroBg: 'from-[#1c130c] via-[#2d1b10] to-[#451e08]',
       accent: '#f59e0b', // amber-500
       accentLight: 'bg-amber-50 text-amber-900 border-amber-200',
@@ -132,24 +136,24 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   // Cálculo inteligente del total
   const totalPrice = useMemo(() => {
     if (totalMains > 0) {
-      let total = totalMains * BASE_PRICE;
+      let total = totalMains * basePrice;
       // Adicionales por platos de fondo premium
       mains.forEach(m => {
         const q = getQty(m.id);
         if (q > 0 && m.extraPrice) total += q * m.extraPrice;
       });
-      // Si el cliente pide más entradas que platos de fondo, las extras se cobran a S/ 5.00
+      // Si el cliente pide más entradas que platos de fondo, las extras se cobran según extraStarterPrice
       if (totalStarters > totalMains) {
-        total += (totalStarters - totalMains) * 5.00;
+        total += (totalStarters - totalMains) * extraStarterPrice;
       }
-      // Si pide más bebidas que fondos, las extras se cobran a S/ 3.00
+      // Si pide más bebidas que fondos, las extras se cobran según extraDrinkPrice
       if (totalDrinks > totalMains) {
-        total += (totalDrinks - totalMains) * 3.00;
+        total += (totalDrinks - totalMains) * extraDrinkPrice;
       }
       // Postres
       desserts.forEach(d => {
         const q = getQty(d.id);
-        if (q > 0) total += q * (d.extraPrice ?? 3.50);
+        if (q > 0) total += q * (d.extraPrice ?? defaultDessertPrice);
       });
       return total;
     } else {
@@ -157,10 +161,10 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       let total = 0;
       starters.forEach(s => { total += getQty(s.id) * (s.extraPrice ?? 6.00); });
       drinks.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? 3.00); });
-      desserts.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? 3.50); });
+      desserts.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? defaultDessertPrice); });
       return total;
     }
-  }, [quantities, totalMains, totalStarters, totalDrinks, totalDesserts, mains, starters, drinks, desserts]);
+  }, [quantities, totalMains, totalStarters, totalDrinks, totalDesserts, mains, starters, drinks, desserts, basePrice, extraStarterPrice, extraDrinkPrice, defaultDessertPrice]);
 
   // Lista detallada de ítems seleccionados para resumen
   const selectedItemsList = useMemo(() => {
@@ -205,8 +209,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     const orderItems: any[] = [];
     selectedItemsList.forEach(({ item, qty, course }) => {
       let unitPrice = 0;
-      if (course === 'fondo') unitPrice = BASE_PRICE + (item.extraPrice || 0);
-      else if (course === 'postre') unitPrice = item.extraPrice || 3.50;
+      if (course === 'fondo') unitPrice = basePrice + (item.extraPrice || 0);
+      else if (course === 'postre') unitPrice = item.extraPrice || defaultDessertPrice;
 
       orderItems.push({
         id: crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${item.id}`,
@@ -403,7 +407,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
           <div className="pt-2">
             <div className="inline-flex items-baseline gap-1.5 bg-white/15 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/20 shadow-lg">
               <span className="text-xs font-black uppercase text-amber-300 tracking-wider">Menú Ejecutivo Completo</span>
-              <span className="text-2xl sm:text-3xl font-black text-white ml-1">S/ {BASE_PRICE.toFixed(2)}</span>
+              <span className="text-2xl sm:text-3xl font-black text-white ml-1">S/ {basePrice.toFixed(2)}</span>
             </div>
             <p className="text-[11px] text-stone-300 font-medium mt-1.5">
               💡 Puedes armar varios menús, pedir varios platos o prescindir de algún tiempo según tu preferencia.
