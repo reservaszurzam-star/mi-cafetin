@@ -66,21 +66,6 @@ function Root() {
     };
   }, []);
 
-  const publicRoute = parsePublicRoute();
-
-  if (publicRoute) {
-    return (
-      <StoreProvider tenantId={publicRoute.tenantId} key={`public-${publicRoute.tenantId}-${publicRoute.mode}`}>
-        <PublicMenuView
-          initialMode={publicRoute.mode}
-          onBack={() => {
-            window.location.href = '/';
-          }}
-        />
-      </StoreProvider>
-    );
-  }
-
   // ─── Flujo de Autenticación para Administradores (/admin) ───
   useEffect(() => {
     const init = async () => {
@@ -107,6 +92,21 @@ function Root() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const publicRoute = parsePublicRoute();
+
+  if (publicRoute) {
+    return (
+      <StoreProvider tenantId={publicRoute.tenantId} key={`public-${publicRoute.tenantId}-${publicRoute.mode}`}>
+        <PublicMenuView
+          initialMode={publicRoute.mode}
+          onBack={() => {
+            window.location.href = '/';
+          }}
+        />
+      </StoreProvider>
+    );
+  }
 
   // Restaura la sesión ya autenticada
   const restoreSession = (user: { id: string; email?: string; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> }) => {
