@@ -175,24 +175,27 @@ export async function loginByPin(tenantId: string, username: string, pin: string
 }
 
 export async function upsertUser(tenantId: string, user: User): Promise<void> {
+  const validId = ensureUUID(user.id);
   const row = {
-    id:         user.id,
+    id:         validId,
     tenant_id:  tenantId,
     name:       user.name,
     username:   user.username,
     pin:        user.pin,
     role:       user.role,
-    phone:      user.phone,
-    email:      user.email,
-    active:     user.active,
-    avatar_url: user.avatarUrl,
+    phone:      user.phone ?? null,
+    email:      user.email ?? null,
+    active:     user.active ?? true,
+    avatar_url: user.avatarUrl ?? null,
+    updated_at: new Date().toISOString(),
   };
   const { error } = await db(tenantId).from('users').upsert(row, { onConflict: 'id' });
   if (error) handleError('upsertUser', error);
 }
 
 export async function deleteUser(tenantId: string, userId: string): Promise<void> {
-  const { error } = await db(tenantId).from('users').delete().eq('id', userId).eq('tenant_id', tenantId);
+  const validId = ensureUUID(userId);
+  const { error } = await db(tenantId).from('users').delete().eq('id', validId).eq('tenant_id', tenantId);
   if (error) handleError('deleteUser', error);
 }
 

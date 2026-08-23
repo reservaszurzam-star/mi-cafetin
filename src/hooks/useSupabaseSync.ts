@@ -219,6 +219,16 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
           });
         }
       )
+      // Cambios en usuarios y credenciales
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users', filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          svc.fetchUsers(tenantId).then(users => {
+            if (users.length > 0) setters.setUsers(users);
+          });
+        }
+      )
       .subscribe();
 
     realtimeChannel.current = channel as unknown as ReturnType<typeof getSupabaseForTenant>['channel'];

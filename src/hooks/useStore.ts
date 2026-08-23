@@ -689,18 +689,23 @@ export function useStore(tenantId: string) {
 
   // ── Helpers para Usuarios ──
   const addUser = useCallback((user: Omit<User, 'id' | 'createdAt'>) => {
-    const newUser: User = { ...user, id: `usr-${Date.now()}`, createdAt: new Date().toISOString() };
+    const newUser: User = { ...user, id: generateUUID(), createdAt: new Date().toISOString() };
     setUsers(prev => [...prev, newUser]);
     svc.upsertUser(tenantId, newUser);
   }, [tenantId]);
 
   const updateUser = useCallback((id: string, user: Partial<User>) => {
+    let updatedUser: User | undefined;
     setUsers(prev => {
-      const next = prev.map(u => u.id === id ? { ...u, ...user } : u);
-      const updated = next.find(u => u.id === id);
-      if (updated) svc.upsertUser(tenantId, updated);
-      return next;
+      const target = prev.find(u => u.id === id);
+      if (!target) return prev;
+      const updated = { ...target, ...user };
+      updatedUser = updated;
+      return prev.map(u => u.id === id ? updated : u);
     });
+    if (updatedUser) {
+      svc.upsertUser(tenantId, updatedUser);
+    }
   }, [tenantId]);
 
   const deleteUser = useCallback((id: string) => {
