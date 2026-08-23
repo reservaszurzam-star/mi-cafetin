@@ -340,28 +340,31 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const updateOrder = useCallback((id: string, updates: Partial<RestaurantOrder>) => {
+    let updatedOrder: RestaurantOrder | undefined;
     setOrders((prev) => {
-      const next = prev.map((o) => (o.id === id ? { ...o, ...updates, updatedAt: new Date().toISOString() } : o));
-      const updated = next.find(o => o.id === id);
-      if (updated) svc.upsertOrder(tenantId, updated);
-      return next;
+      const entry = prev.find(o => o.id === id);
+      if (!entry) return prev;
+      const updated = { ...entry, ...updates, updatedAt: new Date().toISOString() };
+      updatedOrder = updated;
+      return prev.map((o) => (o.id === id ? updated : o));
     });
+    if (updatedOrder) {
+      svc.upsertOrder(tenantId, updatedOrder);
+    }
   }, [tenantId]);
 
   const saveOrderDraft = useCallback((order: RestaurantOrder) => {
+    const entry = { ...order, updatedAt: new Date().toISOString() };
     setOrders((prev) => {
       const idx = prev.findIndex((o) => o.id === order.id);
-      const entry = { ...order, updatedAt: new Date().toISOString() };
-      let next: RestaurantOrder[];
       if (idx >= 0) {
-        next = [...prev];
+        const next = [...prev];
         next[idx] = entry;
-      } else {
-        next = [...prev, entry];
+        return next;
       }
-      svc.upsertOrder(tenantId, entry);
-      return next;
+      return [...prev, entry];
     });
+    svc.upsertOrder(tenantId, entry);
   }, [tenantId]);
 
 
