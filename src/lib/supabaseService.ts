@@ -322,12 +322,13 @@ export async function deleteProduct(tenantId: string, id: string): Promise<void>
 // ─── ORDERS ──────────────────────────────────────────────────────────────────
 
 function mapDbOrderItem(i: Record<string, unknown>): OrderItem {
+  const itemId = (i.id as string) || generateUUID();
   return {
-    id:             i.id as string,
-    productId:      i.product_id as string,
-    productName:    i.product_name as string,
-    quantity:       i.quantity as number,
-    price:          i.price as number,
+    id:             itemId,
+    productId:      (i.product_id as string) || itemId,
+    productName:    (i.product_name as string) || 'Plato',
+    quantity:       (i.quantity as number) || 1,
+    price:          (i.price as number) || 0,
     notes:          i.notes as string | undefined,
     station:        i.station as OrderItem['station'],
     sentToKitchen:  (i.sent_to_kitchen as boolean) ?? false,

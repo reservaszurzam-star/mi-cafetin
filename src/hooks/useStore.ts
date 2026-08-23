@@ -51,6 +51,7 @@ import {
 
 import * as svc from "../lib/supabaseService";
 import { useSupabaseSync } from "./useSupabaseSync";
+import { generateUUID } from "../lib/utils";
 
 export function useStore(tenantId: string) {
   const [customers, setCustomers] = useState<Customer[]>(() => {
@@ -359,7 +360,7 @@ export function useStore(tenantId: string) {
   }, []);
 
   const createCustomTableOrder = useCallback((customName: string, floor: 1 | 2 | 3 | 4 = 1, dinerCount: number = 2) => {
-    const newOrderId = `ord-custom-${Date.now().toString().slice(-4)}`;
+    const newOrderId = generateUUID();
     const newOrder: RestaurantOrder = {
       id: newOrderId,
       type: "salón",
@@ -382,7 +383,7 @@ export function useStore(tenantId: string) {
 
   const createDirectSaleOrder = useCallback(() => {
     const saleNo = Date.now().toString().slice(-4);
-    const newOrderId = `ord-vl-${saleNo}`;
+    const newOrderId = generateUUID();
     const newOrder: RestaurantOrder = {
       id: newOrderId,
       type: "venta_libre",

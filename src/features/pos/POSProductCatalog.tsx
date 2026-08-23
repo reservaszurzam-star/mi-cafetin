@@ -47,7 +47,12 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
     const map = new Map<string, number>();
     if (activeOrder?.items) {
       for (const item of activeOrder.items) {
-        map.set(item.productId, (map.get(item.productId) || 0) + item.quantity);
+        if (item.productId) {
+          map.set(item.productId, (map.get(item.productId) || 0) + item.quantity);
+        }
+        if (item.productName) {
+          map.set(item.productName.toLowerCase(), (map.get(item.productName.toLowerCase()) || 0) + item.quantity);
+        }
       }
     }
     return map;
@@ -98,7 +103,7 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {filteredProducts.map((prod) => {
-              const qtyInOrder = itemQuantities.get(prod.id) || 0;
+              const qtyInOrder = itemQuantities.get(prod.id) || itemQuantities.get(prod.name.toLowerCase()) || 0;
               return (
                 <button
                   key={prod.id}

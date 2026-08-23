@@ -10,6 +10,7 @@ import { POSDeliveryModal } from "./POSDeliveryModal";
 import { POSSendKitchenModal } from "./POSSendKitchenModal";
 import { Utensils, ClipboardList } from "lucide-react";
 import { formatMoney } from "../../lib/formatters";
+import { generateUUID } from "../../lib/utils";
 
 export default function POSView() {
   const {
@@ -45,7 +46,7 @@ export default function POSView() {
     let orderToUpdate = activeOrder;
     if (!orderToUpdate) {
       orderToUpdate = {
-        id: `ord-${selectedTable.replace(/\s+/g, '_')}-${Date.now().toString().slice(-4)}`,
+        id: generateUUID(),
         type: selectedTable.startsWith("D-") ? "delivery" : selectedTable.startsWith("Venta") ? "venta_libre" : "salón",
         floor: (activeFloor as 1|2|3|4) || 1,
         tableNumber: selectedTable,
@@ -60,7 +61,7 @@ export default function POSView() {
     }
 
     const existingIndex = orderToUpdate.items.findIndex(
-      (item) => item.productId === product.id && !item.sentToKitchen
+      (item) => (item.productId === product.id || item.productName.toLowerCase() === product.name.toLowerCase()) && !item.sentToKitchen
     );
 
     let newItems = [...orderToUpdate.items];
@@ -71,13 +72,14 @@ export default function POSView() {
       };
     } else {
       newItems.push({
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: generateUUID(),
         productId: product.id,
         productName: product.name,
         quantity: 1,
         price: product.price,
-        station: product.station,
+        station: product.station || "Cocina & Parrilla",
         sentToKitchen: false,
+        batchNumber: 1,
       });
     }
 
@@ -89,10 +91,11 @@ export default function POSView() {
     });
   };
 
-  const handleUpdateQuantity = (productId: string, delta: number) => {
+  const handleUpdateQuantity = (itemIdOrProductId: string, delta: number) => {
     if (!activeOrder) return;
     const existingIndex = activeOrder.items.findIndex(
-      (i) => i.productId === productId && !i.sentToKitchen
+      (i) => (i.id === itemIdOrProductId || (i.productId && i.productId === itemIdOrProductId)) &&
+             (activeOrder.status === 'draft' || !i.sentToKitchen)
     );
     if (existingIndex < 0) return;
 
@@ -106,22 +109,32 @@ export default function POSView() {
     }
 
     const newTotal = newItems.reduce((s, i) => s + i.price * i.quantity, 0);
-    updateOrder(activeOrder.id, { items: newItems, total: newTotal });
+    updateOrder(activeOrder.id, {
+      items: newItems,
+      total: newTotal,
+      status: newItems.length === 0 ? "draft" : activeOrder.status,
+    });
   };
 
-  const handleRemoveItem = (itemOrProductId: string) => {
+  const handleRemoveItem = (itemIdOrProductId: string) => {
     if (!activeOrder) return;
     const newItems = activeOrder.items.filter(
-      (i) => i.productId !== itemOrProductId && i.id !== itemOrProductId
+      (i) => i.id !== itemIdOrProductId && (i.productId ? i.productId !== itemIdOrProductId : true)
     );
     const newTotal = newItems.reduce((s, i) => s + i.price * i.quantity, 0);
-    updateOrder(activeOrder.id, { items: newItems, total: newTotal });
+    updateOrder(activeOrder.id, {
+      items: newItems,
+      total: newTotal,
+      status: newItems.length === 0 ? "draft" : activeOrder.status,
+    });
   };
 
-  const handleSaveNote = (productId: string, note: string) => {
+  const handleSaveNote = (itemIdOrProductId: string, note: string) => {
     if (!activeOrder) return;
     const newItems = activeOrder.items.map((i) =>
-      i.productId === productId && !i.sentToKitchen ? { ...i, notes: note.trim() || undefined } : i
+      (i.id === itemIdOrProductId || (i.productId && i.productId === itemIdOrProductId)) && (activeOrder.status === 'draft' || !i.sentToKitchen)
+        ? { ...i, notes: note.trim() || undefined }
+        : i
     );
     updateOrder(activeOrder.id, { items: newItems });
   };
@@ -132,7 +145,7 @@ export default function POSView() {
       updateOrder(activeOrder.id, { dinerName: trimmed || undefined });
     } else if (trimmed) {
       saveOrderDraft({
-        id: `ord-${selectedTable.replace(/\s+/g, '_')}-${Date.now().toString().slice(-4)}`,
+        id: generateUUID(),
         type: selectedTable.startsWith("D-") ? "delivery" : "salón",
         floor: (activeFloor as 1|2|3|4) || 1,
         tableNumber: selectedTable,
@@ -231,7 +244,7 @@ export default function POSView() {
   const handleAddCustomTable = (clientName: string, targetTable?: string) => {
     const finalTable = targetTable || `Cliente: ${clientName}`;
     saveOrderDraft({
-      id: `ord-${finalTable.replace(/\s+/g, '_')}-${Date.now().toString().slice(-4)}`,
+      id: generateUUID(),
       type: "salón",
       floor: (activeFloor as 1|2|3|4) || 1,
       tableNumber: finalTable,
@@ -251,7 +264,7 @@ export default function POSView() {
     const saleNum = Math.floor(100 + Math.random() * 900);
     const tbl = `Venta #${saleNum}`;
     saveOrderDraft({
-      id: `ord-direct-${Date.now()}`,
+      id: generateUUID(),
       type: "venta_libre",
       floor: (activeFloor as 1|2|3|4) || 1,
       tableNumber: tbl,
@@ -407,7 +420,7 @@ export default function POSView() {
         onConfirm={(delData) => {
           const tableNum = `D-${Math.floor(10 + Math.random() * 90)}`;
           saveOrderDraft({
-            id: `ord-${tableNum}-${Date.now().toString().slice(-4)}`,
+            id: generateUUID(),
             type: "delivery",
             floor: 1,
             tableNumber: tableNum,
