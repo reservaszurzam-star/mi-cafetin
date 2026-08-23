@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronUp, Utensils, Coffee, UtensilsCrossed,
   Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle
 } from 'lucide-react';
-import { cn } from "../../lib/utils";
+import { cn, generateUUID } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
 
 const COURSE_CONFIG: Record<DailyMenuCourse, { label: string; icon: React.ElementType; color: string; bg: string; border: string }> = {
@@ -96,7 +96,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     if (!formData.name.trim()) return;
     addDailyMenuItem({
       ...formData,
-      id: `item-${Date.now()}`,
+      id: generateUUID(),
     });
     cancelForm();
   };

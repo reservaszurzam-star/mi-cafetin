@@ -340,6 +340,43 @@ function mapDbOrderItem(i: Record<string, unknown>): OrderItem {
   };
 }
 
+function toDbOrderStatus(status: RestaurantOrder['status']): 'draft' | 'served' | 'paid' | 'delivered' | 'cancelled' {
+  if (status === 'served') return 'served';
+  if (status === 'paid') return 'paid';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'cancelled') return 'cancelled';
+  return 'draft';
+}
+
+function fromDbOrderStatus(status: string): RestaurantOrder['status'] {
+  if (status === 'served') return 'served';
+  if (status === 'paid') return 'paid';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'cancelled') return 'cancelled';
+  if (status === 'sent') return 'sent';
+  if (status === 'partially_sent') return 'partially_sent';
+  return 'draft';
+}
+
+function toDbDriverStatus(status: DeliveryDriver['status']): 'disponible' | 'en_ruta' | 'inactivo' {
+  if (status === 'en_ruta') return 'en_ruta';
+  if (status === 'inactivo') return 'inactivo';
+  return 'disponible';
+}
+
+function fromDbDriverStatus(status: string): DeliveryDriver['status'] {
+  if (status === 'en_ruta') return 'en_ruta';
+  if (status === 'inactivo') return 'inactivo';
+  return 'disponible';
+}
+
+function toDbOrderType(type?: string): 'salón' | 'delivery' | 'para_llevar' | 'venta_libre' {
+  if (type === 'delivery') return 'delivery';
+  if (type === 'para_llevar' || type === 'takeaway' || type === 'takeout') return 'para_llevar';
+  if (type === 'venta_libre' || type === 'direct') return 'venta_libre';
+  return 'salón';
+}
+
 function mapDbOrder(o: Record<string, unknown>): RestaurantOrder {
   const items = Array.isArray(o.order_items)
     ? (o.order_items as Record<string, unknown>[]).map(mapDbOrderItem)
@@ -347,9 +384,9 @@ function mapDbOrder(o: Record<string, unknown>): RestaurantOrder {
 
   return {
     id:                 o.id as string,
-    type:               o.type as RestaurantOrder['type'],
+    type:               (o.type as RestaurantOrder['type']) || 'salón',
     floor:              (o.floor as 1 | 2 | 3 | 4) ?? 1,
-    tableNumber:        o.table_number as string,
+    tableNumber:        (o.table_number as string) || 'Mesa 1',
     customTableName:    o.custom_table_name as string | undefined,
     dinerName:          o.diner_name as string | undefined,
     customerId:         o.customer_id as string | undefined,
@@ -363,9 +400,9 @@ function mapDbOrder(o: Record<string, unknown>): RestaurantOrder {
     deliveryPlatform:   o.delivery_platform as RestaurantOrder['deliveryPlatform'],
     driverId:           o.driver_id as string | undefined,
     driverName:         o.driver_name as string | undefined,
-    status:             o.status as RestaurantOrder['status'],
+    status:             fromDbOrderStatus(o.status as string),
     items,
-    total:              items.length > 0 ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) : 0,
+    total:              items.length > 0 ? items.reduce((sum, item) => sum + item.price * item.quantity, 0) : ((o.total as number) || 0),
     notes:              o.notes as string | undefined,
     waiterName:         o.waiter_name as string | undefined,
     posTerminalId:      o.pos_terminal_id as string | undefined,
@@ -389,13 +426,13 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
   const client = db(tenantId);
   const validOrderId = ensureUUID(order.id);
 
-  // 1. Guardar la orden principal primero (necesario para satisfacer la clave foránea order_items -> orders)
+  // 1. Guardar la orden principal con status y type mapeados a enums válidos de PostgreSQL
   const orderRow = {
     id:                validOrderId,
     tenant_id:         tenantId,
-    type:              order.type,
-    floor:             order.floor,
-    table_number:      order.tableNumber,
+    type:              toDbOrderType(order.type),
+    floor:             order.floor || 1,
+    table_number:      order.tableNumber || 'Mesa 1',
     custom_table_name: order.customTableName ?? null,
     diner_name:        order.dinerName ?? null,
     customer_id:       order.customerId && UUID_REGEX.test(order.customerId) ? order.customerId : null,
@@ -409,8 +446,8 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
     delivery_platform: order.deliveryPlatform ?? null,
     driver_id:         order.driverId && UUID_REGEX.test(order.driverId) ? order.driverId : null,
     driver_name:       order.driverName ?? null,
-    status:            order.status,
-    total:             order.total,
+    status:            toDbOrderStatus(order.status),
+    total:             order.total || 0,
     notes:             order.notes ?? null,
     waiter_name:       order.waiterName ?? null,
     pos_terminal_id:   order.posTerminalId ?? null,
@@ -451,16 +488,19 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
 }
 
 export async function updateOrderStatus(tenantId: string, orderId: string, status: RestaurantOrder['status']): Promise<void> {
+  const validId = ensureUUID(orderId);
+  const dbStatus = toDbOrderStatus(status);
   const { error } = await db(tenantId)
     .from('orders')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', orderId)
+    .update({ status: dbStatus, updated_at: new Date().toISOString() })
+    .eq('id', validId)
     .eq('tenant_id', tenantId);
   if (error) handleError('updateOrderStatus', error);
 }
 
 export async function deleteOrder(tenantId: string, orderId: string): Promise<void> {
-  const { error } = await db(tenantId).from('orders').delete().eq('id', orderId).eq('tenant_id', tenantId);
+  const validId = ensureUUID(orderId);
+  const { error } = await db(tenantId).from('orders').delete().eq('id', validId).eq('tenant_id', tenantId);
   if (error) handleError('deleteOrder', error);
 }
 
@@ -533,11 +573,17 @@ export async function upsertInventoryItem(tenantId: string, item: InventoryItem)
   if (error) handleError('upsertInventoryItem', error);
 }
 
+export async function deleteInventoryItem(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('inventory_items').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deleteInventoryItem', error);
+}
+
 export async function insertInventoryMovement(tenantId: string, m: InventoryMovement): Promise<void> {
   const { error } = await db(tenantId).from('inventory_movements').insert({
-    id: m.id, tenant_id: tenantId, item_id: m.itemId, type: m.type,
-    quantity: m.quantity, reason: m.reason,
-    reference_order_id: m.referenceOrderId ?? null, date: m.date,
+    id: ensureUUID(m.id), tenant_id: tenantId, item_id: ensureUUID(m.itemId), type: m.type,
+    quantity: m.quantity, reason: m.reason || 'Movimiento de inventario',
+    reference_order_id: m.referenceOrderId && UUID_REGEX.test(m.referenceOrderId) ? m.referenceOrderId : null,
   });
   if (error) handleError('insertInventoryMovement', error);
 }
@@ -570,7 +616,7 @@ export async function fetchPrinters(tenantId: string): Promise<StationPrinter[]>
 
 export async function upsertPrinter(tenantId: string, p: StationPrinter): Promise<void> {
   const { error } = await db(tenantId).from('printers').upsert({
-    id: p.id, tenant_id: tenantId, name: p.name, station: p.station,
+    id: ensureUUID(p.id), tenant_id: tenantId, name: p.name, station: p.station,
     categories: p.categories, connection_type: p.connectionType ?? null,
     ip_address: p.ipAddress ?? null, status: p.status,
     auto_print: p.autoPrint ?? true, paper_width: p.paperWidth ?? '80mm',
@@ -579,7 +625,8 @@ export async function upsertPrinter(tenantId: string, p: StationPrinter): Promis
 }
 
 export async function deletePrinter(tenantId: string, id: string): Promise<void> {
-  const { error } = await db(tenantId).from('printers').delete().eq('id', id).eq('tenant_id', tenantId);
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('printers').delete().eq('id', validId).eq('tenant_id', tenantId);
   if (error) handleError('deletePrinter', error);
 }
 
@@ -592,7 +639,7 @@ function mapDbDriver(d: Record<string, unknown>): DeliveryDriver {
     phone:            d.phone as string,
     plateNumber:      d.plate_number as string | undefined,
     vehicleType:      d.vehicle_type as DeliveryDriver['vehicleType'],
-    status:           d.status as DeliveryDriver['status'],
+    status:           fromDbDriverStatus(d.status as string),
     activeOrdersCount:d.active_orders as number,
     userId:           d.user_id as string | undefined,
     currentLat:       d.current_lat as number | undefined,
@@ -613,14 +660,21 @@ export async function fetchDrivers(tenantId: string): Promise<DeliveryDriver[]> 
 }
 
 export async function upsertDriver(tenantId: string, d: DeliveryDriver): Promise<void> {
+  const dbStatus = toDbDriverStatus(d.status);
   const { error } = await db(tenantId).from('delivery_drivers').upsert({
-    id: d.id, tenant_id: tenantId, name: d.name, phone: d.phone,
+    id: ensureUUID(d.id), tenant_id: tenantId, name: d.name, phone: d.phone,
     plate_number: d.plateNumber ?? null, vehicle_type: d.vehicleType,
-    status: d.status, active_orders: d.activeOrdersCount,
+    status: dbStatus, active_orders: d.activeOrdersCount ?? 0,
     current_lat: d.currentLat ?? null, current_lng: d.currentLng ?? null,
     last_gps_update: d.lastGpsUpdate ?? null, is_online: d.isOnline ?? false,
   }, { onConflict: 'id' });
   if (error) handleError('upsertDriver', error);
+}
+
+export async function deleteDriver(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('delivery_drivers').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deleteDriver', error);
 }
 
 // ─── DELIVERY ZONES ───────────────────────────────────────────────────────────
@@ -641,10 +695,16 @@ export async function fetchDeliveryZones(tenantId: string): Promise<DeliveryZone
 
 export async function upsertDeliveryZone(tenantId: string, z: DeliveryZone): Promise<void> {
   const { error } = await db(tenantId).from('delivery_zones').upsert({
-    id: z.id, tenant_id: tenantId, name: z.name,
+    id: ensureUUID(z.id), tenant_id: tenantId, name: z.name,
     cost: z.cost, estimated_minutes: z.estimatedMinutes,
   }, { onConflict: 'id' });
   if (error) handleError('upsertDeliveryZone', error);
+}
+
+export async function deleteDeliveryZone(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('delivery_zones').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deleteDeliveryZone', error);
 }
 
 // ─── RESERVATIONS ─────────────────────────────────────────────────────────────
@@ -657,7 +717,7 @@ function mapDbReservation(r: Record<string, unknown>): Reservation {
     date:         r.date as string,
     time:         r.time as string,
     tableNumber:  r.table_number as string,
-    guestCount:   r.guest_count as number,
+    guestCount:   (r.guest_count as number) || 2,
     status:       r.status as Reservation['status'],
     notes:        r.notes as string | undefined,
     deposit:      r.deposit as number | undefined,
@@ -676,12 +736,18 @@ export async function fetchReservations(tenantId: string): Promise<Reservation[]
 
 export async function upsertReservation(tenantId: string, r: Reservation): Promise<void> {
   const { error } = await db(tenantId).from('reservations').upsert({
-    id: r.id, tenant_id: tenantId, customer_name: r.customerName,
+    id: ensureUUID(r.id), tenant_id: tenantId, customer_name: r.customerName,
     phone: r.phone ?? null, date: r.date, time: r.time,
-    table_number: r.tableNumber, guest_count: r.guestCount,
+    table_number: r.tableNumber, guest_count: r.guestCount || 2,
     status: r.status, notes: r.notes ?? null, deposit: r.deposit ?? null,
   }, { onConflict: 'id' });
   if (error) handleError('upsertReservation', error);
+}
+
+export async function deleteReservation(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('reservations').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deleteReservation', error);
 }
 
 // ─── SUNAT INVOICES ───────────────────────────────────────────────────────────
@@ -718,12 +784,17 @@ export async function fetchSunatInvoices(tenantId: string): Promise<SunatInvoice
 
 export async function insertSunatInvoice(tenantId: string, inv: SunatInvoice): Promise<void> {
   const { error } = await db(tenantId).from('sunat_invoices').insert({
-    id: inv.id, tenant_id: tenantId, order_id: inv.orderId ?? null,
+    id: ensureUUID(inv.id), tenant_id: tenantId,
+    order_id: inv.orderId && UUID_REGEX.test(inv.orderId) ? inv.orderId : null,
     type: inv.type, series: inv.series, number: inv.number,
-    date: inv.date, customer_name: inv.customerName,
-    customer_doc_type: inv.customerDocType, customer_doc_number: inv.customerDocNumber,
+    date: inv.date || new Date().toISOString(),
+    customer_name: inv.customerName,
+    customer_doc_type: inv.customerDocType || 'DNI',
+    customer_doc_number: inv.customerDocNumber || '00000000',
     subtotal: inv.subtotal, igv: inv.igv, total: inv.total,
-    status: inv.status, hash: inv.hash, payment_method: inv.paymentMethod,
+    status: inv.status || 'Aceptado',
+    hash: inv.hash || Math.random().toString(36).substring(2, 12),
+    payment_method: inv.paymentMethod || 'Efectivo',
   });
   if (error) handleError('insertSunatInvoice', error);
 }
@@ -755,12 +826,18 @@ export async function fetchDailyMenuItems(tenantId: string): Promise<DailyMenuIt
 
 export async function upsertDailyMenuItem(tenantId: string, item: DailyMenuItem): Promise<void> {
   const { error } = await db(tenantId).from('daily_menu_items').upsert({
-    id: item.id, tenant_id: tenantId, name: item.name, course: item.course,
+    id: ensureUUID(item.id), tenant_id: tenantId, name: item.name, course: item.course,
     description: item.description ?? null, available: item.available,
     extra_price: item.extraPrice ?? 0, image_url: item.imageUrl ?? null,
     popular: item.popular ?? false,
   }, { onConflict: 'id' });
   if (error) handleError('upsertDailyMenuItem', error);
+}
+
+export async function deleteDailyMenuItem(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('daily_menu_items').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deleteDailyMenuItem', error);
 }
 
 // ─── ROLE PERMISSIONS ─────────────────────────────────────────────────────────

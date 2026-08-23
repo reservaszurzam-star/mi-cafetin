@@ -59,6 +59,12 @@ import * as svc from "../lib/supabaseService";
 import { useSupabaseSync } from "./useSupabaseSync";
 import { generateUUID } from "../lib/utils";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function ensureUUID(val?: string | null): string {
+  if (val && UUID_REGEX.test(val)) return val;
+  return generateUUID();
+}
+
 export function useStore(tenantId: string) {
   const [customers, setCustomers] = useState<Customer[]>(() => {
     const saved = localStorage.getItem(`${tenantId}_cafetin_customers`);
@@ -358,7 +364,15 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const updatePrinters = useCallback((newPrinters: StationPrinter[]) => {
-    setPrinters(newPrinters);
+    setPrinters(prev => {
+      const newIds = new Set(newPrinters.map(p => p.id));
+      prev.forEach(oldP => {
+        if (!newIds.has(oldP.id)) {
+          svc.deletePrinter(tenantId, oldP.id);
+        }
+      });
+      return newPrinters;
+    });
     newPrinters.forEach(p => svc.upsertPrinter(tenantId, p));
   }, [tenantId]);
 
@@ -448,39 +462,55 @@ export function useStore(tenantId: string) {
     return newOrder;
   }, [currentUser, settings, tenantId]);
 
-  const addInventoryItem = (item: Omit<InventoryItem, 'id'>) => {
-    const newItem = { ...item, id: Date.now().toString() };
+  const addInventoryItem = useCallback((item: Omit<InventoryItem, 'id'>) => {
+    const newItem: InventoryItem = { ...item, id: generateUUID() };
     setInventoryItems(prev => [...prev, newItem]);
     svc.upsertInventoryItem(tenantId, newItem);
-  };
-  const updateInventoryItem = (id: string, item: Partial<InventoryItem>) => {
+    return newItem;
+  }, [tenantId]);
+
+  const updateInventoryItem = useCallback((id: string, item: Partial<InventoryItem>) => {
     setInventoryItems(prev => {
       const next = prev.map(i => i.id === id ? { ...i, ...item } : i);
       const updated = next.find(i => i.id === id);
       if (updated) svc.upsertInventoryItem(tenantId, updated);
       return next;
     });
-  };
-  const addInventoryMovement = (movement: Omit<InventoryMovement, 'id' | 'date'>) => {
-    const newMovement = { ...movement, id: Date.now().toString(), date: new Date().toISOString() };
+  }, [tenantId]);
+
+  const deleteInventoryItem = useCallback((id: string) => {
+    setInventoryItems(prev => prev.filter(i => i.id !== id));
+    svc.deleteInventoryItem(tenantId, id);
+  }, [tenantId]);
+
+  const addInventoryMovement = useCallback((movement: Omit<InventoryMovement, 'id' | 'date'>) => {
+    const newMovement: InventoryMovement = { ...movement, id: generateUUID(), date: new Date().toISOString() };
     setInventoryMovements(prev => [...prev, newMovement]);
     setInventoryItems(prev => prev.map(i => i.id === movement.itemId ? { ...i, currentStock: i.currentStock + (movement.type === 'in' ? movement.quantity : -movement.quantity) } : i));
     svc.insertInventoryMovement(tenantId, newMovement);
-  };
+    return newMovement;
+  }, [tenantId]);
   
-  const addReservation = (res: Omit<Reservation, 'id'>) => {
-    const newRes = { ...res, id: Date.now().toString() };
+  const addReservation = useCallback((res: Omit<Reservation, 'id'>) => {
+    const newRes: Reservation = { ...res, id: generateUUID() };
     setReservations(prev => [...prev, newRes]);
     svc.upsertReservation(tenantId, newRes);
-  };
-  const updateReservationStatus = (id: string, status: Reservation['status']) => {
+    return newRes;
+  }, [tenantId]);
+
+  const updateReservationStatus = useCallback((id: string, status: Reservation['status']) => {
     setReservations(prev => {
       const next = prev.map(r => r.id === id ? { ...r, status } : r);
       const updated = next.find(r => r.id === id);
       if (updated) svc.upsertReservation(tenantId, updated);
       return next;
     });
-  };
+  }, [tenantId]);
+
+  const deleteReservation = useCallback((id: string) => {
+    setReservations(prev => prev.filter(r => r.id !== id));
+    svc.deleteReservation(tenantId, id);
+  }, [tenantId]);
 
 
   const sendOrderToKitchen = useCallback((orderId: string, customStation?: string) => {
@@ -911,32 +941,42 @@ export function useStore(tenantId: string) {
 
   const deleteDriver = useCallback((id: string) => {
     setDrivers(prev => prev.filter(d => d.id !== id));
-  }, []);
+    svc.deleteDriver(tenantId, id);
+  }, [tenantId]);
 
   // ── Helpers para Zonas de Delivery ──
   const addDeliveryZone = useCallback((zone: Omit<DeliveryZone, 'id'>) => {
-    const newZone: DeliveryZone = { ...zone, id: `zone-${Date.now()}` };
+    const newZone: DeliveryZone = { ...zone, id: generateUUID() };
     setDeliveryZones(prev => [...prev, newZone]);
-  }, []);
+    svc.upsertDeliveryZone(tenantId, newZone);
+    return newZone;
+  }, [tenantId]);
 
   const updateDeliveryZone = useCallback((id: string, zone: Partial<DeliveryZone>) => {
-    setDeliveryZones(prev => prev.map(z => z.id === id ? { ...z, ...zone } : z));
-  }, []);
+    setDeliveryZones(prev => {
+      const next = prev.map(z => z.id === id ? { ...z, ...zone } : z);
+      const updated = next.find(z => z.id === id);
+      if (updated) svc.upsertDeliveryZone(tenantId, updated);
+      return next;
+    });
+  }, [tenantId]);
 
   const deleteDeliveryZone = useCallback((id: string) => {
     setDeliveryZones(prev => prev.filter(z => z.id !== id));
-  }, []);
+    svc.deleteDeliveryZone(tenantId, id);
+  }, [tenantId]);
 
   // ── Helpers para SUNAT ──
   const createSunatInvoice = useCallback((inv: Omit<SunatInvoice, 'id' | 'hash'>) => {
     const newDoc: SunatInvoice = {
       ...inv,
-      id: `sunat-${Date.now()}`,
+      id: generateUUID(),
       hash: Math.random().toString(36).substring(2, 12),
     };
     setSunatInvoices(prev => [newDoc, ...prev]);
+    svc.insertSunatInvoice(tenantId, newDoc);
     return newDoc;
-  }, []);
+  }, [tenantId]);
 
   const updateSunatInvoiceStatus = useCallback((id: string, status: SunatInvoice['status']) => {
     setSunatInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
@@ -963,20 +1003,31 @@ export function useStore(tenantId: string) {
 
   // ── Daily Menu CRUD ──
   const addDailyMenuItem = useCallback((item: DailyMenuItem) => {
-    setDailyMenuItems(prev => [...prev, item]);
-  }, []);
+    const newItem = { ...item, id: ensureUUID(item.id) };
+    setDailyMenuItems(prev => [...prev, newItem]);
+    svc.upsertDailyMenuItem(tenantId, newItem);
+    return newItem;
+  }, [tenantId]);
 
   const updateDailyMenuItem = useCallback((id: string, updates: Partial<DailyMenuItem>) => {
-    setDailyMenuItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
-  }, []);
+    setDailyMenuItems(prev => {
+      const next = prev.map(i => i.id === id ? { ...i, ...updates } : i);
+      const updated = next.find(i => i.id === id);
+      if (updated) svc.upsertDailyMenuItem(tenantId, updated);
+      return next;
+    });
+  }, [tenantId]);
 
   const deleteDailyMenuItem = useCallback((id: string) => {
     setDailyMenuItems(prev => prev.filter(i => i.id !== id));
-  }, []);
+    svc.deleteDailyMenuItem(tenantId, id);
+  }, [tenantId]);
 
   const resetDailyMenuItems = useCallback(() => {
-    setDailyMenuItems(DEFAULT_DAILY_MENU_ITEMS);
-  }, []);
+    const defaultSet = tenantId === 'paradero' ? DEFAULT_DAILY_MENU_ITEMS_PARADERO : DEFAULT_DAILY_MENU_ITEMS_LASLOMAS;
+    setDailyMenuItems(defaultSet);
+    defaultSet.forEach(item => svc.upsertDailyMenuItem(tenantId, item));
+  }, [tenantId]);
 
   // ── Role Permissions CRUD ──
   const updateRolePermission = useCallback((role: RoleType, module: AppModuleKey, enabled: boolean) => {
@@ -1121,9 +1172,11 @@ export function useStore(tenantId: string) {
     reservations,
     addInventoryItem,
     updateInventoryItem,
+    deleteInventoryItem,
     addInventoryMovement,
     addReservation,
     updateReservationStatus,
+    deleteReservation,
     customers,
     transactions,
     products,

@@ -5,7 +5,7 @@ import {
   Trash2, Edit3, X, FileText, Check, ArrowRight, Activity, 
   Cpu, Zap, Receipt, AlertCircle, Radio, QrCode
 } from 'lucide-react';
-import { cn } from "../../lib/utils";
+import { cn, generateUUID } from "../../lib/utils";
 import { StationPrinter, OrderStation } from '../../types';
 
 const AVAILABLE_CATEGORIES = [
@@ -94,7 +94,7 @@ export default function PrintersView() {
       updatePrinters(updated);
     } else {
       const newPrinter: StationPrinter = {
-        id: `prn-${Date.now()}`,
+        id: generateUUID(),
         name: formName.trim(),
         station: formStation,
         ipAddress: formIp.trim(),
