@@ -386,6 +386,45 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
   const client = db(tenantId);
   const validOrderId = ensureUUID(order.id);
 
+  // 1. Sincronizar items de la comanda primero
+  const currentItemIds = (order.items || []).map(i => ensureUUID(i.id));
+
+  // Insertar o actualizar los platos actuales
+  if (order.items && order.items.length > 0) {
+    const itemRows = order.items.map((i, idx) => ({
+      id:             currentItemIds[idx],
+      order_id:       validOrderId,
+      product_id:     i.productId && UUID_REGEX.test(i.productId) ? i.productId : null,
+      product_name:   i.productName,
+      quantity:       i.quantity,
+      price:          i.price,
+      notes:          i.notes ?? null,
+      station:        i.station ?? null,
+      sent_to_kitchen:i.sentToKitchen ?? false,
+      sent_at:        i.sentAt ?? null,
+      batch_number:   i.batchNumber ?? 1,
+    }));
+    const { error: itemErr } = await client.from('order_items').upsert(itemRows, { onConflict: 'id' });
+    if (itemErr) handleError('upsertOrder:items', itemErr);
+  }
+
+  // Limpiar items eliminados
+  if (currentItemIds.length > 0) {
+    const { error: delErr } = await client
+      .from('order_items')
+      .delete()
+      .eq('order_id', validOrderId)
+      .not('id', 'in', `(${currentItemIds.join(',')})`);
+    if (delErr) handleError('upsertOrder:cleanItems', delErr);
+  } else {
+    const { error: delAllErr } = await client
+      .from('order_items')
+      .delete()
+      .eq('order_id', validOrderId);
+    if (delAllErr) handleError('upsertOrder:clearItems', delAllErr);
+  }
+
+  // 2. Guardar la orden principal (dispara Realtime cuando los items ya existen)
   const orderRow = {
     id:                validOrderId,
     tenant_id:         tenantId,
@@ -411,50 +450,11 @@ export async function upsertOrder(tenantId: string, order: RestaurantOrder): Pro
     waiter_name:       order.waiterName ?? null,
     pos_terminal_id:   order.posTerminalId ?? null,
     pre_count_printed: order.preCountPrinted ?? false,
-    updated_at:        new Date().toISOString(),
+    updated_at:        order.updatedAt || new Date().toISOString(),
   };
 
   const { error: orderErr } = await client.from('orders').upsert(orderRow, { onConflict: 'id' });
-  if (orderErr) { handleError('upsertOrder:order', orderErr); return; }
-
-  // Sincronizar items de la comanda y limpiar items eliminados
-  const currentItemIds = (order.items || []).map(i => ensureUUID(i.id));
-
-  if (currentItemIds.length > 0) {
-    // Eliminar de Supabase los platos que ya no están en la orden
-    const { error: delErr } = await client
-      .from('order_items')
-      .delete()
-      .eq('order_id', validOrderId)
-      .not('id', 'in', `(${currentItemIds.join(',')})`);
-    if (delErr) handleError('upsertOrder:cleanItems', delErr);
-  } else {
-    // Si la orden no tiene platos, borrar todos sus items
-    const { error: delAllErr } = await client
-      .from('order_items')
-      .delete()
-      .eq('order_id', validOrderId);
-    if (delAllErr) handleError('upsertOrder:clearItems', delAllErr);
-  }
-
-  // Insertar o actualizar los platos actuales
-  if (order.items && order.items.length > 0) {
-    const itemRows = order.items.map((i, idx) => ({
-      id:             currentItemIds[idx],
-      order_id:       validOrderId,
-      product_id:     i.productId && UUID_REGEX.test(i.productId) ? i.productId : null,
-      product_name:   i.productName,
-      quantity:       i.quantity,
-      price:          i.price,
-      notes:          i.notes ?? null,
-      station:        i.station ?? null,
-      sent_to_kitchen:i.sentToKitchen ?? false,
-      sent_at:        i.sentAt ?? null,
-      batch_number:   i.batchNumber ?? 1,
-    }));
-    const { error: itemErr } = await client.from('order_items').upsert(itemRows, { onConflict: 'id' });
-    if (itemErr) handleError('upsertOrder:items', itemErr);
-  }
+  if (orderErr) handleError('upsertOrder:order', orderErr);
 }
 
 export async function updateOrderStatus(tenantId: string, orderId: string, status: RestaurantOrder['status']): Promise<void> {

@@ -149,9 +149,35 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
         () => {
-          // Recarga órdenes activas cuando hay cualquier cambio
-          svc.fetchOrders(tenantId).then(orders => {
-            setters.setOrders(orders);
+          // Recarga órdenes activas combinando cambios sin sobreescribir ediciones locales recientes
+          svc.fetchOrders(tenantId).then(remoteOrders => {
+            if (!remoteOrders) return;
+            setters.setOrders((prevOrders: RestaurantOrder[]) => {
+              if (!prevOrders || prevOrders.length === 0) return remoteOrders;
+              const prevMap = new Map(prevOrders.map(o => [o.id, o]));
+              const merged = remoteOrders.map(rem => {
+                const local = prevMap.get(rem.id);
+                if (!local) return rem;
+
+                const localTime = new Date(local.updatedAt || local.createdAt).getTime();
+                const remTime = new Date(rem.updatedAt || rem.createdAt).getTime();
+
+                // Si la versión local tiene ítems y es más reciente, preservarla
+                if (localTime > remTime && local.items.length >= rem.items.length) {
+                  return local;
+                }
+                return rem;
+              });
+
+              // Preservar órdenes locales que todavía no llegaron de Supabase
+              for (const [id, local] of prevMap.entries()) {
+                if (!merged.some(m => m.id === id)) {
+                  merged.push(local);
+                }
+              }
+
+              return merged;
+            });
           });
         }
       )

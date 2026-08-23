@@ -45,19 +45,31 @@ export default function POSView() {
   const handleAddProduct = (product: Product) => {
     let orderToUpdate = activeOrder;
     if (!orderToUpdate) {
-      orderToUpdate = {
+      const newOrderId = generateUUID();
+      const newItem: OrderItem = {
         id: generateUUID(),
+        productId: product.id,
+        productName: product.name,
+        quantity: 1,
+        price: product.price,
+        station: product.station || "Cocina & Parrilla",
+        sentToKitchen: false,
+        batchNumber: 1,
+      };
+      const newOrder: RestaurantOrder = {
+        id: newOrderId,
         type: selectedTable.startsWith("D-") ? "delivery" : selectedTable.startsWith("Venta") ? "venta_libre" : "salón",
         floor: (activeFloor as 1|2|3|4) || 1,
         tableNumber: selectedTable,
         status: "draft",
-        items: [],
-        total: 0,
+        items: [newItem],
+        total: product.price,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         waiterName: currentUser.name || "Mesero",
       };
-      saveOrderDraft(orderToUpdate);
+      saveOrderDraft(newOrder);
+      return;
     }
 
     const existingIndex = orderToUpdate.items.findIndex(
