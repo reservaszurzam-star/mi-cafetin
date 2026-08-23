@@ -7,6 +7,7 @@ import { UserCard } from './UserCard';
 interface UsersListTabProps {
   users: User[];
   currentUser: User;
+  isOwner?: boolean;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
   onToggleUserActive: (user: User) => void;
@@ -17,6 +18,7 @@ interface UsersListTabProps {
 export const UsersListTab: React.FC<UsersListTabProps> = ({
   users,
   currentUser,
+  isOwner,
   onEditUser,
   onDeleteUser,
   onToggleUserActive,
@@ -144,7 +146,7 @@ export const UsersListTab: React.FC<UsersListTabProps> = ({
               key={user.id}
               user={user}
               isSelf={user.id === currentUser.id}
-              isOwner={currentUser.role === 'Owner'}
+              isOwner={isOwner !== undefined ? isOwner : currentUser.role === 'Owner'}
               isPinVisible={!!showPins[user.id]}
               onTogglePin={() => togglePinVisibility(user.id)}
               onToggleActive={() => onToggleUserActive(user)}

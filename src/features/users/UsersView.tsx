@@ -14,8 +14,12 @@ export default function UsersView() {
   const { 
     users, addUser, updateUser, deleteUser, 
     currentUser, setCurrentUser,
-    rolePermissions, updateRolePermission, resetRolePermissions
+    rolePermissions, updateRolePermission, resetRolePermissions,
+    ownerSimulatedRole,
   } = useAppStore();
+
+  const effectiveRole = ownerSimulatedRole || currentUser.role;
+  const isOwner = effectiveRole === 'Owner';
 
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'permissions'>('users');
   const [selectedRoleForPerms, setSelectedRoleForPerms] = useState<RoleType | 'todos'>('todos');
@@ -163,32 +167,34 @@ export default function UsersView() {
             <div className="flex items-center gap-2 text-xs font-semibold text-stone-400 mt-0.5">
               <span>@{currentUser.username}</span>
               <span>·</span>
-              <span className="text-amber-300 font-bold">{currentUser.role}</span>
+              <span className="text-amber-300 font-bold">{effectiveRole}</span>
               <span>·</span>
               <span>PIN: ****</span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-stone-800/80 border border-stone-700 px-3 py-2 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
-            <span className="text-xs font-bold text-stone-400">Cambiar perfil a:</span>
-            <select
-              value={currentUser.id}
-              onChange={(e) => {
-                const target = users.find(u => u.id === e.target.value);
-                if (target) setCurrentUser(target);
-              }}
-              className="bg-stone-900 text-amber-300 border border-stone-700 text-xs font-black px-3 py-1.5 rounded-xl outline-none cursor-pointer hover:border-amber-500 transition"
-            >
-              {users.map(u => (
-                <option key={u.id} value={u.id} className="bg-stone-900 text-white">
-                  {u.name} ({u.role}) {!u.active ? '· [Inactivo]' : ''}
-                </option>
-              ))}
-            </select>
+        {isOwner && (
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-2 bg-stone-800/80 border border-stone-700 px-3 py-2 rounded-2xl w-full sm:w-auto justify-between sm:justify-start">
+              <span className="text-xs font-bold text-stone-400">Cambiar perfil a:</span>
+              <select
+                value={currentUser.id}
+                onChange={(e) => {
+                  const target = users.find(u => u.id === e.target.value);
+                  if (target) setCurrentUser(target);
+                }}
+                className="bg-stone-900 text-amber-300 border border-stone-700 text-xs font-black px-3 py-1.5 rounded-xl outline-none cursor-pointer hover:border-amber-500 transition"
+              >
+                {users.map(u => (
+                  <option key={u.id} value={u.id} className="bg-stone-900 text-white">
+                    {u.name} ({u.role}) {!u.active ? '· [Inactivo]' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── CONTENIDO POR PESTAÑA ── */}
@@ -196,6 +202,7 @@ export default function UsersView() {
         <UsersListTab
           users={users}
           currentUser={currentUser}
+          isOwner={isOwner}
           onEditUser={handleOpenEdit}
           onDeleteUser={handleDeleteUser}
           onToggleUserActive={handleToggleUserActive}
