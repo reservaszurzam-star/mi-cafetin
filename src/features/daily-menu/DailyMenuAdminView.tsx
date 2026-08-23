@@ -3,7 +3,8 @@ import { useAppStore } from "../../hooks/StoreContext";
 import {
   Plus, Trash2, Edit3, Check, X, Eye, EyeOff, Star,
   ChevronDown, ChevronUp, Utensils, Coffee, UtensilsCrossed,
-  Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle, Copy, ExternalLink
+  Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle, Copy, ExternalLink,
+  Search, Sparkles, CheckCircle2, XCircle
 } from 'lucide-react';
 import { cn, generateUUID } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
@@ -56,6 +57,8 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const [formData, setFormData] = useState<Omit<DailyMenuItem, 'id'>>(EMPTY_ITEM);
   const [collapsedCourses, setCollapsedCourses] = useState<Set<DailyMenuCourse>>(new Set());
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | DailyMenuCourse>('all');
 
   const courses: DailyMenuCourse[] = ['entrada', 'fondo', 'bebida', 'postre'];
 
@@ -121,6 +124,18 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     updateDailyMenuItem(item.id, { popular: !item.popular });
   };
 
+  const handleEnableAll = () => {
+    dailyMenuItems.forEach(item => {
+      if (!item.available) updateDailyMenuItem(item.id, { available: true });
+    });
+  };
+
+  const handleDisableAll = () => {
+    dailyMenuItems.forEach(item => {
+      if (item.available) updateDailyMenuItem(item.id, { available: false });
+    });
+  };
+
   const handleReset = () => {
     resetDailyMenuItems();
     setShowResetConfirm(false);
@@ -144,6 +159,8 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const totalItems = dailyMenuItems.length;
   const availableItems = dailyMenuItems.filter(i => i.available).length;
 
+  const filteredCourses = courses.filter(c => activeTab === 'all' || activeTab === c);
+
   return (
     <div className="min-h-screen bg-[#faf8f5]">
 
@@ -158,9 +175,14 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-black text-stone-900 text-base leading-none">Administrar Menú del Día</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-black text-stone-900 text-base leading-none">Configurar Menú del Día</h1>
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${isParadero ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+                  {isParadero ? 'Paradero 104' : 'Las Lomas Grill'}
+                </span>
+              </div>
               <p className="text-[11px] text-stone-500 font-semibold mt-0.5">
-                {availableItems} disponibles · {totalItems} en total · <span className="font-bold text-stone-700">{settings.companyName}</span>
+                {availableItems} disponibles · {totalItems} platos en total
               </p>
             </div>
           </div>
@@ -195,6 +217,64 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+      {/* ── BARRA DE BÚSQUEDA Y ACCIONES RÁPIDAS ── */}
+      <div className="bg-white border-b border-stone-200/80 px-4 py-3 shadow-2xs">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Tabs por Tiempo */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
+            {[
+              { id: 'all', label: '🍽️ Todos' },
+              { id: 'entrada', label: '🥣 Entradas' },
+              { id: 'fondo', label: '🍲 Fondos' },
+              { id: 'bebida', label: '🥤 Bebidas' },
+              { id: 'postre', label: '🍰 Postres' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border",
+                  activeTab === tab.id
+                    ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+                    : "bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Buscador & Botones Bulk */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-56">
+              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar plato..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:bg-white focus:border-stone-900 transition"
+              />
+            </div>
+
+            <button
+              onClick={handleEnableAll}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition whitespace-nowrap"
+              title="Habilitar todos los platos"
+            >
+              ✓ Activar Todos
+            </button>
+            <button
+              onClick={handleDisableAll}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-stone-100 text-stone-600 border border-stone-200 hover:bg-stone-200 transition whitespace-nowrap"
+              title="Pausar todos los platos"
+            >
+              ⏸ Pausar Todos
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* ── RESET CONFIRM ── */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -205,7 +285,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
               </div>
               <div>
                 <h3 className="font-black text-stone-900">¿Restaurar menú?</h3>
-                <p className="text-xs text-stone-500">Se perderán todos los cambios y se cargarán los platos predeterminados.</p>
+                <p className="text-xs text-stone-500">Se cargarán los 12 platos predeterminados según la sede activa.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -226,12 +306,15 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* ── CONTENIDO ── */}
+      {/* ── CONTENIDO POR CATEGORÍAS ── */}
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
-        {courses.map(course => {
+        {filteredCourses.map(course => {
           const cfg = COURSE_CONFIG[course];
-          const items = dailyMenuItems.filter(i => i.course === course);
+          let items = dailyMenuItems.filter(i => i.course === course);
+          if (searchTerm) {
+            items = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || (i.description && i.description.toLowerCase().includes(searchTerm.toLowerCase())));
+          }
           const collapsed = collapsedCourses.has(course);
           const isAddingHere = showAddForm === course;
 
@@ -258,7 +341,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                   <button
                     onClick={e => { e.stopPropagation(); openAddForm(course); }}
                     className={cn(
-                      'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition',
+                      'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs',
                       cfg.color, 'bg-white border', cfg.border, 'hover:shadow-sm'
                     )}
                   >

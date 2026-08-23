@@ -350,56 +350,74 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
 
             {/* Encabezado de Sección */}
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isParadero ? 'bg-teal-50 border border-teal-100 text-teal-600' : 'bg-amber-50 border border-amber-100 text-amber-700'}`}>
                 {getCategoryIcon(group.category)}
               </div>
               <div>
-                <h2 className="font-black text-xs text-stone-900 uppercase tracking-wider">{group.category}</h2>
-                <div className="h-0.5 w-6 bg-teal-500 rounded-full mt-0.5" />
+                <h2 className="font-black text-xs sm:text-sm text-stone-900 uppercase tracking-wider">{group.category}</h2>
+                <div className={`h-0.5 w-6 rounded-full mt-0.5 ${isParadero ? 'bg-teal-500' : 'bg-amber-500'}`} />
               </div>
               <span className="ml-auto text-[10px] font-black text-stone-400">
                 {group.items.length} plato{group.items.length !== 1 ? 's' : ''}
               </span>
             </div>
 
-            {/* Tarjetas */}
-            <div className="space-y-2.5">
+            {/* Tarjetas en 2 Columnas */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 md:grid-cols-3 lg:grid-cols-4">
               {group.items.map(product => {
                 const qty = getQty(product.id);
                 return (
                   <div
                     key={product.id}
-                    className="bg-white rounded-2xl border border-stone-200 shadow-sm flex items-center gap-3 px-4 py-3 hover:border-teal-300 transition-colors"
+                    className={`bg-white rounded-2xl border border-stone-200 shadow-2xs flex flex-col justify-between p-3 sm:p-4 transition-all duration-200 hover:shadow-md ${isParadero ? 'hover:border-teal-400' : 'hover:border-amber-400'}`}
                   >
-                    {/* Info */}
-                    <div className="flex-1 min-w-0" onClick={() => openProductModal(product)}>
-                      <p className="font-black text-sm text-stone-900 leading-snug">{product.name}</p>
-                      <p className="font-black text-teal-700 text-sm mt-0.5">
-                        S/ {product.price.toFixed(2)}
+                    {/* Info del Plato */}
+                    <div className="cursor-pointer space-y-1" onClick={() => openProductModal(product)}>
+                      <p className="font-black text-xs sm:text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.4rem]">
+                        {product.name}
                       </p>
+                      {product.description && (
+                        <p className="text-[10px] text-stone-400 line-clamp-2 leading-tight">
+                          {product.description}
+                        </p>
+                      )}
                     </div>
 
-                    {/* Control cantidad */}
-                    {qty > 0 ? (
-                      <div className="flex items-center gap-2 bg-teal-600 rounded-full px-2.5 py-1.5 shrink-0">
-                        <button onClick={() => updateQty(product.id, -1)}
-                          className="w-5 h-5 flex items-center justify-center text-white font-black">
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="font-black text-white text-sm w-4 text-center">{qty}</span>
-                        <button onClick={() => updateQty(product.id, 1)}
-                          className="w-5 h-5 flex items-center justify-center text-white font-black">
-                          <Plus className="w-3 h-3" />
-                        </button>
+                    {/* Fila Inferior: Precio + Botón */}
+                    <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-stone-100">
+                      <div>
+                        <span className={`font-black text-xs sm:text-sm ${isParadero ? 'text-teal-700' : 'text-amber-800'}`}>
+                          S/ {product.price.toFixed(2)}
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="w-9 h-9 rounded-full border-2 border-teal-500 text-teal-600 flex items-center justify-center hover:bg-teal-50 transition shrink-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    )}
+
+                      {/* Control cantidad */}
+                      {qty > 0 ? (
+                        <div className={`flex items-center gap-1.5 rounded-full px-2 py-1 shrink-0 shadow-xs ${isParadero ? 'bg-teal-600' : 'bg-amber-500'}`}>
+                          <button
+                            onClick={() => updateQty(product.id, -1)}
+                            className="w-4 h-4 flex items-center justify-center text-white font-black text-xs"
+                          >
+                            <Minus className="w-2.5 h-2.5" />
+                          </button>
+                          <span className="font-black text-white text-xs min-w-[12px] text-center">{qty}</span>
+                          <button
+                            onClick={() => updateQty(product.id, 1)}
+                            className="w-4 h-4 flex items-center justify-center text-white font-black text-xs"
+                          >
+                            <Plus className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(product)}
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-colors shrink-0 shadow-2xs ${isParadero ? 'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-600 hover:text-white' : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-500 hover:text-stone-950 font-black'}`}
+                          title="Agregar al pedido"
+                        >
+                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -410,12 +428,17 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
         {/* Footer */}
         {products.length > 0 && (
           <div className="flex items-center justify-center gap-3 py-6 border-t border-stone-200">
-            <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center">
-              <Fish className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src={logoImage}
+              alt="Logo"
+              className="w-8 h-8 rounded-xl object-contain bg-white border border-stone-200 p-0.5"
+              onError={(e) => { e.currentTarget.src = '/LOGO OFICIAL.png'; }}
+            />
             <div>
-              <p className="font-black text-xs text-stone-800">Paradero 104</p>
-              <p className="text-[10px] text-stone-400 font-medium">Los mejores mariscos de la ciudad 🦐</p>
+              <p className="font-black text-xs text-stone-800">{settings.companyName || (isParadero ? 'Paradero 104' : 'Las Lomas Grill')}</p>
+              <p className="text-[10px] text-stone-400 font-medium">
+                {isParadero ? 'Los mejores mariscos y ceviches de la ciudad 🦐' : 'El mejor sabor a la brasa y parrillas 🔥'}
+              </p>
             </div>
           </div>
         )}

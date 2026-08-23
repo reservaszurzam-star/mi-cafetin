@@ -128,9 +128,9 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
           ))}
         </div>
 
-        {/* Products Grid */}
+        {/* Products Grid en 2 Columnas */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-20 animate-in slide-in-from-bottom-8 duration-500 delay-200 fill-mode-both">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 md:grid-cols-3 lg:grid-cols-4 pb-20 animate-in slide-in-from-bottom-8 duration-500 delay-200 fill-mode-both">
             {filteredProducts.map(product => (
               <div 
                 key={product.id}
