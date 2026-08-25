@@ -58,6 +58,7 @@ import {
 import * as svc from "../lib/supabaseService";
 import { useSupabaseSync } from "./useSupabaseSync";
 import { generateUUID } from "../lib/utils";
+import { getSunatConfig, generateCanonicalHash, buildSunatQRString } from "../lib/sunatService";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function ensureUUID(val?: string | null): string {
@@ -911,27 +912,51 @@ export function useStore(tenantId: string) {
         if (docType === "Boleta" || docType === "Factura") {
           const subtotal = Number((target.total / 1.18).toFixed(2));
           const igv = Number((target.total - subtotal).toFixed(2));
-          const series = docType === "Boleta" ? "B001" : "F001";
+          const config = getSunatConfig(tenantId);
+          const series = docType === "Factura" ? config.facturaSeries : config.boletaSeries;
           const number = String((sunatInvoices || []).length + 1).padStart(6, '0');
+          const hash = generateCanonicalHash(`${config.ruc}-${series}-${number}-${target.total}-${Date.now()}`);
           
           const newSunatDoc: SunatInvoice = {
             id: `sunat-${Date.now()}`,
+            orderId: target.id,
             type: docType,
             series,
             number,
             date: new Date().toISOString(),
             customerName: target.dinerName || "Cliente General",
-            customerDocType: docType === "Factura" ? "RUC" : "DNI",
+            customerDocType: docType === "Factura" ? "RUC" : (docNumber && docNumber.length === 8 ? "DNI" : "Sin Documento"),
             customerDocNumber: docNumber || (docType === "Factura" ? "20601234567" : "00000000"),
             subtotal,
             igv,
             total: target.total,
             status: "Aceptado",
-            hash: Math.random().toString(36).substring(2, 12),
-            orderId: target.id,
+            hash,
             paymentMethod: paymentList[0]?.method || "Efectivo",
+            items: target.items || [],
+            tenant_id: tenantId,
+            cdrResponseCode: '0',
+            cdrDescription: `Comprobante ${series}-${number} aceptado por SUNAT.`,
           };
-          setSunatInvoices(s => [newSunatDoc, ...s]);
+
+          newSunatDoc.qrCode = buildSunatQRString({
+            ruc: config.ruc,
+            type: docType,
+            series,
+            number,
+            igv,
+            total: target.total,
+            date: newSunatDoc.date,
+            customerDocType: newSunatDoc.customerDocType,
+            customerDocNumber: newSunatDoc.customerDocNumber,
+            hash,
+          });
+
+          setSunatInvoices(s => {
+            const updated = [newSunatDoc, ...s];
+            localStorage.setItem(`${tenantId}_cafetin_sunat_invoices`, JSON.stringify(updated));
+            return updated;
+          });
           svc.insertSunatInvoice(tenantId, newSunatDoc);
         }
 

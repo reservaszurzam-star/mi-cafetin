@@ -440,20 +440,28 @@ export type SupabaseSyncConfig = {
 // ── Facturación Electrónica SUNAT ──
 export type SunatInvoice = {
   id: string;
-  type: "Boleta" | "Factura" | "Nota de Crédito";
+  type: "Boleta" | "Factura" | "Nota de Crédito" | "Nota de Venta";
   series: string;
   number: string;
   date: string;
   customerName: string;
-  customerDocType: "DNI" | "RUC";
+  customerDocType: "DNI" | "RUC" | "Sin Documento" | "CE" | "Pasaporte";
   customerDocNumber: string;
+  customerAddress?: string;
   subtotal: number;
   igv: number;
   total: number;
-  status: "Aceptado" | "Pendiente" | "Rechazado";
+  status: "Aceptado" | "Pendiente" | "Rechazado" | "Anulado";
   hash: string;
+  qrCode?: string;
+  xmlUrl?: string;
+  cdrUrl?: string;
+  cdrResponseCode?: string;
+  cdrDescription?: string;
   orderId?: string;
   paymentMethod: PaymentMethod;
+  items?: OrderItem[];
+  tenant_id?: string;
 };
 
 // ── Pantallas de Cocina KDS (Multi-Monitor) ──
