@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Customer,
   Transaction,
@@ -240,11 +240,83 @@ export function useStore(tenantId: string) {
     return saved ? JSON.parse(saved) : DEFAULT_ROLE_PERMISSIONS;
   });
 
-  const [currentUser, setCurrentUser] = useState<User>(() => users[0] || DEFAULT_USERS[0]);
+  const [currentUser, setCurrentUserState] = useState<User>(() => {
+    // 1. Verificar la sesión global de autenticación (cafetin_auth_user)
+    const savedAuthUser = localStorage.getItem('cafetin_auth_user');
+    if (savedAuthUser) {
+      try {
+        const parsed = JSON.parse(savedAuthUser);
+        
+        // Si el usuario autenticado en el login es OWNER, SIEMPRE usar el perfil de Owner
+        if (parsed.role === 'Owner') {
+          return users.find(u => u.role === 'Owner') || users[0] || DEFAULT_USERS[0];
+        }
+
+        // Si coincide exactamente por ID, email o username en este negocio
+        const match = users.find(u => 
+          u.id === parsed.userId || 
+          (parsed.email && u.email?.toLowerCase() === parsed.email.toLowerCase()) ||
+          (parsed.username && u.username?.toLowerCase() === parsed.username.toLowerCase())
+        );
+        if (match) return match;
+
+        // Si tiene un rol no-Owner (ej. Mozo, Cajero, Cocinero, Repartidor, Administrador),
+        // buscar el perfil de ese rol en este negocio
+        if (parsed.role) {
+          const roleMatch = users.find(u => u.role === parsed.role);
+          if (roleMatch) return roleMatch;
+        }
+      } catch {}
+    }
+
+    // 2. Si hay un usuario activo explícitamente seleccionado en el panel de usuarios para esta sede
+    const savedActiveId = localStorage.getItem(`${tenantId}_active_user_id`);
+    if (savedActiveId) {
+      const match = users.find(u => u.id === savedActiveId);
+      if (match) return match;
+    }
+
+    // 3. Verificar el rol activo de la otra sede (ej. si era Mozo en Las Lomas y pasa a Paradero 104)
+    const otherTenant = tenantId === 'paradero' ? 'laslomas' : 'paradero';
+    const otherActiveId = localStorage.getItem(`${otherTenant}_active_user_id`);
+    if (otherActiveId) {
+      const otherSaved = localStorage.getItem(`${otherTenant}_cafetin_users`);
+      if (otherSaved) {
+        try {
+          const otherList: User[] = JSON.parse(otherSaved);
+          const otherUser = otherList.find(u => u.id === otherActiveId);
+          if (otherUser && otherUser.role && otherUser.role !== 'Owner') {
+            const roleMatch = users.find(u => u.role === otherUser.role);
+            if (roleMatch) return roleMatch;
+          }
+        } catch {}
+      }
+    }
+
+    // 4. Fallback por defecto al primer usuario (Owner)
+    return users.find(u => u.role === 'Owner') || users[0] || DEFAULT_USERS[0];
+  });
+
+  const setCurrentUser = useCallback((userOrUpdater: User | ((prev: User) => User)) => {
+    setCurrentUserState(prev => {
+      const next = typeof userOrUpdater === 'function' ? userOrUpdater(prev) : userOrUpdater;
+      if (next?.id) {
+        localStorage.setItem(`${tenantId}_active_user_id`, next.id);
+        localStorage.setItem('cafetin_auth_user', JSON.stringify({
+          tenants: [tenantId],
+          role: next.role,
+          email: next.email || `${next.username}@cafetin.com`,
+          username: next.username,
+          userId: next.id,
+        }));
+      }
+      return next;
+    });
+  }, [tenantId]);
 
   // ── Owner Role Simulator: permite al Owner probar la vista de cualquier rol en vivo ──
   const [ownerSimulatedRole, setOwnerSimulatedRole] = useState<RoleType | null>(() => {
-    const saved = sessionStorage.getItem(`${tenantId}_owner_simulated_role`);
+    const saved = sessionStorage.getItem(`${tenantId}_owner_simulated_role`) || sessionStorage.getItem('cafetin_simulated_role');
     return (saved as RoleType) || null;
   });
 
@@ -252,10 +324,23 @@ export function useStore(tenantId: string) {
     setOwnerSimulatedRole(role);
     if (role) {
       sessionStorage.setItem(`${tenantId}_owner_simulated_role`, role);
+      sessionStorage.setItem('cafetin_simulated_role', role);
     } else {
       sessionStorage.removeItem(`${tenantId}_owner_simulated_role`);
+      sessionStorage.removeItem('cafetin_simulated_role');
     }
   }, [tenantId]);
+
+  const isRealOwnerSession = useMemo(() => {
+    const saved = localStorage.getItem('cafetin_auth_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.role === 'Owner') return true;
+      } catch {}
+    }
+    return currentUser.role === 'Owner';
+  }, [currentUser.role]);
 
   // ── Supabase: indica si está cargando datos desde la base de datos ──
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
@@ -1135,6 +1220,7 @@ export function useStore(tenantId: string) {
         ...prev,
         [role]: updatedList
       };
+      localStorage.setItem(`${tenantId}_cafetin_role_permissions`, JSON.stringify(nextConfig));
       svc.saveRolePermissions(tenantId, nextConfig);
       return nextConfig;
     });
@@ -1142,6 +1228,7 @@ export function useStore(tenantId: string) {
 
   const resetRolePermissions = useCallback(() => {
     setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+    localStorage.setItem(`${tenantId}_cafetin_role_permissions`, JSON.stringify(DEFAULT_ROLE_PERMISSIONS));
     svc.saveRolePermissions(tenantId, DEFAULT_ROLE_PERMISSIONS);
   }, [tenantId]);
 
@@ -1354,6 +1441,7 @@ export function useStore(tenantId: string) {
     hasPermission,
     ownerSimulatedRole,
     setOwnerSimulatedRole: changeOwnerSimulatedRole,
+    isRealOwnerSession,
     tenantId,
     isLoadingFromDB,
     syncWithSupabase,

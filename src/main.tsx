@@ -138,9 +138,25 @@ function Root() {
 
   // Callback del LoginView cuando Supabase Auth confirma la sesión
   const handleLoginSuccess = (result: { tenants: string[]; role: string; email: string; userId: string }) => {
+    // Limpiar cualquier simulación o usuario activo residual
+    sessionStorage.removeItem('laslomas_owner_simulated_role');
+    sessionStorage.removeItem('paradero_owner_simulated_role');
+    sessionStorage.removeItem('cafetin_simulated_role');
+
+    localStorage.setItem('cafetin_auth_user', JSON.stringify(result));
+    
+    // Si el usuario logueado es Owner, limpiar IDs activos previos para que tome su propio perfil de Owner
+    if (result.role === 'Owner') {
+      localStorage.removeItem('laslomas_active_user_id');
+      localStorage.removeItem('paradero_active_user_id');
+    }
+
     if (result.tenants.length === 1) {
       const tenantId = result.tenants[0];
       localStorage.setItem('cafetin_tenantId', tenantId);
+      if (result.role !== 'Owner') {
+        localStorage.setItem(`${tenantId}_active_user_id`, result.userId);
+      }
       setAuth({ status: 'ready', tenantId, role: result.role, email: result.email, userId: result.userId });
     } else {
       // Multi-sede (Owner u Administrador de ambas sedes) → mostrar selector
@@ -152,6 +168,13 @@ function Root() {
   const handleSelectTenant = (tenantId: string) => {
     if (auth.status !== 'select_tenant') return;
     localStorage.setItem('cafetin_tenantId', tenantId);
+    if (auth.role === 'Owner') {
+      localStorage.removeItem(`${tenantId}_active_user_id`);
+      sessionStorage.removeItem(`${tenantId}_owner_simulated_role`);
+      sessionStorage.removeItem('cafetin_simulated_role');
+    } else {
+      localStorage.setItem(`${tenantId}_active_user_id`, auth.userId);
+    }
     setAuth({
       status:   'ready',
       tenantId,
@@ -185,6 +208,12 @@ function Root() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('cafetin_tenantId');
+    localStorage.removeItem('cafetin_auth_user');
+    localStorage.removeItem('laslomas_active_user_id');
+    localStorage.removeItem('paradero_active_user_id');
+    sessionStorage.removeItem('laslomas_owner_simulated_role');
+    sessionStorage.removeItem('paradero_owner_simulated_role');
+    sessionStorage.removeItem('cafetin_simulated_role');
     setAuth({ status: 'unauthenticated' });
   };
 

@@ -15,11 +15,11 @@ export default function UsersView() {
     users, addUser, updateUser, deleteUser, 
     currentUser, setCurrentUser,
     rolePermissions, updateRolePermission, resetRolePermissions,
-    ownerSimulatedRole,
+    ownerSimulatedRole, setOwnerSimulatedRole, isRealOwnerSession
   } = useAppStore();
 
   const effectiveRole = ownerSimulatedRole || currentUser.role;
-  const isOwner = effectiveRole === 'Owner';
+  const isOwner = isRealOwnerSession || effectiveRole === 'Owner' || currentUser.role === 'Owner';
 
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'permissions'>('users');
   const [selectedRoleForPerms, setSelectedRoleForPerms] = useState<RoleType | 'todos'>('todos');
@@ -182,7 +182,12 @@ export default function UsersView() {
                 value={currentUser.id}
                 onChange={(e) => {
                   const target = users.find(u => u.id === e.target.value);
-                  if (target) setCurrentUser(target);
+                  if (target) {
+                    setCurrentUser(target);
+                    if (target.role === 'Owner') {
+                      setOwnerSimulatedRole(null);
+                    }
+                  }
                 }}
                 className="bg-stone-900 text-amber-300 border border-stone-700 text-xs font-black px-3 py-1.5 rounded-xl outline-none cursor-pointer hover:border-amber-500 transition"
               >
@@ -206,7 +211,12 @@ export default function UsersView() {
           onEditUser={handleOpenEdit}
           onDeleteUser={handleDeleteUser}
           onToggleUserActive={handleToggleUserActive}
-          onSetCurrentUser={setCurrentUser}
+          onSetCurrentUser={(user) => {
+            setCurrentUser(user);
+            if (user.role === 'Owner') {
+              setOwnerSimulatedRole(null);
+            }
+          }}
           onOpenCreate={handleOpenCreate}
         />
       )}
@@ -229,6 +239,7 @@ export default function UsersView() {
         onClose={() => setShowModal(false)}
         onSave={handleSaveUser}
         initialUser={editingUser}
+        existingUsers={users}
       />
 
     </div>

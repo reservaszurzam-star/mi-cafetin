@@ -42,7 +42,8 @@ export default function GraceAssistant({ onNavigate }: { onNavigate: (v: ViewSta
     ownerSimulatedRole, 
     setOwnerSimulatedRole,
     rolePermissions,
-    hasPermission
+    hasPermission,
+    isRealOwnerSession
   } = useAppStore();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -300,7 +301,7 @@ export default function GraceAssistant({ onNavigate }: { onNavigate: (v: ViewSta
     }, 600);
   };
 
-  const isOwner = currentUser.role === 'Owner';
+  const isOwner = isRealOwnerSession || currentUser.role === 'Owner';
 
   return (
     <>

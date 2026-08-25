@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../hooks/StoreContext';
 import { RoleType } from '../../types';
+import { MODULE_DEFINITIONS } from '../users/userConstants';
 import { cn } from '../../lib/utils';
 
 export default function OwnerRoleSimulatorBar() {
@@ -13,15 +14,27 @@ export default function OwnerRoleSimulatorBar() {
     currentUser, 
     ownerSimulatedRole, 
     setOwnerSimulatedRole, 
-    rolePermissions 
+    rolePermissions,
+    isRealOwnerSession,
+    users,
+    setCurrentUser
   } = useAppStore();
 
   const [isExpanded, setIsExpanded] = useState(true);
 
-  // Solo se muestra si el usuario logueado en Supabase es el Owner real
-  if (currentUser.role !== 'Owner') {
+  // Solo se muestra si la sesión autenticada es del Owner
+  if (!isRealOwnerSession && currentUser.role !== 'Owner') {
     return null;
   }
+
+  const handleRestoreOwner = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setOwnerSimulatedRole(null);
+    const ownerUser = users.find(u => u.role === 'Owner');
+    if (ownerUser && currentUser.id !== ownerUser.id) {
+      setCurrentUser(ownerUser);
+    }
+  };
 
   const simulatedRoles: { role: RoleType | null; label: string; icon: React.ElementType; color: string }[] = [
     { role: null, label: 'Owner (Modo Real)', icon: Crown, color: 'text-amber-400 bg-amber-500/20 border-amber-400/40' },
@@ -32,8 +45,10 @@ export default function OwnerRoleSimulatorBar() {
     { role: 'Repartidor', label: 'Motorizado', icon: Bike, color: 'text-blue-400 bg-blue-500/20 border-blue-400/40' },
   ];
 
-  const currentActiveRole = ownerSimulatedRole || 'Owner';
-  const activeCount = ownerSimulatedRole ? (rolePermissions[ownerSimulatedRole] || []).length : 23;
+  const currentActiveRole = ownerSimulatedRole || (currentUser.role === 'Owner' ? 'Owner' : currentUser.role);
+  const activeCount = ownerSimulatedRole 
+    ? (rolePermissions[ownerSimulatedRole] || []).length 
+    : (currentUser.role === 'Owner' ? MODULE_DEFINITIONS.length : (rolePermissions[currentUser.role] || []).length);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-lg w-full px-2 sm:px-0">
@@ -66,12 +81,9 @@ export default function OwnerRoleSimulatorBar() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {ownerSimulatedRole && (
+            {(ownerSimulatedRole || currentUser.role !== 'Owner') && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOwnerSimulatedRole(null);
-                }}
+                onClick={handleRestoreOwner}
                 className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-[10px] font-black transition flex items-center gap-1 shadow-xs cursor-pointer"
                 title="Volver al modo Owner con acceso total"
               >
@@ -95,13 +107,19 @@ export default function OwnerRoleSimulatorBar() {
             {/* Grid de Botones de Roles */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {simulatedRoles.map((item) => {
-                const isSelected = item.role === ownerSimulatedRole;
+                const isSelected = item.role === null ? (!ownerSimulatedRole && currentUser.role === 'Owner') : item.role === ownerSimulatedRole;
                 const Icon = item.icon;
 
                 return (
                   <button
                     key={item.label}
-                    onClick={() => setOwnerSimulatedRole(item.role)}
+                    onClick={() => {
+                      if (item.role === null) {
+                        handleRestoreOwner();
+                      } else {
+                        setOwnerSimulatedRole(item.role);
+                      }
+                    }}
                     className={cn(
                       "p-2.5 rounded-2xl border text-left transition-all flex items-center gap-2 cursor-pointer select-none",
                       isSelected

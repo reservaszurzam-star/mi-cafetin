@@ -102,17 +102,50 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
       if (reservations.length > 0)  setters.setReservations(reservations);
       if (users.length > 0) {
         setters.setUsers(users);
-        // Sincronizar usuario activo con la sesión de Supabase Auth
-        const { supabase } = await import('../lib/supabaseClient');
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && setters.setCurrentUser) {
-          const authUser = users.find(u =>
-            u.supabaseId === session.user.id ||
-            (u.email && u.email.toLowerCase() === session.user.email?.toLowerCase()) ||
-            (session.user.app_metadata?.username && u.username === session.user.app_metadata.username)
-          );
-          if (authUser) {
-            setters.setCurrentUser(authUser);
+        if (setters.setCurrentUser) {
+          const savedAuth = localStorage.getItem('cafetin_auth_user');
+          let matchedActiveUser: User | undefined;
+          
+          if (savedAuth) {
+            try {
+              const parsed = JSON.parse(savedAuth);
+              if (parsed.role === 'Owner') {
+                matchedActiveUser = users.find(u => u.role === 'Owner');
+              } else {
+                matchedActiveUser = users.find(u => 
+                  u.id === parsed.userId || 
+                  (parsed.email && u.email?.toLowerCase() === parsed.email.toLowerCase()) ||
+                  (parsed.username && u.username?.toLowerCase() === parsed.username.toLowerCase())
+                );
+                if (!matchedActiveUser && parsed.role) {
+                  matchedActiveUser = users.find(u => u.role === parsed.role);
+                }
+              }
+            } catch {}
+          }
+
+          if (!matchedActiveUser) {
+            const savedActiveId = localStorage.getItem(`${tenantId}_active_user_id`);
+            if (savedActiveId) {
+              matchedActiveUser = users.find(u => u.id === savedActiveId);
+            }
+          }
+
+          if (!matchedActiveUser) {
+            // Sincronizar usuario activo con la sesión de Supabase Auth
+            const { supabase } = await import('../lib/supabaseClient');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              matchedActiveUser = users.find(u =>
+                u.supabaseId === session.user.id ||
+                (u.email && u.email.toLowerCase() === session.user.email?.toLowerCase()) ||
+                (session.user.app_metadata?.username && u.username === session.user.app_metadata.username)
+              );
+            }
+          }
+
+          if (matchedActiveUser) {
+            setters.setCurrentUser(matchedActiveUser);
           }
         }
       }
@@ -120,7 +153,10 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
       if (zones.length > 0)         setters.setDeliveryZones(zones);
       if (sunat.length > 0)         setters.setSunatInvoices(sunat);
       if (menu.length > 0)          setters.setDailyMenuItems(menu);
-      if (permissions)              setters.setRolePermissions(permissions);
+      if (permissions) {
+        setters.setRolePermissions(permissions);
+        localStorage.setItem(`${tenantId}_cafetin_role_permissions`, JSON.stringify(permissions));
+      }
       if (settings)                 setters.setSettings(settings);
       if (promotions && promotions.length > 0 && setters.setPromotions) setters.setPromotions(promotions);
 

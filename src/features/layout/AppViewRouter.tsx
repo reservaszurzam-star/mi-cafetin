@@ -46,6 +46,12 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
 
   if (!isAllowed) {
     const activeRole = ownerSimulatedRole || currentUser.role;
+    const fallbackTarget = hasPermission('pos') ? { name: 'pos' as const } :
+      hasPermission('kds') ? { name: 'kds' as const } :
+      hasPermission('delivery') ? { name: 'delivery' as const } :
+      hasPermission('dashboard') ? { name: 'dashboard' as const } :
+      { name: 'pos' as const };
+
     return (
       <main className="flex-1 w-full overflow-x-hidden max-w-[1600px] mx-auto p-3 sm:p-4 md:p-8 pb-24 md:pb-8 flex items-center justify-center min-h-[60vh]">
         <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200 shadow-sm text-center max-w-md mx-auto animate-in fade-in">
@@ -60,10 +66,10 @@ export const AppViewRouter: React.FC<AppViewRouterProps> = ({
             💡 Por favor, solicita acceso a tu <strong>Administrador</strong> o al <strong>Owner</strong> para habilitar esta pestaña.
           </div>
           <button
-            onClick={() => onNavigate({ name: "dashboard" })}
+            onClick={() => onNavigate(fallbackTarget)}
             className="mt-6 px-6 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl transition cursor-pointer"
           >
-            Volver al Inicio
+            Ir a módulo permitido
           </button>
         </div>
       </main>

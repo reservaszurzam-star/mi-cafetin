@@ -91,6 +91,14 @@ export default function LoginView({ onLoginSuccess }: Props) {
 
         if (matchedUser) {
           const userTenant = matchedUser.tenant_id || 'laslomas';
+          localStorage.setItem(`${userTenant}_active_user_id`, matchedUser.id);
+          localStorage.setItem('cafetin_auth_user', JSON.stringify({
+            tenants: [userTenant],
+            role: matchedUser.role || 'Mozo',
+            email: matchedUser.email || `${matchedUser.username}@cafetin.com`,
+            userId: matchedUser.id,
+          }));
+
           onLoginSuccess({
             tenants: [userTenant],
             role: matchedUser.role || 'Mozo',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, X } from 'lucide-react';
+import { UserPlus, X, AlertCircle } from 'lucide-react';
 import { User, RoleType } from '../../types';
 
 interface UserModalProps {
@@ -15,6 +15,7 @@ interface UserModalProps {
     active: boolean;
   }) => void;
   initialUser?: User | null;
+  existingUsers?: User[];
 }
 
 export const UserModal: React.FC<UserModalProps> = ({
@@ -22,6 +23,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   onClose,
   onSave,
   initialUser,
+  existingUsers = [],
 }) => {
   const [userName, setUserName] = useState('');
   const [userUsername, setUserUsername] = useState('');
@@ -30,8 +32,10 @@ export const UserModal: React.FC<UserModalProps> = ({
   const [userPhone, setUserPhone] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userActive, setUserActive] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
+    setErrorMsg('');
     if (initialUser) {
       setUserName(initialUser.name);
       setUserUsername(initialUser.username);
@@ -55,15 +59,36 @@ export const UserModal: React.FC<UserModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName.trim()) return;
+    setErrorMsg('');
 
-    const finalUsername = userUsername.trim() || userName.toLowerCase().replace(/\s+/g, '');
+    if (!userName.trim()) {
+      setErrorMsg('Por favor ingresa el nombre completo.');
+      return;
+    }
+
+    const finalUsername = (userUsername.trim() || userName.toLowerCase().replace(/\s+/g, '')).toLowerCase();
+    
+    // Validar nombre de usuario duplicado
+    const duplicate = existingUsers.find(u => 
+      u.username.toLowerCase() === finalUsername && (!initialUser || u.id !== initialUser.id)
+    );
+    if (duplicate) {
+      setErrorMsg(`El nombre de usuario "${finalUsername}" ya está en uso por "${duplicate.name}". Elige otro.`);
+      return;
+    }
+
+    const cleanPin = userPin.trim().replace(/\D/g, '');
+    if (cleanPin.length !== 4) {
+      setErrorMsg('El PIN de seguridad debe tener exactamente 4 dígitos numéricos.');
+      return;
+    }
+
     const finalEmail = userEmail.trim() || `${finalUsername}@stc.com`;
 
     onSave({
       name: userName.trim(),
       username: finalUsername,
-      pin: userPin.trim() || '1234',
+      pin: cleanPin,
       role: userRole,
       phone: userPhone.trim(),
       email: finalEmail,
@@ -96,7 +121,13 @@ export const UserModal: React.FC<UserModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          
+          {errorMsg && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 text-xs font-bold animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+              <p className="leading-tight">{errorMsg}</p>
+            </div>
+          )}
+
           <div>
             <label className="block text-[11px] font-black text-stone-700 uppercase tracking-wider mb-1">
               Nombre Completo *

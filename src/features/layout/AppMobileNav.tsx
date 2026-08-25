@@ -661,48 +661,68 @@ export const AppMobileNav: React.FC<AppMobileNavProps> = ({
         </>
       )}
 
-      {/* ── TAB-BAR INFERIOR MOBILE (5 BOTONES PRINCIPALES) ── */}
+      {/* ── TAB-BAR INFERIOR MOBILE (BOTONES FILTRADOS POR PERMISOS) ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-stone-200 shadow-[0_-2px_16px_rgba(0,0,0,0.07)]" style={{ height: 60 }}>
         <div className="flex items-stretch h-full">
-          <button
-            onClick={() => { onNavigate({ name: "dashboard" }); onCloseMobileMenu(); }}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
-              view.name === "dashboard" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
-            }`}
-          >
-            <LayoutGrid className="w-[19px] h-[19px]" />
-            <span className="text-[9px] font-black">Panel</span>
-          </button>
+          {hasPermission('dashboard') && (
+            <button
+              onClick={() => { onNavigate({ name: "dashboard" }); onCloseMobileMenu(); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                view.name === "dashboard" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
+              }`}
+            >
+              <LayoutGrid className="w-[19px] h-[19px]" />
+              <span className="text-[9px] font-black">Panel</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => { onNavigate({ name: "pos" }); onCloseMobileMenu(); }}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
-              view.name === "pos" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
-            }`}
-          >
-            <Receipt className="w-[19px] h-[19px]" />
-            <span className="text-[9px] font-black">POS</span>
-          </button>
+          {hasPermission('pos') && (
+            <button
+              onClick={() => { onNavigate({ name: "pos" }); onCloseMobileMenu(); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                view.name === "pos" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
+              }`}
+            >
+              <Receipt className="w-[19px] h-[19px]" />
+              <span className="text-[9px] font-black">POS</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => { onNavigate({ name: "delivery" }); onCloseMobileMenu(); }}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
-              view.name === "delivery" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
-            }`}
-          >
-            <Truck className="w-[19px] h-[19px]" />
-            <span className="text-[9px] font-black">Delivery</span>
-          </button>
+          {hasPermission('delivery') && (
+            <button
+              onClick={() => { onNavigate({ name: "delivery" }); onCloseMobileMenu(); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                view.name === "delivery" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
+              }`}
+            >
+              <Truck className="w-[19px] h-[19px]" />
+              <span className="text-[9px] font-black">Delivery</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => { onNavigate({ name: "kds" }); onCloseMobileMenu(); }}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
-              view.name === "kds" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
-            }`}
-          >
-            <ChefHat className="w-[19px] h-[19px]" />
-            <span className="text-[9px] font-black">Cocina</span>
-          </button>
+          {hasPermission('kds') && (
+            <button
+              onClick={() => { onNavigate({ name: "kds" }); onCloseMobileMenu(); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                view.name === "kds" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
+              }`}
+            >
+              <ChefHat className="w-[19px] h-[19px]" />
+              <span className="text-[9px] font-black">Cocina</span>
+            </button>
+          )}
+
+          {hasPermission('reservations') && !hasPermission('dashboard') && (
+            <button
+              onClick={() => { onNavigate({ name: "reservations" }); onCloseMobileMenu(); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                view.name === "reservations" && !isMobileMenuOpen ? "text-amber-600 border-t-2 border-amber-500 bg-amber-50/60" : "text-stone-400 border-t-2 border-transparent"
+              }`}
+            >
+              <Calendar className="w-[19px] h-[19px]" />
+              <span className="text-[9px] font-black">Reservas</span>
+            </button>
+          )}
 
           <button
             onClick={onToggleMobileMenu}

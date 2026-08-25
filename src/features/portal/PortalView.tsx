@@ -153,6 +153,26 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
     </nav>
   );
 
+  const handleEnterManagement = () => {
+    if (hasPermission('dashboard')) {
+      onSelectModule('restaurant', { name: 'dashboard' }, 'ops_ventas');
+    } else if (hasPermission('pos')) {
+      onSelectModule('restaurant', { name: 'pos' }, 'ops_ventas');
+    } else if (hasPermission('kds')) {
+      onSelectModule('restaurant', { name: 'kds' }, 'ops_cocina');
+    } else if (hasPermission('delivery')) {
+      onSelectModule('restaurant', { name: 'delivery' }, 'ops_ventas');
+    } else if (hasPermission('inventory')) {
+      onSelectModule('restaurant', { name: 'inventory' }, 'ops_inventario');
+    } else if (hasPermission('reports')) {
+      onSelectModule('restaurant', { name: 'reports' }, 'admin_finanzas');
+    } else if (hasPermission('users')) {
+      onSelectModule('restaurant', { name: 'users' }, 'admin_sistema');
+    } else {
+      onSelectModule('restaurant', { name: 'pos' }, 'ops_ventas');
+    }
+  };
+
   const heroImage = isParadero ? '/fondo-web/ceviche-portal.jpg' : '/assets/portal/menu/bg.jpg';
   const heroFallback = isParadero ? '/fondo-web/paradero-seafood.jpg' : '/assets/portal/menu/bg.jpg';
 
@@ -307,7 +327,7 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
 
               {/* CARD 2: Gestión Interna */}
               <button
-                onClick={() => onSelectModule('restaurant', { name: 'dashboard' }, 'ops_ventas')}
+                onClick={handleEnterManagement}
                 className={`group relative flex items-center w-full h-[130px] sm:h-[145px] md:h-[150px] rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden border text-left transition-all duration-500 bg-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.07)] hover:shadow-[0_20px_45px_-10px_rgba(0,0,0,0.12)] ${isParadero ? 'border-blue-100 hover:border-blue-400' : 'border-stone-200/90 hover:border-amber-400'} ${animate ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'}`}
                 style={{ transitionDelay: '250ms' }}
               >

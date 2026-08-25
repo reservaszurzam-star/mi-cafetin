@@ -201,7 +201,7 @@ export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
         />
       )}
 
-      {/* ── ASISTENTE VIRTUAL GRACE ── */}
+      {/* ── ASISTENTE VIRTUAL GRACE IA ── */}
       <GraceAssistant onNavigate={navigate} />
 
       {/* ── BOTÓN UNIVERSAL FLOTANTE DE SINCRONIZACIÓN SUPABASE ── */}

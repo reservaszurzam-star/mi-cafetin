@@ -221,13 +221,13 @@ export async function loginByPin(tenantId: string, username: string, pin: string
   return mapDbUser(data[0]);
 }
 
-export async function upsertUser(tenantId: string, user: User): Promise<void> {
+export async function upsertUser(tenantId: string, user: User): Promise<{ success: boolean; error?: string }> {
   const validId = ensureUUID(user.id);
   const row = {
     id:         validId,
     tenant_id:  tenantId,
     name:       user.name,
-    username:   user.username,
+    username:   user.username.trim().toLowerCase(),
     pin:        user.pin,
     role:       user.role,
     phone:      user.phone ?? null,
@@ -237,13 +237,21 @@ export async function upsertUser(tenantId: string, user: User): Promise<void> {
     updated_at: new Date().toISOString(),
   };
   const { error } = await db(tenantId).from('users').upsert(row, { onConflict: 'id' });
-  if (error) handleError('upsertUser', error);
+  if (error) {
+    handleError('upsertUser', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
 }
 
-export async function deleteUser(tenantId: string, userId: string): Promise<void> {
+export async function deleteUser(tenantId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   const validId = ensureUUID(userId);
   const { error } = await db(tenantId).from('users').delete().eq('id', validId).eq('tenant_id', tenantId);
-  if (error) handleError('deleteUser', error);
+  if (error) {
+    handleError('deleteUser', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
 }
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
