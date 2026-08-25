@@ -234,16 +234,6 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
 
         {/* Top bar */}
         <div className="flex items-center gap-3 px-4 py-3">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition shrink-0"
-              title="Volver al Panel"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
-
           <img
             src={logoImage}
             alt={settings.companyName || 'Logo'}

@@ -191,7 +191,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
                     onChange={(e) => setIdentifier(e.target.value)}
                     required
                     autoComplete="username"
-                    placeholder="Ej: valentino, marcos1 o correo"
+                    placeholder="Ingresa tu usuario o correo"
                     className="w-full pl-11 pr-4 py-3.5 bg-[#fcfbf8] border border-[#fcfbf8] rounded-xl text-[14px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#d8a85c] transition-all [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_#fcfbf8] [&:-webkit-autofill]:-webkit-text-fill-color-black"
                   />
                 </div>
@@ -211,7 +211,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    placeholder="PIN (ej: 1234) o contraseña"
+                    placeholder="Ingresa tu contraseña o PIN"
                     className="w-full pl-11 pr-12 py-3.5 bg-[#fcfbf8] border border-[#fcfbf8] rounded-xl text-[14px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#d8a85c] transition-all tracking-[0.2em] font-medium [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_#fcfbf8] [&:-webkit-autofill]:-webkit-text-fill-color-black"
                   />
                   <button

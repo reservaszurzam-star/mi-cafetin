@@ -291,15 +291,6 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="w-9 h-9 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition shrink-0 cursor-pointer"
-                title="Volver"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
             <img
               src={theme.logo}
               alt={theme.name}
