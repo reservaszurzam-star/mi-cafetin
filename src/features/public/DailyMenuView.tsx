@@ -287,36 +287,19 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-stone-900 font-sans flex flex-col selection:bg-amber-500 selection:text-white">
 
-      {/* ── BARRA SUPERIOR ADMIN (Si viene desde el panel) ── */}
-      {onBack && (
-        <div className="bg-stone-950 text-stone-300 px-4 py-2 text-xs font-bold flex items-center justify-between border-b border-stone-800">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Vista Pública de Clientes · <strong>{theme.name}</strong></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopyMenuLink}
-              className="bg-stone-800 hover:bg-stone-700 text-stone-200 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
-            >
-              {copiedLink ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              <span>{copiedLink ? 'Copiado' : 'Copiar Link'}</span>
-            </button>
-            <button
-              onClick={onBack}
-              className="bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-1 rounded-lg text-xs font-black transition flex items-center gap-1"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Panel Admin</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── HEADER PÚBLICO ── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="w-9 h-9 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition shrink-0 cursor-pointer"
+                title="Volver"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
             <img
               src={theme.logo}
               alt={theme.name}

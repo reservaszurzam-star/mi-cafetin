@@ -229,23 +229,6 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   return (
     <div className="min-h-screen bg-[#f9f6f1] text-stone-900 font-sans">
 
-      {/* Banner para administrador si tiene onBack */}
-      {onBack && (
-        <div className="bg-stone-900 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Vista de Carta Digital ({settings.companyName})</span>
-          </div>
-          <button
-            onClick={onBack}
-            className="bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-1 rounded-lg text-xs font-black transition flex items-center gap-1"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Volver al Panel</span>
-          </button>
-        </div>
-      )}
-
       {/* ══ HEADER ════════════════════════════════════════════════════════════ */}
       <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
 
