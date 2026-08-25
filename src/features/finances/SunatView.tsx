@@ -610,7 +610,14 @@ export default function SunatView() {
                   className="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-base font-mono font-black text-stone-900 outline-none focus:border-amber-500"
                 />
                 <div className="text-[10px] text-stone-500 font-semibold mt-1">
-                  Subtotal: S/ {(parseFloat(totalAmountInput || '0') / 1.18).toFixed(2)} · IGV 18%: S/ {(parseFloat(totalAmountInput || '0') - (parseFloat(totalAmountInput || '0') / 1.18)).toFixed(2)}
+                  {(() => {
+                    const totalVal = parseFloat(totalAmountInput || '0');
+                    const rate = sunatConfig.igvRate ?? 10;
+                    const factor = 1 + (rate / 100);
+                    const subtotal = totalVal / factor;
+                    const igvVal = totalVal - subtotal;
+                    return `Subtotal: S/ ${subtotal.toFixed(2)} · IGV ${rate}% (Ley Restaurantes): S/ ${igvVal.toFixed(2)}`;
+                  })()}
                 </div>
               </div>
 
@@ -821,6 +828,24 @@ export default function SunatView() {
                   <option value="beta">🧪 Pruebas (Beta)</option>
                 </select>
               </div>
+            </div>
+
+            {/* Tasa de IGV Tributario */}
+            <div>
+              <label className="block text-[11px] font-black text-stone-700 uppercase tracking-wider mb-1">
+                Tasa de IGV Tributario para Facturación
+              </label>
+              <select
+                value={sunatConfig.igvRate ?? 10}
+                onChange={(e) => setSunatConfig({ ...sunatConfig, igvRate: Number(e.target.value) })}
+                className="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-xs font-black text-stone-900"
+              >
+                <option value={10}>🍽️ 10% — Restaurantes y Hoteles (Ley N° 31556 - Predeterminado)</option>
+                <option value={18}>🏢 18% — Régimen General</option>
+              </select>
+              <p className="text-[10px] text-stone-500 mt-1">
+                Aplica la tasa especial del 10% de IGV para el sector gastronómico de acuerdo con la normativa vigente de SUNAT.
+              </p>
             </div>
 
             <div className="pt-3">

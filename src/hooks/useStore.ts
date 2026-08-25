@@ -1040,9 +1040,11 @@ export function useStore(tenantId: string) {
 
         // Generar Comprobante SUNAT si es Boleta o Factura
         if (docType === "Boleta" || docType === "Factura") {
-          const subtotal = Number((target.total / 1.18).toFixed(2));
-          const igv = Number((target.total - subtotal).toFixed(2));
           const config = getSunatConfig(tenantId);
+          const igvPercent = config.igvRate ?? 10;
+          const igvFactor = 1 + (igvPercent / 100);
+          const subtotal = Number((target.total / igvFactor).toFixed(2));
+          const igv = Number((target.total - subtotal).toFixed(2));
           const series = docType === "Factura" ? config.facturaSeries : config.boletaSeries;
           const number = String((sunatInvoices || []).length + 1).padStart(6, '0');
           const hash = generateCanonicalHash(`${config.ruc}-${series}-${number}-${target.total}-${Date.now()}`);

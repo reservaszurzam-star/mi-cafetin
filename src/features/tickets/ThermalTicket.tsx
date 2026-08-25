@@ -89,9 +89,9 @@ export function ThermalTicket({
   const displayOrderNo = order.id ? order.id.replace(/\D/g, '').slice(-6) || ticketNumber : ticketNumber;
   const isDelivery = order.type === 'delivery' || order.tableNumber.startsWith('D-');
 
-  // Cálculos tributarios
+  // Cálculos tributarios (10% IGV Ley de Restaurantes N° 31556)
   const totalAmount = filteredItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const opGravada = Number((totalAmount / 1.18).toFixed(2));
+  const opGravada = Number((totalAmount / 1.10).toFixed(2));
   const igv = Number((totalAmount - opGravada).toFixed(2));
 
   // Códigos oficiales SUNAT (Anexo 7)
@@ -516,7 +516,7 @@ export function ThermalTicket({
                     <span>S/ {opGravada.toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0' }}>
-                    <span>I.G.V. (18%):</span>
+                    <span>I.G.V. (10%):</span>
                     <span>S/ {igv.toFixed(2)}</span>
                   </div>
                 </div>
