@@ -27,6 +27,7 @@ export interface SunatConfig {
   department: string;
   province: string;
   district: string;
+  lookupApiToken?: string;
 }
 
 export const DEFAULT_SUNAT_CONFIG: SunatConfig = {
@@ -48,6 +49,7 @@ export const DEFAULT_SUNAT_CONFIG: SunatConfig = {
   department: 'LIMA',
   province: 'LIMA',
   district: 'LIMA',
+  lookupApiToken: 'sk_18750.Kz5Db2bkVuxXsVXdz5yXs5rugHLpQTIf',
 };
 
 const SUNAT_CONFIG_KEY_PREFIX = 'cafetin_sunat_config_';

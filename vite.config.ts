@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 
+const OFFICIAL_LOOKUP_TOKEN = 'sk_18750.Kz5Db2bkVuxXsVXdz5yXs5rugHLpQTIf';
+
 function docLookupPlugin(): Plugin {
   return {
     name: 'doc-lookup-plugin',
@@ -15,7 +17,7 @@ function docLookupPlugin(): Plugin {
         const urlObj = new URL(req.url, 'http://localhost:3000');
         const docType = urlObj.searchParams.get('type') || 'DNI';
         const rawNumber = urlObj.searchParams.get('number') || '';
-        const userToken = urlObj.searchParams.get('token') || '';
+        const userToken = urlObj.searchParams.get('token') || OFFICIAL_LOOKUP_TOKEN;
         const clean = rawNumber.replace(/\D/g, '').trim();
 
         res.setHeader('Content-Type', 'application/json');
@@ -25,7 +27,7 @@ function docLookupPlugin(): Plugin {
           return;
         }
 
-        // Datos conocidos de la empresa
+        // Datos conocidos del emisor
         if (clean === '10437453701' || clean === '43745370') {
           res.end(JSON.stringify({
             success: true,
@@ -35,110 +37,83 @@ function docLookupPlugin(): Plugin {
           return;
         }
 
-        // 1. Consulta RUC (11 dígitos)
+        // 1. Consulta RUC (11 dígitos) en Decolecta / SUNAT Oficial
         if (docType === 'RUC' && clean.length === 11) {
-          // Intento con Token configurado
-          if (userToken) {
-            try {
-              const apiRes = await fetch(`https://api.apis.net.pe/v2/sunat/ruc?numero=${clean}`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
-              });
-              if (apiRes.ok) {
-                const data = await apiRes.json();
-                const name = (data.razonSocial || data.nombre || '').trim();
-                const address = (data.direccion || '').trim();
-                if (name) {
-                  res.end(JSON.stringify({ success: true, name, address: address || 'LIMA, PERÚ' }));
-                  return;
-                }
-              }
-            } catch {
-              // Continuar
-            }
-          }
-
-          // Intento 2: APIs públicas libres
           try {
-            const apiRes = await fetch(`https://api.perudevs.com/api/v1/ruc?document=${clean}&key=cGVydWRldnMucHJveHkueHRydWN0dXJhLm1haW4=`, {
-              headers: { 'User-Agent': 'Mozilla/5.0' }
+            const apiRes = await fetch(`https://api.decolecta.com/v1/sunat/ruc?numero=${clean}`, {
+              headers: { 
+                'Authorization': `Bearer ${userToken}`,
+                'User-Agent': 'Mozilla/5.0'
+              }
             });
             if (apiRes.ok) {
               const data = await apiRes.json();
-              const resultData = data.resultado || data;
-              const name = (resultData.razon_social || resultData.nombre_o_razon_social || resultData.nombre || '').trim();
-              const address = (resultData.direccion || resultData.direccion_completa || '').trim();
+              const name = (data.razon_social || data.nombre_o_razon_social || data.nombre || '').trim();
+              const direccion = data.direccion && data.direccion !== '-' ? data.direccion : 
+                [data.departamento, data.provincia, data.distrito].filter(Boolean).join(', ') || 'LIMA, PERÚ';
+              
               if (name) {
-                res.end(JSON.stringify({ success: true, name, address: address || 'LIMA, PERÚ' }));
+                res.end(JSON.stringify({ 
+                  success: true, 
+                  name, 
+                  address: direccion,
+                  estado: data.estado || 'ACTIVO',
+                  condicion: data.condicion || 'HABIDO'
+                }));
                 return;
               }
             }
-          } catch {
-            // Continuar
+          } catch (e) {
+            console.error('Error Decolecta RUC:', e);
           }
 
-          // Intento 3: Si es RUC 10, consultar DNI embebido
+          // Fallback Si es RUC 10, consultar DNI
           if (clean.startsWith('10')) {
             const embeddedDni = clean.substring(2, 10);
             try {
-              const dniHeaders: Record<string, string> = { 'User-Agent': 'Mozilla/5.0' };
-              if (userToken) dniHeaders['Authorization'] = `Bearer ${userToken}`;
-              const dniRes = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${embeddedDni}`, {
-                headers: dniHeaders
+              const dniRes = await fetch(`https://api.decolecta.com/v1/reniec/dni?numero=${embeddedDni}`, {
+                headers: { 
+                  'Authorization': `Bearer ${userToken}`,
+                  'User-Agent': 'Mozilla/5.0'
+                }
               });
               if (dniRes.ok) {
                 const data = await dniRes.json();
-                const name = (data.nombreCompleto || `${data.nombres || ''} ${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`).trim();
+                const name = (data.full_name || `${data.first_name || ''} ${data.first_last_name || ''} ${data.second_last_name || ''}`).trim();
                 if (name) {
                   res.end(JSON.stringify({ success: true, name, address: 'LIMA, PERÚ' }));
                   return;
                 }
               }
-            } catch {
+            } catch (e) {
               // Continuar
             }
           }
         }
 
-        // 2. Consulta DNI (8 dígitos)
+        // 2. Consulta DNI (8 dígitos) en Decolecta / RENIEC Oficial
         if (docType === 'DNI' && clean.length === 8) {
-          // Intento con Token configurado
-          if (userToken) {
-            try {
-              const apiRes = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${clean}`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
-              });
-              if (apiRes.ok) {
-                const data = await apiRes.json();
-                const name = (data.nombreCompleto || `${data.nombres || ''} ${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`).trim();
-                if (name) {
-                  res.end(JSON.stringify({ success: true, name }));
-                  return;
-                }
-              }
-            } catch {
-              // Continuar
-            }
-          }
-
-          // Intento 2: apis.net.pe sin token
           try {
-            const apiRes = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${clean}`, {
-              headers: { 'User-Agent': 'Mozilla/5.0' }
+            const apiRes = await fetch(`https://api.decolecta.com/v1/reniec/dni?numero=${clean}`, {
+              headers: { 
+                'Authorization': `Bearer ${userToken}`,
+                'User-Agent': 'Mozilla/5.0'
+              }
             });
             if (apiRes.ok) {
               const data = await apiRes.json();
-              const name = (data.nombreCompleto || `${data.nombres || ''} ${data.apellidoPaterno || ''} ${data.apellidoMaterno || ''}`).trim();
+              const name = (data.full_name || `${data.first_name || ''} ${data.first_last_name || ''} ${data.second_last_name || ''}`).trim();
               if (name) {
                 res.end(JSON.stringify({ success: true, name }));
                 return;
               }
             }
-          } catch {
-            // Continuar
+          } catch (e) {
+            console.error('Error Decolecta DNI:', e);
           }
         }
 
-        res.end(JSON.stringify({ success: false, message: 'No se encontraron datos automáticos. Puedes escribir el nombre directamente.' }));
+        res.end(JSON.stringify({ success: false, message: 'Documento no encontrado' }));
       });
     }
   };
