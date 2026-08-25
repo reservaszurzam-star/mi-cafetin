@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import PortalView from "./features/portal/PortalView";
 import PublicMenuView from "./features/public/PublicMenuView";
-import PublicTrackingView from "./features/public/PublicTrackingView";
 import { ModuleTutorialModal } from './features/assistant/ModuleTutorialModal';
 import GraceAssistant from "./features/assistant/GraceAssistant";
 import { useAppStore } from "./hooks/StoreContext";
@@ -49,14 +48,13 @@ type AppProps = {
 export type AppSegment = 'menu_admin' | 'ops_ventas' | 'ops_cocina' | 'ops_inventario' | 'admin_finanzas' | 'admin_crm' | 'admin_sistema';
 
 export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
-  const [currentModule, setCurrentModule] = useState<'portal' | 'menu' | 'restaurant' | 'tracking'>(() => {
+  const [currentModule, setCurrentModule] = useState<'portal' | 'menu' | 'restaurant'>(() => {
     const saved = localStorage.getItem(`cafetin_module_${tenantId}`);
-    if (saved === 'portal' || saved === 'menu' || saved === 'restaurant' || saved === 'tracking') {
+    if (saved === 'portal' || saved === 'menu' || saved === 'restaurant') {
       return saved;
     }
     return 'portal';
   });
-  const [trackingOrderId, setTrackingOrderId] = useState<string>('');
   const [view, setView] = useState<ViewState>(() => {
     const saved = localStorage.getItem(`cafetin_view_${tenantId}`);
     if (saved) {
@@ -77,26 +75,13 @@ export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
   
   const { settings, products, customers, transactions, hasPermission } = useAppStore();
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const trackParam = urlParams.get('track');
-    if (trackParam) {
-      setTrackingOrderId(trackParam);
-      setCurrentModule('tracking');
-    }
-  }, []);
-
   const handleSelectModule = (
-    module: 'portal' | 'menu' | 'restaurant' | 'tracking', 
+    module: 'portal' | 'menu' | 'restaurant', 
     initialView?: ViewState,
-    segment?: AppSegment,
-    orderId?: string
+    segment?: AppSegment
   ) => {
     setCurrentModule(module);
     localStorage.setItem(`cafetin_module_${tenantId}`, module);
-    if (orderId) {
-      setTrackingOrderId(orderId);
-    }
     if (initialView) {
       setView(initialView);
       localStorage.setItem(`cafetin_view_${tenantId}`, JSON.stringify(initialView));
@@ -115,20 +100,8 @@ export default function App({ onBackToBrands, onLogout, tenantId }: AppProps) {
     localStorage.setItem(`cafetin_module_${tenantId}`, 'portal');
   };
 
-  if (currentModule === 'tracking') {
-    return (
-      <PublicTrackingView 
-        orderId={trackingOrderId} 
-        onBack={() => {
-          window.history.replaceState({}, '', window.location.pathname);
-          handleBackToPortal();
-        }} 
-      />
-    );
-  }
-
   if (currentModule === 'portal') {
-    return <PortalView onSelectModule={handleSelectModule as any} onBackToBrands={onBackToBrands} tenantId={tenantId} />;
+    return <PortalView onSelectModule={handleSelectModule} onBackToBrands={onBackToBrands} tenantId={tenantId} />;
   }
 
   if (currentModule === 'menu') {

@@ -271,10 +271,6 @@ export function buildWhatsAppDispatchMessage(data: {
     ? `https://waze.com/ul?ll=${coords[0]},${coords[1]}&navigate=yes`
     : `https://waze.com/ul?q=${encodeURIComponent(deliveryAddress)}%26navigate=yes`;
 
-  const webTrackUrl = orderId
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}?track=${orderId}`
-    : '';
-
   return (
     `🛵 *DESPACHO DELIVERY - ${companyName.toUpperCase()}* 🔥\n\n` +
     `📋 *Pedido:* ${orderNumber}\n` +
@@ -284,7 +280,6 @@ export function buildWhatsAppDispatchMessage(data: {
     (distanceKm ? `📏 *Distancia:* ${distanceKm} km (~${durationMins} min)\n` : '') +
     `💵 *Total a Cobrar:* ${currency} ${totalAmount.toFixed(2)}\n\n` +
     `🍗 *Detalle del Pedido:*\n${itemsSummary}\n\n` +
-    (webTrackUrl ? `🛰️ *Rastreo Web en Vivo:* ${webTrackUrl}\n\n` : '') +
     `🗺️ *Google Maps:* ${mapsUrl}\n` +
     `🚗 *Waze:* ${wazeUrl}`
   );

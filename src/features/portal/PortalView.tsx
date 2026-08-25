@@ -30,7 +30,7 @@ import { useAppStore } from "../../hooks/StoreContext";
 import { UniversalSyncButton } from "../../components/UniversalSyncButton";
 
 type PortalViewProps = {
-  onSelectModule: (module: 'menu' | 'restaurant' | 'tracking', initialView?: any, segment?: string) => void;
+  onSelectModule: (module: 'menu' | 'restaurant', initialView?: any, segment?: string) => void;
   onBackToBrands: () => void;
   tenantId?: string;
 };
@@ -80,7 +80,7 @@ export default function PortalView({ onSelectModule, onBackToBrands, tenantId }:
           { label: 'App Delivery (PedidosYa / Rappi)', show: true, iconEl: <Store className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('menu'); onClose?.(); } },
           { label: 'Menú del Día (Entradas/Fondos)', show: hasPermission('daily_menu'), iconEl: <Utensils className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'daily_menu' }, 'menu_admin'); onClose?.(); } },
           { label: 'Ranking de Platos', show: hasPermission('dish_ranking'), iconEl: <Trophy className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'dish_ranking' }, 'menu_admin'); onClose?.(); } },
-          { label: 'Rastreo GPS en Vivo', show: hasPermission('delivery'), iconEl: <Truck className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('tracking' as any); onClose?.(); } },
+          { label: '🛵 Despacho & Motorizados', show: hasPermission('delivery'), iconEl: <Truck className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'delivery' }, 'ops_ventas'); onClose?.(); } },
           { label: 'Administrar Carta & Precios', show: hasPermission('products'), iconEl: <ChefHat className={`w-4 h-4 ${isParadero ? 'text-blue-500' : 'text-amber-600'}`} />, action: () => { onSelectModule('restaurant', { name: 'products' }, 'menu_admin'); onClose?.(); } },
           { label: '🔗 Ver / Copiar Enlaces Clientes', show: true, iconEl: <Share2 className={`w-4 h-4 text-emerald-600`} />, action: () => { setShowLinksModal(true); onClose?.(); } },
         ].filter(i => i.show).map((item) => (

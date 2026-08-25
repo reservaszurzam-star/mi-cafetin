@@ -145,9 +145,11 @@ export default function DriverAppView({ onBackToAdmin }: DriverAppViewProps) {
 
   // Iniciar / Solicitar GPS en vivo
   const requestAndStartGps = (onSuccessCoords?: (coords: { lat: number; lng: number }) => void) => {
+    const fallbackCoords = { lat: DEFAULT_RESTAURANT_COORDS[0], lng: DEFAULT_RESTAURANT_COORDS[1] };
+
     if (!navigator.geolocation) {
       setGpsStatus('error');
-      alert('Tu navegador no soporta geolocalización GPS.');
+      if (onSuccessCoords) onSuccessCoords(fallbackCoords);
       return;
     }
 
@@ -180,17 +182,16 @@ export default function DriverAppView({ onBackToAdmin }: DriverAppViewProps) {
       },
       (error) => {
         console.warn('Error al obtener ubicación GPS:', error);
-        if (error.code === error.PERMISSION_DENIED) {
-          setGpsStatus('denied');
-          alert('Por favor autoriza el acceso a la ubicación GPS en tu celular para que tus clientes puedan ver el pedido en camino.');
-        } else {
-          setGpsStatus('error');
+        setGpsStatus(error.code === error.PERMISSION_DENIED ? 'denied' : 'error');
+        // Continuar con fallback para no bloquear el despacho del pedido
+        if (onSuccessCoords) {
+          onSuccessCoords(fallbackCoords);
         }
       },
       {
         enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0,
+        timeout: 10000,
+        maximumAge: 5000,
       }
     );
 
