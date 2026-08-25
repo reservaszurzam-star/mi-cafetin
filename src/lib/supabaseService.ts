@@ -63,6 +63,26 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
 
   const isParadero = tenantId === 'paradero';
 
+  let priceTiers = isParadero ? [16, 18, 22, 26] : [14, 16, 18, 22];
+  let tierLabels = isParadero ? ['Clásico', 'Ejecutivo', 'Marino', 'Especial'] : ['Económico', 'Clásico', 'Ejecutivo', 'Especial'];
+  let customFooter = data.whatsapp_custom_footer || undefined;
+
+  // Extraer configuración de 4 precios guardada en el campo de metadatos de Supabase
+  if (data.whatsapp_custom_footer) {
+    try {
+      if (typeof data.whatsapp_custom_footer === 'string' && data.whatsapp_custom_footer.startsWith('{')) {
+        const parsed = JSON.parse(data.whatsapp_custom_footer);
+        if (Array.isArray(parsed.dailyMenuPriceTiers) && parsed.dailyMenuPriceTiers.length === 4) {
+          priceTiers = parsed.dailyMenuPriceTiers.map((p: any) => Number(p));
+        }
+        if (Array.isArray(parsed.dailyMenuTierLabels) && parsed.dailyMenuTierLabels.length === 4) {
+          tierLabels = parsed.dailyMenuTierLabels.map((l: any) => String(l));
+        }
+        customFooter = parsed.customFooter || undefined;
+      }
+    } catch {}
+  }
+
   return {
     theme: 'light',
     companyName:                data.company_name || (isParadero ? 'Paradero 104' : 'Las Lomas Grill'),
@@ -86,11 +106,13 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
     whatsappOrdersPhone:        data.whatsapp_orders_phone || (isParadero ? '51987654321' : '51995881303'),
     whatsappOrdersPhone2:       data.whatsapp_orders_phone2 || (isParadero ? '51995881303' : '51953034562'),
     whatsappMessageGreeting:    data.whatsapp_message_greeting,
-    whatsappCustomFooter:       data.whatsapp_custom_footer,
+    whatsappCustomFooter:       customFooter,
     whatsappIncludeAddress:     data.whatsapp_include_address ?? true,
     whatsappIncludePayment:     data.whatsapp_include_payment ?? true,
     whatsappIncludeNotes:       data.whatsapp_include_notes ?? true,
     dailyMenuPrice:             data.daily_menu_price ?? (isParadero ? 18 : 16),
+    dailyMenuPriceTiers:        priceTiers,
+    dailyMenuTierLabels:        tierLabels,
     dailyMenuEnabled:           data.daily_menu_enabled ?? true,
     dailyMenuStartTime:         data.daily_menu_start_time || '12:00',
     dailyMenuEndTime:           data.daily_menu_end_time || '16:30',
@@ -121,6 +143,16 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
 }
 
 export async function saveSettings(tenantId: string, s: Partial<Settings>): Promise<void> {
+  const isParadero = tenantId === 'paradero';
+  const tiers = s.dailyMenuPriceTiers || (isParadero ? [16, 18, 22, 26] : [14, 16, 18, 22]);
+  const labels = s.dailyMenuTierLabels || (isParadero ? ['Clásico', 'Ejecutivo', 'Marino', 'Especial'] : ['Económico', 'Clásico', 'Ejecutivo', 'Especial']);
+
+  const footerPayload = JSON.stringify({
+    dailyMenuPriceTiers: tiers,
+    dailyMenuTierLabels: labels,
+    customFooter: s.whatsappCustomFooter || null,
+  });
+
   const row: Record<string, unknown> = {
     tenant_id:                    tenantId,
     company_name:                 s.companyName,
@@ -144,7 +176,7 @@ export async function saveSettings(tenantId: string, s: Partial<Settings>): Prom
     whatsapp_orders_phone:        s.whatsappOrdersPhone,
     whatsapp_orders_phone2:       s.whatsappOrdersPhone2,
     whatsapp_message_greeting:    s.whatsappMessageGreeting,
-    whatsapp_custom_footer:       s.whatsappCustomFooter,
+    whatsapp_custom_footer:       footerPayload,
     whatsapp_include_address:     s.whatsappIncludeAddress,
     whatsapp_include_payment:     s.whatsappIncludePayment,
     whatsapp_include_notes:       s.whatsappIncludeNotes,
@@ -172,8 +204,8 @@ export async function saveSettings(tenantId: string, s: Partial<Settings>): Prom
       pos_provider:      s.paymentDetails.posProvider,
       pos_terminal_code: s.paymentDetails.posTerminalCode,
       pos_commission_rate: s.paymentDetails.posCommissionRate,
-      pos_active:        s.paymentDetails.posActive,
-      cash_active:       s.paymentDetails.cashActive,
+      pos_active:         s.paymentDetails.posActive,
+      cash_active:        s.paymentDetails.cashActive,
     } : {}),
     updated_at: new Date().toISOString(),
   };
@@ -862,13 +894,32 @@ export async function deleteSunatInvoice(tenantId: string, id: string): Promise<
 // ─── DAILY MENU ───────────────────────────────────────────────────────────────
 
 function mapDbDailyMenuItem(m: Record<string, unknown>): DailyMenuItem {
+  let desc = (m.description as string) || '';
+  let price: number | undefined = undefined;
+  let priceTier: string | undefined = undefined;
+
+  // Extraer etiquetas de metadatos si existen
+  const metaMatch = desc.match(/<!--tier:(.*?)\|price:(.*?)-->/);
+  if (metaMatch) {
+    priceTier = metaMatch[1] || undefined;
+    price = parseFloat(metaMatch[2]) || undefined;
+    desc = desc.replace(/<!--tier:(.*?)\|price:(.*?)-->/g, '').trim();
+  } else if (m.course === 'fondo') {
+    const extra = m.extra_price as number;
+    if (extra && extra >= 10) {
+      price = extra;
+    }
+  }
+
   return {
     id:          m.id as string,
     name:        m.name as string,
     course:      m.course as DailyMenuItem['course'],
-    description: m.description as string | undefined,
+    description: desc || undefined,
     available:   m.available as boolean,
-    extraPrice:  m.extra_price as number | undefined,
+    extraPrice:  m.course === 'postre' ? (m.extra_price as number) : undefined,
+    price:       price,
+    priceTier:   priceTier,
     imageUrl:    m.image_url as string | undefined,
     popular:     m.popular as boolean | undefined,
   };
@@ -885,11 +936,23 @@ export async function fetchDailyMenuItems(tenantId: string): Promise<DailyMenuIt
 }
 
 export async function upsertDailyMenuItem(tenantId: string, item: DailyMenuItem): Promise<void> {
+  let cleanDesc = item.description || '';
+  if (item.course === 'fondo' && (item.price || item.priceTier)) {
+    cleanDesc = cleanDesc.replace(/<!--tier:(.*?)\|price:(.*?)-->/g, '').trim();
+    cleanDesc = `${cleanDesc}<!--tier:${item.priceTier || ''}|price:${item.price || ''}-->`;
+  }
+
   const { error } = await db(tenantId).from('daily_menu_items').upsert({
-    id: ensureUUID(item.id), tenant_id: tenantId, name: item.name, course: item.course,
-    description: item.description ?? null, available: item.available,
-    extra_price: item.extraPrice ?? 0, image_url: item.imageUrl ?? null,
+    id: ensureUUID(item.id),
+    tenant_id: tenantId,
+    name: item.name,
+    course: item.course,
+    description: cleanDesc || null,
+    available: item.available,
+    extra_price: item.course === 'fondo' ? (item.price ?? 0) : (item.extraPrice ?? 0),
+    image_url: item.imageUrl ?? null,
     popular: item.popular ?? false,
+    updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
   if (error) handleError('upsertDailyMenuItem', error);
 }

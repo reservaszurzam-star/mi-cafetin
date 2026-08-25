@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import {
   Plus, Trash2, Edit3, Check, X, Eye, EyeOff, Star,
@@ -96,6 +96,33 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const [cfgPhone, setCfgPhone] = useState<string>(settings.whatsappOrdersPhone || (isParadero ? '51987654321' : '51995881303'));
   const [cfgPhone2, setCfgPhone2] = useState<string>(settings.whatsappOrdersPhone2 || (isParadero ? '51995881303' : '51953034562'));
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  // Sincronizar estados locales cuando settings se hidrata desde Supabase
+  useEffect(() => {
+    if (settings.dailyMenuPriceTiers && settings.dailyMenuPriceTiers.length === 4) {
+      setCfgTier1(settings.dailyMenuPriceTiers[0]);
+      setCfgTier2(settings.dailyMenuPriceTiers[1]);
+      setCfgTier3(settings.dailyMenuPriceTiers[2]);
+      setCfgTier4(settings.dailyMenuPriceTiers[3]);
+    }
+    if (settings.dailyMenuTierLabels && settings.dailyMenuTierLabels.length === 4) {
+      setCfgLabel1(settings.dailyMenuTierLabels[0]);
+      setCfgLabel2(settings.dailyMenuTierLabels[1]);
+      setCfgLabel3(settings.dailyMenuTierLabels[2]);
+      setCfgLabel4(settings.dailyMenuTierLabels[3]);
+    }
+    if (settings.dailyMenuPrice) setCfgBasePrice(settings.dailyMenuPrice);
+    if (settings.dailyMenuExtraStarterPrice !== undefined) setCfgExtraStarter(settings.dailyMenuExtraStarterPrice);
+    if (settings.dailyMenuExtraDrinkPrice !== undefined) setCfgExtraDrink(settings.dailyMenuExtraDrinkPrice);
+    if (settings.dailyMenuDefaultDessertPrice !== undefined) setCfgDefaultDessert(settings.dailyMenuDefaultDessertPrice);
+    if (settings.dailyMenuTitle) setCfgTitle(settings.dailyMenuTitle);
+    if (settings.dailyMenuSubtitle) setCfgSubtitle(settings.dailyMenuSubtitle);
+    if (settings.dailyMenuStartTime) setCfgStartTime(settings.dailyMenuStartTime);
+    if (settings.dailyMenuEndTime) setCfgEndTime(settings.dailyMenuEndTime);
+    if (settings.dailyMenuEnabled !== undefined) setCfgEnabled(settings.dailyMenuEnabled);
+    if (settings.whatsappOrdersPhone) setCfgPhone(settings.whatsappOrdersPhone);
+    if (settings.whatsappOrdersPhone2) setCfgPhone2(settings.whatsappOrdersPhone2);
+  }, [settings]);
 
   // Estados de platos
   const [editingId, setEditingId] = useState<string | null>(null);
