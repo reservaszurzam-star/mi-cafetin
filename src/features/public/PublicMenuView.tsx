@@ -32,11 +32,17 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
   const isParadero = settings.companyName.toLowerCase().includes('paradero');
   const logoImage = isParadero ? '/Logo/logo-paradero-104.png' : (settings.logoUrl && settings.logoUrl !== '/icono.png' ? settings.logoUrl : '/Logo/logo-lomas-grill.png');
 
+  const fallbackBack = () => {
+    localStorage.setItem(`cafetin_module_${isParadero ? 'paradero' : 'laslomas'}`, 'portal');
+    window.location.href = '/';
+  };
+  const effectiveBack = onBack || fallbackBack;
+
   // Modo 1: Interfaz Limpia por Cuadros (Nombre + Precio + Agregar)
   if (viewMode === 'mobile_app') {
     return (
       <RappiMobileStoreView
-        onBack={onBack}
+        onBack={effectiveBack}
         onViewDailyMenu={() => setViewMode('daily')}
       />
     );
@@ -46,7 +52,7 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
   if (viewMode === 'daily') {
     return (
       <DailyMenuView 
-        onBack={onBack} 
+        onBack={effectiveBack} 
         onViewFullMenu={() => setViewMode('mobile_app')} 
       />
     );
@@ -59,17 +65,13 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-30 bg-white/90 dark:bg-stone-900/90 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          {onBack ? (
-            <button 
-              onClick={onBack}
-              className="flex items-center gap-2 text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-white transition-colors p-2 -ml-2 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-bold text-sm hidden sm:inline">Volver</span>
-            </button>
-          ) : (
-            <div className="w-10"></div>
-          )}
+          <button 
+            onClick={effectiveBack}
+            className="flex items-center gap-2 text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 transition p-2 -ml-2 rounded-xl border border-stone-200 cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-bold text-xs sm:text-sm">Volver al Panel</span>
+          </button>
 
           <div className="flex items-center space-x-3 text-stone-900 dark:text-white font-display font-bold text-lg md:text-xl">
             <img 

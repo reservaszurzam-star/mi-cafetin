@@ -3,7 +3,7 @@ import { useAppStore } from "../../hooks/StoreContext";
 import {
   MessageCircle, Check, CheckCircle2, ChevronLeft,
   Utensils, Coffee, Cake, Soup, Sparkles,
-  User, Phone, MapPin, ArrowRight, Info,
+  User, Phone, MapPin, ArrowRight, ArrowLeft, Info,
   ChefHat, Flame, Waves, Star, Clock, ShoppingBag,
   ExternalLink, Share2, Copy, Plus, Minus, X, Trash2
 } from 'lucide-react';
@@ -298,13 +298,48 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     setShowCheckout(false);
   };
 
+  const handleReturn = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      localStorage.setItem(`cafetin_module_${tenantKey}`, 'portal');
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-stone-900 font-sans flex flex-col selection:bg-amber-500 selection:text-white">
+
+      {/* ── TOPBAR DE RETORNO AL PANEL (MODO OWNER / STAFF) ── */}
+      <div className="bg-stone-900 text-stone-200 text-xs px-4 py-2 border-b border-stone-800 flex items-center justify-between z-40">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-bold text-[11px] sm:text-xs">Menú Digital para Clientes</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleReturn}
+          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 px-3 py-1 rounded-xl font-black text-xs transition cursor-pointer shadow-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Volver al Panel de Administración</span>
+        </button>
+      </div>
 
       {/* ── HEADER PÚBLICO ── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={handleReturn}
+              className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-1 cursor-pointer shrink-0 border border-stone-200"
+              title="Volver al panel"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="font-bold text-xs hidden sm:inline">Panel</span>
+            </button>
+
             <img
               src={theme.logo}
               alt={theme.name}

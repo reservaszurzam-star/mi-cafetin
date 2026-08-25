@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Utensils, UtensilsCrossed,
   Coffee, Flame, Fish, Waves, Salad, Package, Star,
   MapPin, Phone, User, CreditCard, Banknote, Smartphone,
-  CheckCircle2, ArrowRight, ChefHat, Clock
+  CheckCircle2, ArrowRight, ArrowLeft, ChefHat, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from "../../types";
@@ -226,14 +226,50 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   };
 
   // ════════════════════════════════════════════════════════════════════════════
+  const tenantKey = isParadero ? 'paradero' : 'laslomas';
+  const handleReturn = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      localStorage.setItem(`cafetin_module_${tenantKey}`, 'portal');
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f9f6f1] text-stone-900 font-sans">
+
+      {/* ── TOPBAR DE RETORNO AL PANEL (MODO OWNER / STAFF) ── */}
+      <div className="bg-stone-900 text-stone-200 text-xs px-4 py-2 border-b border-stone-800 flex items-center justify-between z-40">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-bold text-[11px] sm:text-xs">Carta Digital para Clientes</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleReturn}
+          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 px-3 py-1 rounded-xl font-black text-xs transition cursor-pointer shadow-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Volver al Panel de Administración</span>
+        </button>
+      </div>
 
       {/* ══ HEADER ════════════════════════════════════════════════════════════ */}
       <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
 
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-2.5 px-4 py-3">
+          <button
+            type="button"
+            onClick={handleReturn}
+            className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-1 cursor-pointer shrink-0 border border-stone-200"
+            title="Volver al panel"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-bold text-xs hidden sm:inline">Panel</span>
+          </button>
+
           <img
             src={logoImage}
             alt={settings.companyName || 'Logo'}

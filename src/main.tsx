@@ -101,6 +101,7 @@ function Root() {
         <PublicMenuView
           initialMode={publicRoute.mode}
           onBack={() => {
+            localStorage.setItem(`cafetin_module_${publicRoute.tenantId}`, 'portal');
             window.location.href = '/';
           }}
         />
