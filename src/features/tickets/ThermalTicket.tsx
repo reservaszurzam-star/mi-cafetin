@@ -69,9 +69,9 @@ export function ThermalTicket({
     ? settings.logoUrl
     : (isParadero ? "/Logo/logo-paradero-104.png" : "/Logo/logo-lomas-grill.png");
   const displayCompanyName = isParadero ? "PARADERO 104" : (settings.companyName || "LAS LOMAS GRILL");
-  const businessSubtitle = isParadero ? (settings.slogan || "BARRA CEVICHERA & MARISCOS") : (settings.slogan || "SABOR A LA LEÑA & TRADICIÓN");
-  const businessRuc = isParadero ? (settings.companyRuc || "20608934512") : (settings.companyRuc || "20601234567");
-  const businessAddress = settings.address || (isParadero ? "Av. Próceres de la Independencia 1040, SJL - Lima" : "Av. Mangomarca 850, SJL - Lima");
+  const businessSubtitle = isParadero ? (settings.slogan || "BARRA CEVICHERA & MARISCOS") : (settings.slogan || "BRASAS, PARRILLAS & SABOR");
+  const businessRuc = (settings.companyRuc && settings.companyRuc.length === 11) ? settings.companyRuc : "10437453701";
+  const businessAddress = settings.address || (isParadero ? "Av. Próceres de la Independencia 1040, SJL - Lima" : "Av. Las Lomas 234, Lima");
   const businessPhone = `WhatsApp / Pedidos: ${settings.whatsappOrdersPhone || settings.phone || (isParadero ? "987 654 321" : "995 881 303")}`;
 
   // Items filtering

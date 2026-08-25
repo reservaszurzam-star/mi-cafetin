@@ -388,7 +388,9 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissionConfig = {
 export const DEFAULT_SETTINGS_LASLOMAS: Settings = {
   theme: "light",
   companyName: "Las Lomas Grill",
+  companyRuc: "10437453701",
   slogan: "Sabor a la Leña & Tradición",
+  address: "Av. Las Lomas 234, Lima",
   logoUrl: "/Logo/logo-lomas-grill.png",
   phone: "995 881 303 / 953 034 562",
   currency: "S/",
@@ -422,7 +424,9 @@ export const DEFAULT_SETTINGS_LASLOMAS: Settings = {
 export const DEFAULT_SETTINGS_PARADERO: Settings = {
   theme: "light",
   companyName: "Paradero 104",
+  companyRuc: "10437453701",
   slogan: "Cevichería & Mariscos",
+  address: "Av. Próceres 1040, Lima",
   logoUrl: "/Logo/logo-paradero-104.png",
   phone: "987 654 321",
   currency: "S/",
