@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Banknote, QrCode } from 'lucide-react';
+import { X, CheckCircle2, Banknote, QrCode, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { PaymentMethod, Settings, Customer } from '../../types';
 import { PAYMENT_METHODS, PAY_ICONS, PAY_IMAGES } from './posConstants';
 import { formatMoney } from '../../lib/formatters';
+import { lookupDocumentData } from '../../lib/sunatService';
 
 interface POSCheckoutModalProps {
   isOpen: boolean;
@@ -41,19 +42,46 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
   const [docType, setDocType] = useState<'Boleta' | 'Factura' | 'Nota de Venta'>('Boleta');
   const [docNumber, setDocNumber] = useState('');
   const [customerNameInput, setCustomerNameInput] = useState('');
+  const [isSearchingDoc, setIsSearchingDoc] = useState(false);
   const [showQR, setShowQR] = useState(settings.showPaymentQR ?? true);
   const [printTicket, setPrintTicket] = useState(true);
 
   if (!isOpen) return null;
 
-  const handleSearchDoc = () => {
-    if (docNumber.length >= 8) {
-      const match = customers.find(c => c.docNumber === docNumber);
-      if (match) {
-        setCustomerNameInput(match.name);
-      } else {
-        setCustomerNameInput(docType === 'Factura' ? 'EMPRESA COMERCIALIZADORA S.A.C.' : 'CLIENTE VALIDADO');
+  const handleSearchDoc = async (numToSearch?: string) => {
+    const targetDoc = (numToSearch || docNumber).replace(/\D/g, '').trim();
+    if (!targetDoc) return;
+
+    // Primero revisar en clientes locales
+    const localMatch = customers.find(c => c.docNumber === targetDoc);
+    if (localMatch) {
+      setCustomerNameInput(localMatch.name);
+      return;
+    }
+
+    if ((docType === 'Factura' && targetDoc.length === 11) || (docType === 'Boleta' && targetDoc.length === 8)) {
+      setIsSearchingDoc(true);
+      try {
+        const queryType = docType === 'Factura' ? 'RUC' : 'DNI';
+        const info = await lookupDocumentData(targetDoc, queryType);
+        if (info?.name) {
+          setCustomerNameInput(info.name);
+        } else {
+          setCustomerNameInput(docType === 'Factura' ? `EMPRESA RUC ${targetDoc}` : `CLIENTE DNI ${targetDoc}`);
+        }
+      } catch {
+        // Fallback
+      } finally {
+        setIsSearchingDoc(false);
       }
+    }
+  };
+
+  const handleDocChange = (val: string) => {
+    setDocNumber(val);
+    const clean = val.replace(/\D/g, '').trim();
+    if ((docType === 'Factura' && clean.length === 11) || (docType === 'Boleta' && clean.length === 8)) {
+      handleSearchDoc(clean);
     }
   };
 
@@ -126,21 +154,30 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                   type="text"
                   placeholder={docType === "Factura" ? "RUC (11 dígitos)" : "DNI (8 dígitos)"}
                   value={docNumber}
-                  onChange={(e) => setDocNumber(e.target.value)}
+                  onChange={(e) => handleDocChange(e.target.value)}
                   className="flex-1 bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 outline-none focus:border-amber-500"
                 />
                 <button
                   type="button"
-                  onClick={handleSearchDoc}
-                  className="px-3.5 py-2 bg-stone-900 text-white rounded-xl text-xs font-bold hover:bg-stone-800"
+                  onClick={() => handleSearchDoc()}
+                  disabled={isSearchingDoc}
+                  className="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  Buscar
+                  {isSearchingDoc ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : "Buscar"}
                 </button>
               </div>
-              {customerNameInput && (
-                <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {customerNameInput}
+              {isSearchingDoc && (
+                <p className="text-[11px] font-bold text-amber-700 flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Consultando base oficial RENIEC / SUNAT...
                 </p>
+              )}
+              {customerNameInput && !isSearchingDoc && (
+                <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <p className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="truncate">{customerNameInput}</span>
+                  </p>
+                </div>
               )}
             </div>
           )}

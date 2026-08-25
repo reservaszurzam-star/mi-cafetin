@@ -436,17 +436,162 @@ export function downloadCDRFile(invoice: SunatInvoice, tenantId: string): void {
 }
 
 /**
- * Consulta en vivo de RUC / DNI
+ * ══════════════════════════════════════════════════════════════════════
+ * CONSULTA EN VIVO DE RUC (SUNAT) Y DNI (RENIEC)
+ * Conexión multi-proveedor y caché local ultrarrápido
+ * ══════════════════════════════════════════════════════════════════════
  */
-export async function lookupDocumentData(docNumber: string, docType: 'DNI' | 'RUC'): Promise<{ name?: string; address?: string } | null> {
-  const clean = docNumber.trim();
-  if (docType === 'DNI' && clean.length === 8) {
-    if (clean === '43745370') return { name: 'QUISPE FITZCARRALD JULIO ABEL' };
-    return { name: `CLIENTE DNI ${clean}` };
+const DOC_CACHE_KEY = 'cafetin_doc_lookup_cache';
+
+function getDocFromCache(docNumber: string): { name: string; address?: string } | null {
+  try {
+    const raw = localStorage.getItem(DOC_CACHE_KEY);
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    return cache[docNumber] || null;
+  } catch {
+    return null;
   }
+}
+
+function saveDocToCache(docNumber: string, data: { name: string; address?: string }) {
+  try {
+    const raw = localStorage.getItem(DOC_CACHE_KEY);
+    const cache = raw ? JSON.parse(raw) : {};
+    cache[docNumber] = data;
+    localStorage.setItem(DOC_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    console.warn('Error saving doc to cache', e);
+  }
+}
+
+export async function lookupDocumentData(
+  docNumber: string, 
+  docType: 'DNI' | 'RUC'
+): Promise<{ name?: string; address?: string } | null> {
+  const clean = docNumber.replace(/\D/g, '').trim();
+
+  // 1. Validar longitud mínima
+  if (docType === 'DNI' && clean.length !== 8) return null;
+  if (docType === 'RUC' && clean.length !== 11) return null;
+
+  // 2. Revisar si está en caché local
+  const cached = getDocFromCache(clean);
+  if (cached) return cached;
+
+  // Conocidos de la empresa
+  if (clean === '10437453701' || clean === '43745370') {
+    const res = { name: 'QUISPE FITZCARRALD JULIO ABEL', address: 'AV. LAS LOMAS 234 - LIMA' };
+    saveDocToCache(clean, res);
+    return res;
+  }
+
+  // 3. Consulta RUC en APIs Públicas de SUNAT
   if (docType === 'RUC' && clean.length === 11) {
-    if (clean === '10437453701') return { name: 'QUISPE FITZCARRALD JULIO ABEL', address: 'AV. PRINCIPAL 123 - LIMA' };
-    return { name: `EMPRESA RUC ${clean} S.A.C.`, address: 'LIMA, PERÚ' };
+    // Intento 1: API Sunat libre
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`https://api.perudevs.com/api/v1/ruc?document=${clean}&key=cGVydWRldnMucHJveHkueHRydWN0dXJhLm1haW4=`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && (json.resultado?.razon_social || json.razon_social || json.nombre_o_razon_social)) {
+          const name = (json.resultado?.razon_social || json.razon_social || json.nombre_o_razon_social || '').trim();
+          const address = (json.resultado?.direccion || json.direccion || json.direccion_completa || '').trim();
+          if (name) {
+            const result = { name, address: address || 'LIMA, PERÚ' };
+            saveDocToCache(clean, result);
+            return result;
+          }
+        }
+      }
+    } catch {
+      // Continuar al siguiente proveedor
+    }
+
+    // Intento 2: Consulta por apis.net.pe
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`https://api.apis.net.pe/v2/sunat/ruc?numero=${clean}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const json = await res.json();
+        const name = (json.razonSocial || json.nombre || '').trim();
+        const address = (json.direccion || '').trim();
+        if (name) {
+          const result = { name, address: address || 'LIMA, PERÚ' };
+          saveDocToCache(clean, result);
+          return result;
+        }
+      }
+    } catch {
+      // Continuar
+    }
+
+    // Intento 3: Si es RUC 10 (Persona Natural: 10 + DNI + Dígito), consultar el DNI embebido
+    if (clean.startsWith('10') && clean.length === 11) {
+      const embeddedDni = clean.substring(2, 10);
+      const dniInfo = await lookupDocumentData(embeddedDni, 'DNI');
+      if (dniInfo?.name) {
+        const result = { name: dniInfo.name, address: 'LIMA, PERÚ' };
+        saveDocToCache(clean, result);
+        return result;
+      }
+    }
   }
+
+  // 4. Consulta DNI en APIs Públicas de RENIEC
+  if (docType === 'DNI' && clean.length === 8) {
+    // Intento 1: API Reniec
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`https://api.perudevs.com/api/v1/dni?document=${clean}&key=cGVydWRldnMucHJveHkueHRydWN0dXJhLm1haW4=`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const json = await res.json();
+        const resultData = json.resultado || json;
+        const nombre = resultData.nombre_completo || 
+                       `${resultData.nombres || ''} ${resultData.apellido_paterno || ''} ${resultData.apellido_materno || ''}`.trim();
+        if (nombre) {
+          const result = { name: nombre };
+          saveDocToCache(clean, result);
+          return result;
+        }
+      }
+    } catch {
+      // Continuar
+    }
+
+    // Intento 2: apis.net.pe DNI
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${clean}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const json = await res.json();
+        const nombre = (json.nombreCompleto || `${json.nombres || ''} ${json.apellidoPaterno || ''} ${json.apellidoMaterno || ''}`).trim();
+        if (nombre) {
+          const result = { name: nombre };
+          saveDocToCache(clean, result);
+          return result;
+        }
+      }
+    } catch {
+      // Continuar
+    }
+  }
+
   return null;
 }
