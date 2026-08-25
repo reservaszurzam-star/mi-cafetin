@@ -35,6 +35,7 @@ interface ThermalTicketProps {
     totalOrders: number;
     totalGuests: number;
   };
+  hash?: string;
   onClose?: () => void;
 }
 
@@ -56,6 +57,7 @@ export function ThermalTicket({
   showQR = true,
   paperWidth: initialPaperWidth = '80mm',
   salesReportData,
+  hash,
   onClose,
 }: ThermalTicketProps) {
   const { settings } = useAppStore();
@@ -92,8 +94,13 @@ export function ThermalTicket({
   const opGravada = Number((totalAmount / 1.18).toFixed(2));
   const igv = Number((totalAmount - opGravada).toFixed(2));
 
-  // Cadena QR Fiscal SUNAT
-  const qrFiscalData = `${businessRuc}|${customerDocType === 'RUC' ? '01' : '03'}|${invoiceSeries}|${invoiceNumber}|${igv}|${totalAmount}|${formattedDate}|${customerDocType || '1'}|${customerDocNumber || '00000000'}|a8f9c2e1`;
+  // Códigos oficiales SUNAT (Anexo 7)
+  const tipoComprobante = invoiceSeries.startsWith('F') || customerDocType === 'RUC' ? '01' : '03';
+  const tipoDocAdquirente = customerDocType === 'RUC' ? '6' : (customerDocType === 'DNI' || (customerDocNumber && customerDocNumber.length === 8)) ? '1' : '0';
+  const effectiveHash = hash || 'a8f9c2e1b4d093fe';
+
+  // Cadena QR Fiscal Oficial SUNAT (Formato Anexo 7)
+  const qrFiscalData = `${businessRuc}|${tipoComprobante}|${invoiceSeries}|${invoiceNumber}|${igv.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdquirente}|${customerDocNumber || '00000000'}|${effectiveHash}|`;
 
   // Disparador de Impresión Nativa Térmica
   const handlePrint = () => {
@@ -564,7 +571,7 @@ export function ThermalTicket({
                       />
                     </div>
                     <div style={{ fontSize: '8.5px', color: '#555', marginTop: '2px', fontFamily: 'monospace' }}>
-                      Hash: a8f9c2e1b4d093fe
+                      Hash: {effectiveHash}
                     </div>
                   </div>
                 )}

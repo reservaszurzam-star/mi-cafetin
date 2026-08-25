@@ -1061,6 +1061,8 @@ export default function SunatView() {
           invoiceNumber={previewInvoice.number}
           customerDocType={previewInvoice.customerDocType}
           customerDocNumber={previewInvoice.customerDocNumber}
+          customerName={previewInvoice.customerName}
+          hash={previewInvoice.hash}
           showQR={true}
           onClose={() => setPreviewInvoice(null)}
         />
