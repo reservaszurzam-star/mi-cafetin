@@ -121,6 +121,19 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const [selectedWhatsAppPhone, setSelectedWhatsAppPhone] = useState<string>('');
   const [showCheckout,          setShowCheckout]          = useState(false);
   const [copiedLink,            setCopiedLink]            = useState(false);
+  const [customerPriceFilter,   setCustomerPriceFilter]   = useState<number | 'all'>('all');
+
+  const priceTiers = useMemo(() => {
+    return settings.dailyMenuPriceTiers && settings.dailyMenuPriceTiers.length === 4
+      ? settings.dailyMenuPriceTiers
+      : (isParadero ? [16, 18, 22, 26] : [14, 16, 18, 22]);
+  }, [settings.dailyMenuPriceTiers, isParadero]);
+
+  const tierLabels = useMemo(() => {
+    return settings.dailyMenuTierLabels && settings.dailyMenuTierLabels.length === 4
+      ? settings.dailyMenuTierLabels
+      : (isParadero ? ['Clásico', 'Ejecutivo', 'Marino', 'Especial'] : ['Económico', 'Clásico', 'Ejecutivo', 'Especial']);
+  }, [settings.dailyMenuTierLabels, isParadero]);
 
   const todayFormatted = useMemo(() => {
     const d = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -150,13 +163,14 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   // Validación: mínimo 1 plato de fondo seleccionado
   const isReady = totalMains > 0;
 
-  // Cálculo del total a pagar considerando extras de fondo y postres
+  // Cálculo del total a pagar considerando el precio de cada plato de fondo y postres
   const totalPrice = useMemo(() => {
     let total = 0;
     selectedItemsList.forEach(({ item, qty, course }) => {
       if (course === 'fondo') {
+        const dishPrice = item.price || basePrice;
         const extra = item.extraPrice || 0;
-        total += (basePrice + extra) * qty;
+        total += (dishPrice + extra) * qty;
       } else if (course === 'postre') {
         const price = item.extraPrice || defaultDessertPrice;
         total += price * qty;
@@ -179,7 +193,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     const orderItems: any[] = [];
     selectedItemsList.forEach(({ item, qty, course }) => {
       let unitPrice = 0;
-      if (course === 'fondo') unitPrice = basePrice + (item.extraPrice || 0);
+      if (course === 'fondo') unitPrice = (item.price || basePrice) + (item.extraPrice || 0);
       else if (course === 'postre') unitPrice = item.extraPrice || defaultDessertPrice;
 
       orderItems.push({
@@ -431,7 +445,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                 {totalMains > 0 ? (
                   <button
                     onClick={() => clearCourse('fondo')}
-                    className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition"
+                    className="text-[11px] font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-lg transition cursor-pointer"
                     title="No deseo plato de fondo"
                   >
                     Omitir Fondo
@@ -444,11 +458,53 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
               </div>
             </div>
 
+            {/* Filtros por Nivel de Precio para el Comensal */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setCustomerPriceFilter('all')}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-black transition border shrink-0",
+                  customerPriceFilter === 'all'
+                    ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                )}
+              >
+                Todos los Fondos ({mains.length})
+              </button>
+              {priceTiers.map((p, idx) => {
+                const label = tierLabels[idx] || `Nivel ${idx + 1}`;
+                const count = mains.filter(m => (m.price === p) || (m.priceTier?.toLowerCase() === label.toLowerCase())).length;
+                if (count === 0) return null;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setCustomerPriceFilter(p)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-black transition border shrink-0 flex items-center gap-1.5",
+                      customerPriceFilter === p
+                        ? "bg-amber-500 text-stone-950 border-amber-600 shadow-xs font-black"
+                        : "bg-white text-stone-700 border-stone-200 hover:bg-amber-50"
+                    )}
+                  >
+                    <span>S/ {p.toFixed(2)}</span>
+                    <span className="opacity-80 text-[10px]">({label})</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-stone-100 text-stone-800 font-black">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Grilla 2 Columnas */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
-              {mains.map((item) => {
+              {mains.filter(item => {
+                if (customerPriceFilter === 'all') return true;
+                const idx = priceTiers.indexOf(customerPriceFilter);
+                const label = idx >= 0 ? tierLabels[idx] : '';
+                return (item.price === customerPriceFilter) || (label && item.priceTier?.toLowerCase() === label.toLowerCase());
+              }).map((item) => {
                 const qty = getQty(item.id);
                 const isSelected = qty > 0;
+                const itemPrice = (item.price || basePrice) + (item.extraPrice || 0);
                 return (
                   <div
                     key={item.id}
@@ -489,9 +545,14 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                     {/* Barra inferior: Precio + Stepper de Cantidad */}
                     <div className="flex items-center justify-between pt-2 border-t border-stone-100 w-full mt-auto">
                       <div>
-                        <span className="text-[10px] font-black text-stone-700 block leading-none">
-                          {item.extraPrice ? `+S/ ${item.extraPrice.toFixed(2)}` : 'Incluido'}
+                        <span className="text-[11px] font-black text-stone-900 block leading-tight">
+                          S/ {itemPrice.toFixed(2)}
                         </span>
+                        {item.priceTier && (
+                          <span className="text-[9px] font-bold text-amber-700 block leading-tight">
+                            {item.priceTier}
+                          </span>
+                        )}
                       </div>
 
                       {/* Stepper de Cantidad */}

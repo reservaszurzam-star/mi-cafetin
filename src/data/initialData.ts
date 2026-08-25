@@ -310,11 +310,12 @@ export const DEFAULT_DAILY_MENU_ITEMS_LASLOMAS: DailyMenuItem[] = [
   { id: 'ent-5', name: 'Ensalada Fresca de la Casa', course: 'entrada', description: 'Lechuga orgánica, tomate, pepinillo, choclo y vinagreta clásica.', available: true },
   
   // ── PLATOS DE FONDO ──
-  { id: 'fon-1', name: '1/4 Pollo al Horno con Papas & Arroz', course: 'fondo', description: 'Pollo marinado a las finas hierbas con papas doradas crocantes y arroz.', available: true, popular: true },
-  { id: 'fon-2', name: 'Lomo Saltado Criollo al Wok', course: 'fondo', description: 'Trozos de carne flameados con cebolla, tomate, ají amarillo y papas fritas.', available: true, popular: true },
-  { id: 'fon-3', name: 'Seco de Res con Frijoles Canario & Arroz', course: 'fondo', description: 'Guiso tierno de res al culantro con porción de frijoles cremosos y arroz blanco.', available: true },
-  { id: 'fon-4', name: 'Milanesa de Pollo con Tallarines Verdes', course: 'fondo', description: 'Pechuga apanada dorada sobre pasta con crema de albahaca, espinaca y queso.', available: true },
-  { id: 'fon-6', name: 'Arroz Chaufa Especial con Trozos de Pollo', course: 'fondo', description: 'Arroz salteado al wok con cebolla china, huevo, pimientos y sillao oriental.', available: true },
+  { id: 'fon-1', name: '1/4 Pollo al Horno con Papas & Arroz', course: 'fondo', description: 'Pollo marinado a las finas hierbas con papas doradas crocantes y arroz.', available: true, popular: true, price: 16.00, priceTier: 'Clásico' },
+  { id: 'fon-2', name: 'Lomo Saltado Criollo al Wok', course: 'fondo', description: 'Trozos de carne flameados con cebolla, tomate, ají amarillo y papas fritas.', available: true, popular: true, price: 18.00, priceTier: 'Ejecutivo' },
+  { id: 'fon-3', name: 'Seco de Res con Frijoles Canario & Arroz', course: 'fondo', description: 'Guiso tierno de res al culantro con porción de frijoles cremosos y arroz blanco.', available: true, price: 16.00, priceTier: 'Clásico' },
+  { id: 'fon-4', name: 'Milanesa de Pollo con Tallarines Verdes', course: 'fondo', description: 'Pechuga apanada dorada sobre pasta con crema de albahaca, espinaca y queso.', available: true, price: 18.00, priceTier: 'Ejecutivo' },
+  { id: 'fon-6', name: 'Arroz Chaufa Especial con Trozos de Pollo', course: 'fondo', description: 'Arroz salteado al wok con cebolla china, huevo, pimientos y sillao oriental.', available: true, price: 14.00, priceTier: 'Económico' },
+  { id: 'fon-7', name: 'Parrilla Mixta Criolla (Chuleta + Pollo + Chorizo)', course: 'fondo', description: 'Cortes seleccionados a la parrilla con papas doradas y ensalada.', available: true, popular: true, price: 22.00, priceTier: 'Especial' },
   
   // ── BEBIDAS ──
   { id: 'beb-1', name: 'Vaso de Chicha Morada Casera (500 ml)', course: 'bebida', description: 'Preparada con maíz morado, piña, manzana, canela y gotas de limón.', available: true, popular: true },
@@ -339,11 +340,11 @@ export const DEFAULT_DAILY_MENU_ITEMS_PARADERO: DailyMenuItem[] = [
   { id: 'ent-p4', name: 'Ceviche Clásico en Copa', course: 'entrada', description: 'Filete de pescado fresco marinado al momento.', available: true },
   
   // ── FONDOS ──
-  { id: 'fon-p1', name: 'Pescado Frito con Yuca Dorada & Salsa Criolla', course: 'fondo', description: 'Filete de pescado frito al punto, con yuca crocante y arroz blanco.', available: true, popular: true },
-  { id: 'fon-p2', name: 'Arroz con Mariscos Criollo', course: 'fondo', description: 'Arroz sazonado al ají amarillo con mixtura de mariscos y queso parmesano.', available: true, popular: true },
-  { id: 'fon-p3', name: 'Chicharrón de Pescado con Tártara', course: 'fondo', description: 'Trozos crocantes de pescado con salsa tártara y ensalada fresca.', available: true },
-  { id: 'fon-p4', name: 'Chaufa de Mariscos al Wok', course: 'fondo', description: 'Arroz salteado al fuego vivo con mariscos y cebolla china.', available: true },
-  { id: 'fon-p5', name: 'Sudado de Filete de Pescado', course: 'fondo', description: 'Pescado guisado con tomate, cebolla, chicha de jora y yuca.', available: true },
+  { id: 'fon-p1', name: 'Pescado Frito con Yuca Dorada & Salsa Criolla', course: 'fondo', description: 'Filete de pescado frito al punto, con yuca crocante y arroz blanco.', available: true, popular: true, price: 16.00, priceTier: 'Clásico' },
+  { id: 'fon-p2', name: 'Arroz con Mariscos Criollo', course: 'fondo', description: 'Arroz sazonado al ají amarillo con mixtura de mariscos y queso parmesano.', available: true, popular: true, price: 18.00, priceTier: 'Ejecutivo' },
+  { id: 'fon-p3', name: 'Chicharrón de Pescado con Tártara', course: 'fondo', description: 'Trozos crocantes de pescado con salsa tártara y ensalada fresca.', available: true, price: 18.00, priceTier: 'Ejecutivo' },
+  { id: 'fon-p4', name: 'Chaufa de Mariscos al Wok', course: 'fondo', description: 'Arroz salteado al fuego vivo con mariscos y cebolla china.', available: true, price: 22.00, priceTier: 'Marino' },
+  { id: 'fon-p5', name: 'Sudado de Filete de Pescado', course: 'fondo', description: 'Pescado guisado con tomate, cebolla, chicha de jora y yuca.', available: true, price: 26.00, priceTier: 'Especial' },
   
   // ── BEBIDAS ──
   { id: 'beb-p1', name: 'Vaso de Chicha Morada (500 ml)', course: 'bebida', description: 'Refresco casero preparado con maíz morado y frutas.', available: true, popular: true },
@@ -400,6 +401,9 @@ export const DEFAULT_SETTINGS_LASLOMAS: Settings = {
   posTerminalId: "POS-LOMAS-01",
   showPaymentQR: true,
   defaultDeliveryCost: 5.00,
+  dailyMenuPrice: 16.00,
+  dailyMenuPriceTiers: [14, 16, 18, 22],
+  dailyMenuTierLabels: ['Económico', 'Clásico', 'Ejecutivo', 'Especial'],
   whatsappOrdersPhone: "51995881303",
   whatsappOrdersPhone2: "51953034562",
   whatsappMessageGreeting: "¡Hola Las Lomas Grill! Quisiera realizar el siguiente pedido delivery:",
@@ -436,6 +440,9 @@ export const DEFAULT_SETTINGS_PARADERO: Settings = {
   posTerminalId: "POS-PARADERO-01",
   showPaymentQR: true,
   defaultDeliveryCost: 5.00,
+  dailyMenuPrice: 18.00,
+  dailyMenuPriceTiers: [16, 18, 22, 26],
+  dailyMenuTierLabels: ['Clásico', 'Ejecutivo', 'Marino', 'Especial'],
   whatsappOrdersPhone: "51987654321",
   whatsappOrdersPhone2: "51995881303",
   whatsappMessageGreeting: "¡Hola Paradero 104! Quisiera realizar el siguiente pedido:",

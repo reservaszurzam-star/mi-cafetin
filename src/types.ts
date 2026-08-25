@@ -26,6 +26,8 @@ export type Settings = {
   whatsappIncludePayment?: boolean; // Si incluir método de pago
   whatsappIncludeNotes?: boolean; // Si incluir notas especiales de los platos
   dailyMenuPrice?: number; // Precio base del menú ejecutivo (ej. 16.00)
+  dailyMenuPriceTiers?: number[]; // Lista de los 4 precios del menú (ej. [14, 16, 18, 22])
+  dailyMenuTierLabels?: string[]; // Nombres de los 4 niveles de menú (ej. ['Económico', 'Clásico', 'Ejecutivo', 'Especial'])
   dailyMenuEnabled?: boolean; // Si el menú del día está activo para clientes
   dailyMenuStartTime?: string; // Horario inicio (ej. "12:00")
   dailyMenuEndTime?: string; // Horario fin (ej. "16:30")
@@ -237,6 +239,8 @@ export type DailyMenuItem = {
   description?: string;
   available: boolean;
   extraPrice?: number;
+  price?: number; // Precio específico del menú con este plato (ej: 14.00, 16.00, 18.00, 22.00)
+  priceTier?: string; // Nivel de precio opcional (ej: 'Económico', 'Clásico', 'Ejecutivo', 'Especial')
   imageUrl?: string;
   popular?: boolean;
 };
