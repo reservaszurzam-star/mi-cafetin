@@ -21,10 +21,18 @@ type DeliveryType = 'recojo' | 'salon' | 'delivery';
 type PayMethod = 'Yape' | 'Plin' | 'Efectivo' | 'Tarjeta';
 
 export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewProps) {
-  const { settings, dailyMenuItems, orders, saveOrderDraft } = useAppStore();
+  const { settings, dailyMenuItems, orders, saveOrderDraft, currentUser } = useAppStore();
 
   const isParadero = settings.companyName.toLowerCase().includes('paradero');
   const tenantKey = isParadero ? 'paradero' : 'laslomas';
+
+  // Solo mostrar herramientas de retorno si es un usuario interno autenticado (Owner/Admin/Staff)
+  // Los clientes que ingresan por link público jamás verán estos botones
+  const isAuthUser = Boolean(
+    currentUser?.role &&
+    ['Owner', 'Administrador', 'Cajero', 'Mozo', 'Cocina'].includes(currentUser.role) &&
+    (localStorage.getItem('cafetin_auth') || localStorage.getItem('sb-nvchdamvntdykgforfyu-auth-token'))
+  );
 
   // Precios configurables desde el panel de administración
   const basePrice = (settings.dailyMenuPrice && settings.dailyMenuPrice > 0) ? settings.dailyMenuPrice : (isParadero ? 18.00 : 16.00);
@@ -310,35 +318,39 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   return (
     <div className="min-h-screen bg-[#f8f7f4] text-stone-900 font-sans flex flex-col selection:bg-amber-500 selection:text-white">
 
-      {/* ── TOPBAR DE RETORNO AL PANEL (MODO OWNER / STAFF) ── */}
-      <div className="bg-stone-900 text-stone-200 text-xs px-4 py-2 border-b border-stone-800 flex items-center justify-between z-40">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-bold text-[11px] sm:text-xs">Menú Digital para Clientes</span>
+      {/* ── TOPBAR DE RETORNO AL PANEL (SOLO VISIBLE PARA OWNER / STAFF AUTENTICADO) ── */}
+      {isAuthUser && (
+        <div className="bg-stone-900 text-stone-200 text-xs px-4 py-2 border-b border-stone-800 flex items-center justify-between z-40">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold text-[11px] sm:text-xs">Vista Previa de Menú (Modo Owner)</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleReturn}
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 px-3 py-1 rounded-xl font-black text-xs transition cursor-pointer shadow-sm"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Volver al Panel de Gestión</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleReturn}
-          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 px-3 py-1 rounded-xl font-black text-xs transition cursor-pointer shadow-sm"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Volver al Panel de Administración</span>
-        </button>
-      </div>
+      )}
 
       {/* ── HEADER PÚBLICO ── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={handleReturn}
-              className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-1 cursor-pointer shrink-0 border border-stone-200"
-              title="Volver al panel"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="font-bold text-xs hidden sm:inline">Panel</span>
-            </button>
+            {isAuthUser && (
+              <button
+                type="button"
+                onClick={handleReturn}
+                className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-1 cursor-pointer shrink-0 border border-stone-200"
+                title="Volver al panel de administración"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="font-bold text-xs hidden sm:inline">Panel</span>
+              </button>
+            )}
 
             <img
               src={theme.logo}

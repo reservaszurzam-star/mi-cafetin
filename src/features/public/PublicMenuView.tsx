@@ -11,7 +11,7 @@ type PublicMenuViewProps = {
 };
 
 export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: PublicMenuViewProps) {
-  const { products, settings } = useAppStore();
+  const { products, settings, currentUser } = useAppStore();
   const [viewMode, setViewMode] = useState<'mobile_app' | 'daily' | 'full'>(initialMode);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -58,6 +58,12 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
     );
   }
 
+  const isAuthUser = Boolean(
+    currentUser?.role &&
+    ['Owner', 'Administrador', 'Cajero', 'Mozo', 'Cocina'].includes(currentUser.role) &&
+    (localStorage.getItem('cafetin_auth') || localStorage.getItem('sb-nvchdamvntdykgforfyu-auth-token'))
+  );
+
   // Modo 3: Carta Clásica
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex flex-col animate-in fade-in duration-300">
@@ -65,13 +71,17 @@ export default function PublicMenuView({ onBack, initialMode = 'mobile_app' }: P
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-30 bg-white/90 dark:bg-stone-900/90 backdrop-blur-xl border-b border-stone-200/50 dark:border-stone-800/50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button 
-            onClick={effectiveBack}
-            className="flex items-center gap-2 text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 transition p-2 -ml-2 rounded-xl border border-stone-200 cursor-pointer"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-bold text-xs sm:text-sm">Volver al Panel</span>
-          </button>
+          {isAuthUser ? (
+            <button 
+              onClick={effectiveBack}
+              className="flex items-center gap-2 text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 transition p-2 -ml-2 rounded-xl border border-stone-200 cursor-pointer"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-bold text-xs sm:text-sm">Volver al Panel</span>
+            </button>
+          ) : (
+            <div className="w-10"></div>
+          )}
 
           <div className="flex items-center space-x-3 text-stone-900 dark:text-white font-display font-bold text-lg md:text-xl">
             <img 
