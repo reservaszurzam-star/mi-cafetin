@@ -687,12 +687,21 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
           
           {/* Card: Configuración de los 4 Precios */}
           <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 flex items-center gap-3">
-              <Tag className="w-5 h-5" />
-              <div>
-                <h3 className="font-black text-base leading-tight">Configurar los 4 Precios de Menú</h3>
-                <p className="text-xs font-semibold opacity-90">Personaliza el valor en soles y el nombre de cada uno de tus 4 niveles de menú.</p>
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Tag className="w-5 h-5" />
+                <div>
+                  <h3 className="font-black text-base leading-tight">Configurar los 4 Precios de Menú</h3>
+                  <p className="text-xs font-semibold opacity-90">Personaliza el valor en soles y el nombre de cada uno de tus 4 niveles de menú.</p>
+                </div>
               </div>
+              <button
+                onClick={handleSaveAllSettings}
+                className="px-4 py-2 bg-stone-950 hover:bg-stone-900 active:scale-95 text-white font-black text-xs rounded-xl flex items-center gap-2 shadow-md transition cursor-pointer"
+              >
+                <Save className="w-4 h-4 text-amber-400" />
+                <span>Guardar Cambios</span>
+              </button>
             </div>
 
             <div className="p-6 space-y-4">
