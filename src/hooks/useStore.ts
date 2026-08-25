@@ -726,10 +726,55 @@ export function useStore(tenantId: string) {
     setProducts((prev) => {
       const next = prev.map((p) => (p.id === id ? { ...p, stock: newStock } : p));
       const updated = next.find(p => p.id === id);
-      if (updated) svc.upsertProduct(tenantId, updated);
+      if (updated) {
+        localStorage.setItem(`${tenantId}_cafetin_products`, JSON.stringify(next));
+        svc.upsertProduct(tenantId, updated);
+      }
       return next;
     });
   }, [tenantId]);
+
+  const updateProduct = useCallback(
+    (id: string, updates: Partial<Omit<Product, 'id'>>) => {
+      setProducts((prev) => {
+        const next = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+        const updated = next.find(p => p.id === id);
+        if (updated) {
+          localStorage.setItem(`${tenantId}_cafetin_products`, JSON.stringify(next));
+          svc.upsertProduct(tenantId, updated);
+        }
+        return next;
+      });
+    },
+    [tenantId],
+  );
+
+  const renameCategory = useCallback(
+    (oldCategory: string, newCategory: string) => {
+      if (!oldCategory || !newCategory || oldCategory.trim() === newCategory.trim()) return;
+      const targetNewCat = newCategory.trim();
+      setProducts((prev) => {
+        const next = prev.map((p) => (p.category === oldCategory ? { ...p, category: targetNewCat } : p));
+        localStorage.setItem(`${tenantId}_cafetin_products`, JSON.stringify(next));
+        next.filter(p => p.category === targetNewCat).forEach(p => svc.upsertProduct(tenantId, p));
+        return next;
+      });
+    },
+    [tenantId],
+  );
+
+  const deleteCategory = useCallback(
+    (categoryToDelete: string, fallbackCategory: string = 'Otros') => {
+      if (!categoryToDelete) return;
+      setProducts((prev) => {
+        const next = prev.map((p) => (p.category === categoryToDelete ? { ...p, category: fallbackCategory } : p));
+        localStorage.setItem(`${tenantId}_cafetin_products`, JSON.stringify(next));
+        next.filter(p => p.category === fallbackCategory).forEach(p => svc.upsertProduct(tenantId, p));
+        return next;
+      });
+    },
+    [tenantId],
+  );
 
   const deleteProduct = useCallback((id: string) => {
     setProducts((prev) => {
@@ -1397,8 +1442,11 @@ export function useStore(tenantId: string) {
     deleteTransaction,
     addSale,
     addProduct,
+    updateProduct,
     updateProductStock,
     deleteProduct,
+    renameCategory,
+    deleteCategory,
     addExpense,
     deleteExpense,
     addUser,
