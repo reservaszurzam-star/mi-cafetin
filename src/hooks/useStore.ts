@@ -1063,6 +1063,20 @@ export function useStore(tenantId: string) {
     setSunatInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv));
   }, []);
 
+  const deleteSunatInvoice = useCallback((id: string) => {
+    setSunatInvoices(prev => {
+      const next = prev.filter(inv => inv.id !== id);
+      localStorage.setItem(`${tenantId}_cafetin_sunat_invoices`, JSON.stringify(next));
+      return next;
+    });
+    svc.deleteSunatInvoice(tenantId, id);
+  }, [tenantId]);
+
+  const clearAllSunatInvoices = useCallback(() => {
+    setSunatInvoices([]);
+    localStorage.removeItem(`${tenantId}_cafetin_sunat_invoices`);
+  }, [tenantId]);
+
   const getCustomerBalance = useCallback(
     (customerId: string) => {
       return transactions
@@ -1314,6 +1328,8 @@ export function useStore(tenantId: string) {
     deleteDeliveryZone,
     createSunatInvoice,
     updateSunatInvoiceStatus,
+    deleteSunatInvoice,
+    clearAllSunatInvoices,
     getCustomerBalance,
     getTotalReceivables,
     dailyMenuItems,

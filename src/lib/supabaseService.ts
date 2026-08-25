@@ -846,6 +846,11 @@ export async function insertSunatInvoice(tenantId: string, inv: SunatInvoice): P
   if (error) handleError('insertSunatInvoice', error);
 }
 
+export async function deleteSunatInvoice(tenantId: string, id: string): Promise<void> {
+  const { error } = await db(tenantId).from('sunat_invoices').delete().eq('id', id).eq('tenant_id', tenantId);
+  if (error) handleError('deleteSunatInvoice', error);
+}
+
 // ─── DAILY MENU ───────────────────────────────────────────────────────────────
 
 function mapDbDailyMenuItem(m: Record<string, unknown>): DailyMenuItem {

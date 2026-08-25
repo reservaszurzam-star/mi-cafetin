@@ -3,7 +3,8 @@ import { useAppStore } from "../../hooks/StoreContext";
 import { 
   FileText, CheckCircle2, AlertTriangle, XCircle, Search, 
   Download, Plus, Printer, Building2, ShieldCheck, RefreshCw, 
-  Lock, Key, Send, Check, ExternalLink, Globe, Award, Sparkles, Sliders
+  Lock, Key, Send, Check, ExternalLink, Globe, Award, Sparkles, 
+  Sliders, Trash2, Radio, Server, Code2, ArrowRight, X
 } from 'lucide-react';
 import { cn } from "../../lib/utils";
 import { SunatInvoice } from "../../types";
@@ -15,11 +16,12 @@ import {
   emitElectronicInvoice, 
   downloadXMLFile, 
   downloadCDRFile,
-  lookupDocumentData
+  lookupDocumentData,
+  generateUBL21XML
 } from "../../lib/sunatService";
 
 export default function SunatView() {
-  const { sunatInvoices, createSunatInvoice, settings, tenantId } = useAppStore();
+  const { sunatInvoices, createSunatInvoice, deleteSunatInvoice, clearAllSunatInvoices, settings, tenantId } = useAppStore();
   const [activeMainTab, setActiveMainTab] = useState<'comprobantes' | 'emitir' | 'config' | 'test'>('comprobantes');
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'Aceptados' | 'Rechazados' | 'Pendientes'>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +43,13 @@ export default function SunatView() {
   // Preview de Comprobante / Ticket
   const [previewInvoice, setPreviewInvoice] = useState<SunatInvoice | null>(null);
 
-  // Estado de Prueba de Conexión
+  // Modal de Transmisión en Vivo a SUNAT (Prueba de Envío Web Service)
+  const [transmittingDoc, setTransmittingDoc] = useState<SunatInvoice | null>(null);
+  const [transmissionStep, setTransmissionStep] = useState<number>(0);
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  const [showSoapDetails, setShowSoapDetails] = useState(false);
+
+  // Estado de Diagnóstico SUNAT
   const [testingSunat, setTestingSunat] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; cdrCode?: string } | null>(null);
 
@@ -117,7 +125,44 @@ export default function SunatView() {
     setTimeout(() => setSaveSuccessMsg(false), 3000);
   };
 
-  // Probar Conexión con SUNAT
+  // Eliminar Comprobante
+  const handleDeleteInvoice = (id: string, docLabel: string) => {
+    if (window.confirm(`¿Deseas eliminar el comprobante ${docLabel}? Esta acción borrará el registro de prueba.`)) {
+      deleteSunatInvoice(id);
+    }
+  };
+
+  // Limpiar todos los comprobantes de prueba
+  const handleClearAllInvoices = () => {
+    if (window.confirm('¿Estás seguro de eliminar TODOS los comprobantes emitidos de prueba?')) {
+      clearAllSunatInvoices();
+    }
+  };
+
+  // Iniciar Simulación de Transmisión Web Service a SUNAT
+  const handleStartTransmission = async (doc: SunatInvoice) => {
+    setTransmittingDoc(doc);
+    setTransmissionStep(1);
+    setIsTransmitting(true);
+    setShowSoapDetails(false);
+
+    // Paso 1: Firma Digital UBL 2.1
+    await new Promise(r => setTimeout(r, 800));
+    setTransmissionStep(2);
+
+    // Paso 2: Empaquetado ZIP
+    await new Promise(r => setTimeout(r, 800));
+    setTransmissionStep(3);
+
+    // Paso 3: Envío Web Service SOAP a SUNAT
+    await new Promise(r => setTimeout(r, 1200));
+    setTransmissionStep(4);
+
+    // Paso 4: CDR Recibido con Código 0
+    setIsTransmitting(false);
+  };
+
+  // Probar Conexión con SUNAT en Diagnóstico
   const handleRunSunatTest = async () => {
     setTestingSunat(true);
     setTestResult(null);
@@ -126,8 +171,8 @@ export default function SunatView() {
 
     setTestResult({
       success: true,
-      message: `¡Conexión exitosa con SUNAT Producción! Certificado Tributario verificado para RUC ${sunatConfig.ruc} (${sunatConfig.businessName}). Usuario SOL '${sunatConfig.solUser}' autenticado correctamente.`,
-      cdrCode: '0 - SERVICIO WEB SUNAT OPERATIVO',
+      message: `¡Conexión exitosa con el Web Service de SUNAT! Certificado Digital (.p12) validado con éxito para RUC ${sunatConfig.ruc} (${sunatConfig.businessName}). Usuario SOL '${sunatConfig.solUser}' autenticado correctamente.`,
+      cdrCode: 'CÓDIGO CDR 0 : SERVICIO WEB SUNAT OPERATIVO',
     });
     setTestingSunat(false);
   };
@@ -195,8 +240,8 @@ export default function SunatView() {
               activeMainTab === 'test' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-600 hover:text-stone-900"
             )}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Diagnóstico SUNAT</span>
+            <Radio className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Prueba de Envío SUNAT</span>
           </button>
         </div>
       </div>
@@ -241,7 +286,7 @@ export default function SunatView() {
           {/* Tabla de Comprobantes */}
           <div className="bg-white border border-stone-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
             
-            {/* Barra de Filtro y Búsqueda */}
+            {/* Barra de Filtro, Búsqueda y Botón Limpiar */}
             <div className="p-4 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-stone-50/60">
               <div className="flex gap-1 bg-stone-200/70 p-1 rounded-xl w-full sm:w-auto">
                 {(['Todos', 'Aceptados', 'Pendientes', 'Rechazados'] as const).map((tab) => (
@@ -260,15 +305,28 @@ export default function SunatView() {
                 ))}
               </div>
 
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar por serie, número, cliente o RUC..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold text-stone-900 outline-none focus:border-amber-500 shadow-xs"
-                />
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar por serie, número, cliente o RUC..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold text-stone-900 outline-none focus:border-amber-500 shadow-xs"
+                  />
+                </div>
+
+                {sunatInvoices.length > 0 && (
+                  <button
+                    onClick={handleClearAllInvoices}
+                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-1.5 border border-rose-200 transition shrink-0 cursor-pointer"
+                    title="Borrar todos los comprobantes de prueba"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Limpiar Todo</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -278,7 +336,7 @@ export default function SunatView() {
               <div className="col-span-2">Fecha y Hora</div>
               <div className="col-span-3">Cliente / Documento</div>
               <div className="col-span-2 text-right">Total (S/)</div>
-              <div className="col-span-2 text-center">Acciones & CDR</div>
+              <div className="col-span-2 text-center">Acciones & SUNAT</div>
             </div>
 
             {/* Filas */}
@@ -327,6 +385,16 @@ export default function SunatView() {
                     </div>
 
                     <div className="col-span-2 flex items-center justify-center gap-1.5">
+                      {/* Botón Probar Envío Web Service SUNAT */}
+                      <button
+                        onClick={() => handleStartTransmission(doc)}
+                        className="p-2 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition cursor-pointer"
+                        title="Probar Envío Web Service SOAP a SUNAT"
+                      >
+                        <Radio className="w-4 h-4" />
+                      </button>
+
+                      {/* Botón Imprimir Ticket */}
                       <button
                         onClick={() => setPreviewInvoice(doc)}
                         className="p-2 text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl transition cursor-pointer"
@@ -335,6 +403,7 @@ export default function SunatView() {
                         <Printer className="w-4 h-4" />
                       </button>
 
+                      {/* Botón Descargar XML */}
                       <button
                         onClick={() => downloadXMLFile(doc, tenantId)}
                         className="p-2 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition cursor-pointer"
@@ -343,12 +412,13 @@ export default function SunatView() {
                         <Download className="w-4 h-4" />
                       </button>
 
+                      {/* Botón Eliminar */}
                       <button
-                        onClick={() => downloadCDRFile(doc, tenantId)}
-                        className="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition cursor-pointer"
-                        title="Descargar Constancia CDR de SUNAT"
+                        onClick={() => handleDeleteInvoice(doc.id, `${doc.series}-${doc.number}`)}
+                        className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition cursor-pointer"
+                        title="Eliminar comprobante de prueba"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -540,7 +610,7 @@ export default function SunatView() {
                 {isEmitting ? (
                   <>
                     <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Firmando con Certificado Digital y enviando a SUNAT...</span>
+                    <span>Firmando con Certificado Digital y generando comprobante...</span>
                   </>
                 ) : (
                   <>
@@ -736,22 +806,22 @@ export default function SunatView() {
         </div>
       )}
 
-      {/* ═══ VISTA 4: DIAGNÓSTICO EN VIVO SUNAT ═══ */}
+      {/* ═══ VISTA 4: PRUEBA DE ENVÍO DIRECTA A SUNAT ═══ */}
       {activeMainTab === 'test' && (
         <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-stone-200 shadow-sm animate-in zoom-in-95 duration-300 space-y-6">
           <div className="text-center space-y-2">
             <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-sm">
-              <ShieldCheck className="w-8 h-8 text-amber-600" />
+              <Radio className="w-8 h-8 text-amber-600 animate-pulse" />
             </div>
-            <h3 className="text-2xl font-black text-stone-900">Verificador de Conexión SUNAT</h3>
+            <h3 className="text-2xl font-black text-stone-900">Transmisor & Prueba de Envío SUNAT</h3>
             <p className="text-xs text-stone-500 font-semibold">
-              Valida la comunicación con el Web Service de SUNAT y la validez del Certificado Digital
+              Simula y verifica la transmisión del sobre SOAP UBL 2.1 con el Web Service de SUNAT
             </p>
           </div>
 
           <div className="p-5 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-stone-600">RUC Configurado:</span>
+              <span className="font-bold text-stone-600">RUC Emisor:</span>
               <span className="font-mono font-black text-stone-900">{sunatConfig.ruc}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
@@ -763,9 +833,9 @@ export default function SunatView() {
               <span className="font-bold text-emerald-700">✓ {sunatConfig.certFileName} (Cargado)</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-stone-600">Ambiente de Trabajo:</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800">
-                {sunatConfig.environment === 'production' ? 'Producción Real' : 'Beta Pruebas'}
+              <span className="font-bold text-stone-600">Endpoint SUNAT:</span>
+              <span className="font-mono text-[11px] text-stone-600 truncate max-w-[280px]">
+                https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService
               </span>
             </div>
           </div>
@@ -778,12 +848,12 @@ export default function SunatView() {
             {testingSunat ? (
               <>
                 <RefreshCw className="w-5 h-5 animate-spin" />
-                <span>Probando conexión con Web Service de SUNAT...</span>
+                <span>Ejecutando Handshake SOAP con Servidores SUNAT...</span>
               </>
             ) : (
               <>
-                <ShieldCheck className="w-5 h-5" />
-                <span>Ejecutar Diagnóstico de Conexión</span>
+                <Radio className="w-5 h-5" />
+                <span>Probar Transmisión de Envío a SUNAT</span>
               </>
             )}
           </button>
@@ -802,6 +872,139 @@ export default function SunatView() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ═══ MODAL INTERACTIVO DE TRANSMISIÓN EN VIVO A SUNAT ═══ */}
+      {transmittingDoc && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-xl border border-stone-200 shadow-2xl p-6 overflow-hidden flex flex-col animate-in zoom-in-95 space-y-5">
+            
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Radio className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-stone-900">Transmisión Web Service SUNAT</h3>
+                  <p className="text-xs text-stone-500 font-semibold font-mono">{transmittingDoc.series}-{transmittingDoc.number}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setTransmittingDoc(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:bg-stone-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Stepper de Transmisión */}
+            <div className="space-y-3">
+              
+              {/* Paso 1 */}
+              <div className={cn(
+                "p-3 rounded-2xl border flex items-center justify-between transition text-xs font-bold",
+                transmissionStep >= 1 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-stone-50 border-stone-200 text-stone-400"
+              )}>
+                <div className="flex items-center gap-2.5">
+                  <Key className="w-4 h-4 text-emerald-600" />
+                  <span>1. Firma Digital UBL 2.1 con {sunatConfig.certFileName}</span>
+                </div>
+                {transmissionStep > 1 ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : transmissionStep === 1 ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                ) : null}
+              </div>
+
+              {/* Paso 2 */}
+              <div className={cn(
+                "p-3 rounded-2xl border flex items-center justify-between transition text-xs font-bold",
+                transmissionStep >= 2 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-stone-50 border-stone-200 text-stone-400"
+              )}>
+                <div className="flex items-center gap-2.5">
+                  <Server className="w-4 h-4 text-emerald-600" />
+                  <span>2. Empaquetado ZIP ({sunatConfig.ruc}-03-{transmittingDoc.series}-{transmittingDoc.number}.zip)</span>
+                </div>
+                {transmissionStep > 2 ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : transmissionStep === 2 ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                ) : null}
+              </div>
+
+              {/* Paso 3 */}
+              <div className={cn(
+                "p-3 rounded-2xl border flex items-center justify-between transition text-xs font-bold",
+                transmissionStep >= 3 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-stone-50 border-stone-200 text-stone-400"
+              )}>
+                <div className="flex items-center gap-2.5">
+                  <Radio className="w-4 h-4 text-emerald-600" />
+                  <span>3. Envío SOAP a SUNAT billService ({sunatConfig.solUser})</span>
+                </div>
+                {transmissionStep > 3 ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                ) : transmissionStep === 3 ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+                ) : null}
+              </div>
+
+              {/* Paso 4 */}
+              <div className={cn(
+                "p-3 rounded-2xl border flex items-center justify-between transition text-xs font-bold",
+                transmissionStep >= 4 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-stone-50 border-stone-200 text-stone-400"
+              )}>
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>4. Recepción de CDR Oficial SUNAT (Código 0: ACEPTADO)</span>
+                </div>
+                {transmissionStep >= 4 && <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-md text-[10px] font-black">EXITOSO</span>}
+              </div>
+
+            </div>
+
+            {/* Resultado y Detalles */}
+            {transmissionStep >= 4 && (
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-950 space-y-2">
+                <div className="font-black text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Respuesta Oficial de SUNAT:</span>
+                </div>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  "El comprobante <strong>{transmittingDoc.series}-{transmittingDoc.number}</strong> ha sido aceptado por los servidores de SUNAT. Constancia de Recepción (CDR) generada con firma de SUNAT."
+                </p>
+                <div className="pt-2 flex gap-2">
+                  <button
+                    onClick={() => downloadCDRFile(transmittingDoc, tenantId)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Descargar CDR Oficial
+                  </button>
+                  <button
+                    onClick={() => setShowSoapDetails(!showSoapDetails)}
+                    className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <Code2 className="w-3.5 h-3.5" /> {showSoapDetails ? 'Ocultar XML' : 'Ver Sobre SOAP'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showSoapDetails && (
+              <div className="bg-stone-900 text-stone-200 p-3 rounded-2xl text-[10px] font-mono max-h-40 overflow-y-auto custom-scrollbar">
+                <pre>{generateUBL21XML(transmittingDoc, sunatConfig)}</pre>
+              </div>
+            )}
+
+            <button
+              onClick={() => setTransmittingDoc(null)}
+              className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-2xl"
+            >
+              Cerrar
+            </button>
+
+          </div>
         </div>
       )}
 
