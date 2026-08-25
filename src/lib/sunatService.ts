@@ -28,7 +28,7 @@ export interface SunatConfig {
   province: string;
   district: string;
   lookupApiToken?: string;
-  igvRate?: number; // 10% Predeterminado (Ley N° 31556 para Restaurantes) o 18% general
+  igvRate?: number; // 10.5% Predeterminado (Tasa Especial Restaurantes) o 18% general
 }
 
 export const DEFAULT_SUNAT_CONFIG: SunatConfig = {
@@ -51,7 +51,7 @@ export const DEFAULT_SUNAT_CONFIG: SunatConfig = {
   province: 'LIMA',
   district: 'LIMA',
   lookupApiToken: 'sk_18750.Kz5Db2bkVuxXsVXdz5yXs5rugHLpQTIf',
-  igvRate: 10,
+  igvRate: 10.5,
 };
 
 const SUNAT_CONFIG_KEY_PREFIX = 'cafetin_sunat_config_';
@@ -142,7 +142,7 @@ export function generateUBL21XML(invoice: SunatInvoice, config: SunatConfig): st
     { id: '1', name: 'CONSUMO DE RESTAURANTE', price: invoice.total, quantity: 1, sentToKitchen: true }
   ];
 
-  const igvPercent = config.igvRate ?? 10;
+  const igvPercent = config.igvRate ?? 10.5;
   const igvFactor = 1 + (igvPercent / 100);
 
   const itemsXML = items.map((it, idx) => {
@@ -328,7 +328,7 @@ export async function emitElectronicInvoice(data: {
   tenantId: string;
 }): Promise<SunatInvoice> {
   const config = getSunatConfig(data.tenantId);
-  const igvPercent = config.igvRate ?? 10;
+  const igvPercent = config.igvRate ?? 10.5;
   const igvFactor = 1 + (igvPercent / 100);
   const total = Number(data.total.toFixed(2));
   const subtotal = Number((total / igvFactor).toFixed(2));

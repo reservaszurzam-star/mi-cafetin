@@ -612,11 +612,11 @@ export default function SunatView() {
                 <div className="text-[10px] text-stone-500 font-semibold mt-1">
                   {(() => {
                     const totalVal = parseFloat(totalAmountInput || '0');
-                    const rate = sunatConfig.igvRate ?? 10;
+                    const rate = sunatConfig.igvRate ?? 10.5;
                     const factor = 1 + (rate / 100);
                     const subtotal = totalVal / factor;
                     const igvVal = totalVal - subtotal;
-                    return `Subtotal: S/ ${subtotal.toFixed(2)} · IGV ${rate}% (Ley Restaurantes): S/ ${igvVal.toFixed(2)}`;
+                    return `Subtotal: S/ ${subtotal.toFixed(2)} · IGV ${rate}%: S/ ${igvVal.toFixed(2)}`;
                   })()}
                 </div>
               </div>
@@ -836,15 +836,16 @@ export default function SunatView() {
                 Tasa de IGV Tributario para Facturación
               </label>
               <select
-                value={sunatConfig.igvRate ?? 10}
+                value={sunatConfig.igvRate ?? 10.5}
                 onChange={(e) => setSunatConfig({ ...sunatConfig, igvRate: Number(e.target.value) })}
                 className="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-xs font-black text-stone-900"
               >
-                <option value={10}>🍽️ 10% — Restaurantes y Hoteles (Ley N° 31556 - Predeterminado)</option>
-                <option value={18}>🏢 18% — Régimen General</option>
+                <option value={10.5}>🍽️ 10.5% — Tasa Especial Restaurantes (Predeterminado)</option>
+                <option value={10}>🍽️ 10.0% — Ley N° 31556</option>
+                <option value={18}>🏢 18.0% — Régimen General</option>
               </select>
               <p className="text-[10px] text-stone-500 mt-1">
-                Aplica la tasa especial del 10% de IGV para el sector gastronómico de acuerdo con la normativa vigente de SUNAT.
+                Aplica la tasa especial del 10.5% de IGV de acuerdo con tu configuración tributaria de SUNAT.
               </p>
             </div>
 

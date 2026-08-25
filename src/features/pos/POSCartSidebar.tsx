@@ -262,11 +262,11 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
         <div className="space-y-1 text-xs">
           <div className="flex justify-between text-stone-500 font-semibold">
             <span>Subtotal (sin IGV):</span>
-            <span className="font-mono">{formatMoney(total / 1.10, settings.currency)}</span>
+            <span className="font-mono">{formatMoney(total / 1.105, settings.currency)}</span>
           </div>
           <div className="flex justify-between text-stone-500 font-semibold">
-            <span>IGV (10%):</span>
-            <span className="font-mono">{formatMoney(total - (total / 1.10), settings.currency)}</span>
+            <span>IGV (10.5%):</span>
+            <span className="font-mono">{formatMoney(total - (total / 1.105), settings.currency)}</span>
           </div>
           <div className="flex justify-between text-base font-black text-stone-900 pt-1 border-t border-stone-200">
             <span>Total a Pagar:</span>

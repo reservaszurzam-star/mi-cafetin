@@ -1041,7 +1041,7 @@ export function useStore(tenantId: string) {
         // Generar Comprobante SUNAT si es Boleta o Factura
         if (docType === "Boleta" || docType === "Factura") {
           const config = getSunatConfig(tenantId);
-          const igvPercent = config.igvRate ?? 10;
+          const igvPercent = config.igvRate ?? 10.5;
           const igvFactor = 1 + (igvPercent / 100);
           const subtotal = Number((target.total / igvFactor).toFixed(2));
           const igv = Number((target.total - subtotal).toFixed(2));
