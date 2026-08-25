@@ -479,6 +479,21 @@ export async function lookupDocumentData(
   const cached = getDocFromCache(clean);
   if (cached) return cached;
 
+  // 3. Consulta al backend local sin restricciones CORS
+  try {
+    const backendRes = await fetch(`/api/consult-doc?type=${docType}&number=${clean}`);
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      if (data.success && data.name) {
+        const result = { name: data.name, address: data.address || (docType === 'RUC' ? 'LIMA, PERÚ' : undefined) };
+        saveDocToCache(clean, result);
+        return result;
+      }
+    }
+  } catch (e) {
+    // Continuar a los proveedores directos
+  }
+
   // Conocidos de la empresa
   if (clean === '10437453701' || clean === '43745370') {
     const res = { name: 'QUISPE FITZCARRALD JULIO ABEL', address: 'AV. LAS LOMAS 234 - LIMA' };
