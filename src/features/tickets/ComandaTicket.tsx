@@ -16,9 +16,11 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
   const componentRef = useRef<HTMLDivElement>(null);
 
   const isParadero = settings.companyName.toLowerCase().includes('paradero') || (settings.logoUrl && settings.logoUrl.includes('104')) || (settings.logoUrl && settings.logoUrl.includes('paradero'));
-  const logoSrc = isParadero ? "/assets/logos/logo-104.png" : "/assets/logos/logo-lomas.png";
+  const logoSrc = settings.logoUrl && settings.logoUrl !== '/icono.png' && settings.logoUrl !== '/logo-web.png' && !settings.logoUrl.includes('/assets/logos/')
+    ? settings.logoUrl
+    : (isParadero ? "/Logo/logo-paradero-104.png" : "/Logo/logo-lomas-grill.png");
   const displayCompanyName = isParadero ? "PARADERO 104" : (settings.companyName || "LAS LOMAS GRILL");
-  const businessSubtitle = isParadero ? "BARRA CEVICHERA" : "RESTAURANTE & GRILL";
+  const businessSubtitle = isParadero ? (settings.slogan || "BARRA CEVICHERA") : (settings.slogan || "RESTAURANTE & GRILL");
 
   const orderDate = new Date(order.createdAt || Date.now());
   const orderNo = order.id ? order.id.replace(/\D/g, '').slice(-6) : Math.floor(100000 + Math.random() * 900000).toString();
@@ -125,7 +127,7 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
               setTimeout(function() {
                 window.print();
                 window.close();
-              }, 250);
+              }, 400);
             };
           </script>
         </body>
@@ -174,18 +176,26 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
           
           {/* Header con Logo */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-            <img
-              src={logoSrc}
-              alt={displayCompanyName}
-              style={{
-                maxHeight: '48px',
-                maxWidth: '65mm',
-                margin: '0 auto 4px auto',
-                display: 'block',
-                objectFit: 'contain',
-              }}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <div style={{ padding: '2px 0 6px 0', display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={logoSrc}
+                alt={displayCompanyName}
+                style={{
+                  maxHeight: '52px',
+                  maxWidth: '65mm',
+                  margin: '0 auto',
+                  display: 'block',
+                  objectFit: 'contain',
+                  filter: 'contrast(115%) brightness(95%)',
+                }}
+                onError={(e) => {
+                  const fallback = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
+                  if (e.currentTarget.src !== window.location.origin + fallback) {
+                    e.currentTarget.src = fallback;
+                  }
+                }}
+              />
+            </div>
             <div style={{ fontSize: '15px', fontWeight: '900', textTransform: 'uppercase' }}>
               {displayCompanyName}
             </div>

@@ -276,16 +276,16 @@ export function buildWhatsAppDispatchMessage(data: {
     : '';
 
   return (
-    `*DESPACHO DELIVERY - ${companyName.toUpperCase()}*%0A%0A` +
-    `*Pedido:* ${orderNumber}%0A` +
-    `*Cliente:* ${customerName}%0A` +
-    `*Teléfono:* ${customerPhone || 'No registrado'}%0A` +
-    `*Dirección:* ${deliveryAddress}%0A` +
-    (distanceKm ? `*Distancia:* ${distanceKm} km (~${durationMins} min)%0A` : '') +
-    `*Total a Cobrar:* ${currency} ${totalAmount.toFixed(2)}%0A%0A` +
-    `*Detalle:*%0A${itemsSummary}%0A%0A` +
-    (webTrackUrl ? `*Rastreo Web en Vivo:* ${webTrackUrl}%0A%0A` : '') +
-    `*Google Maps GPS:* ${mapsUrl}%0A` +
-    `*Waze GPS:* ${wazeUrl}`
+    `🛵 *DESPACHO DELIVERY - ${companyName.toUpperCase()}* 🔥\n\n` +
+    `📋 *Pedido:* ${orderNumber}\n` +
+    `👤 *Cliente:* ${customerName}\n` +
+    `📞 *Teléfono:* ${customerPhone || 'No registrado'}\n` +
+    `📍 *Dirección:* ${deliveryAddress}\n` +
+    (distanceKm ? `📏 *Distancia:* ${distanceKm} km (~${durationMins} min)\n` : '') +
+    `💵 *Total a Cobrar:* ${currency} ${totalAmount.toFixed(2)}\n\n` +
+    `🍗 *Detalle del Pedido:*\n${itemsSummary}\n\n` +
+    (webTrackUrl ? `🛰️ *Rastreo Web en Vivo:* ${webTrackUrl}\n\n` : '') +
+    `🗺️ *Google Maps:* ${mapsUrl}\n` +
+    `🚗 *Waze:* ${wazeUrl}`
   );
 }

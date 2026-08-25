@@ -65,12 +65,14 @@ export function ThermalTicket({
   const componentRef = useRef<HTMLDivElement>(null);
 
   const isParadero = settings.companyName.toLowerCase().includes('paradero') || (settings.logoUrl && settings.logoUrl.includes('104')) || (settings.logoUrl && settings.logoUrl.includes('paradero'));
-  const logoSrc = isParadero ? "/assets/logos/logo-104.png" : "/assets/logos/logo-lomas.png";
+  const logoSrc = settings.logoUrl && settings.logoUrl !== '/icono.png' && settings.logoUrl !== '/logo-web.png' && !settings.logoUrl.includes('/assets/logos/')
+    ? settings.logoUrl
+    : (isParadero ? "/Logo/logo-paradero-104.png" : "/Logo/logo-lomas-grill.png");
   const displayCompanyName = isParadero ? "PARADERO 104" : (settings.companyName || "LAS LOMAS GRILL");
-  const businessSubtitle = isParadero ? "BARRA CEVICHERA & MARISCOS" : "RESTAURANTE & GRILL";
-  const businessRuc = isParadero ? "20608934512" : "20601234567";
-  const businessAddress = isParadero ? "Av. Próceres de la Independencia 1040, SJL - Lima" : "Av. Mangomarca 850, SJL - Lima";
-  const businessPhone = "WhatsApp / Pedidos: 987-654-321";
+  const businessSubtitle = isParadero ? (settings.slogan || "BARRA CEVICHERA & MARISCOS") : (settings.slogan || "SABOR A LA LEÑA & TRADICIÓN");
+  const businessRuc = isParadero ? (settings.companyRuc || "20608934512") : (settings.companyRuc || "20601234567");
+  const businessAddress = settings.address || (isParadero ? "Av. Próceres de la Independencia 1040, SJL - Lima" : "Av. Mangomarca 850, SJL - Lima");
+  const businessPhone = `WhatsApp / Pedidos: ${settings.whatsappOrdersPhone || settings.phone || (isParadero ? "987 654 321" : "995 881 303")}`;
 
   // Items filtering
   const allItems = itemsToPrint || order.items || [];
@@ -216,7 +218,7 @@ export function ThermalTicket({
               setTimeout(function() {
                 window.print();
                 window.close();
-              }, 250);
+              }, 400);
             };
           </script>
         </body>
@@ -375,18 +377,26 @@ export function ThermalTicket({
             
             {/* ═══ CABECERA FISCAL COMERCIAL CON LOGO ═══ */}
             <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-              <img
-                src={logoSrc}
-                alt={displayCompanyName}
-                style={{
-                  maxHeight: paperWidth === '58mm' ? '44px' : '54px',
-                  maxWidth: paperWidth === '58mm' ? '48mm' : '65mm',
-                  margin: '0 auto 4px auto',
-                  display: 'block',
-                  objectFit: 'contain',
-                }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
+              <div style={{ padding: '2px 0 6px 0', display: 'flex', justifyContent: 'center' }}>
+                <img
+                  src={logoSrc}
+                  alt={displayCompanyName}
+                  style={{
+                    maxHeight: paperWidth === '58mm' ? '50px' : '65px',
+                    maxWidth: paperWidth === '58mm' ? '48mm' : '65mm',
+                    margin: '0 auto',
+                    display: 'block',
+                    objectFit: 'contain',
+                    filter: 'contrast(115%) brightness(95%)',
+                  }}
+                  onError={(e) => {
+                    const fallback = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
+                    if (e.currentTarget.src !== window.location.origin + fallback) {
+                      e.currentTarget.src = fallback;
+                    }
+                  }}
+                />
+              </div>
               <div style={{ fontSize: paperWidth === '58mm' ? '14px' : '16px', fontWeight: '900', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                 {displayCompanyName}
               </div>

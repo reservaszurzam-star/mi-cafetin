@@ -73,10 +73,29 @@ export function cleanPhoneNumber(phone?: string): string {
 }
 
 /**
- * Generates standard wa.me link with encoded text message.
+ * Formats a phone number for display with spacing and country code prefix.
+ * @example formatPhoneDisplay("51995881303") => "+51 995 881 303"
+ */
+export function formatPhoneDisplay(phone?: string): string {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("51") && cleaned.length === 11) {
+    const p = cleaned.slice(2);
+    return `+51 ${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6)}`;
+  }
+  if (cleaned.length === 9) {
+    return `+51 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+  }
+  return phone;
+}
+
+/**
+ * Generates reliable WhatsApp link with properly encoded message.
+ * Uses api.whatsapp.com to prevent wa.me redirect emoji encoding corruption on Windows/WhatsApp Web.
  */
 export function createWhatsAppUrl(phone: string, message: string): string {
   const cleanPhone = cleanPhoneNumber(phone);
   const encodedText = encodeURIComponent(message);
-  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
 }
+

@@ -369,9 +369,11 @@ export default function PublicTrackingView({ orderId, onBack }: PublicTrackingVi
                 <button
                   onClick={() => {
                     const clean = (assignedDriver.phone || '987000000').replace(/\D/g, '');
-                    window.open(`https://wa.me/${clean}?text=Hola+${assignedDriver.name},+te+escribo+por+mi+pedido+${currentOrder.tableNumber}`, '_blank');
+                    const phoneWithCode = clean.startsWith('51') ? clean : `51${clean}`;
+                    const msg = `¡Hola *${assignedDriver.name}*! 👋 Te escribo por mi pedido delivery *${currentOrder.tableNumber || ''}* 🍗🛵`;
+                    window.open(`https://wa.me/${phoneWithCode}?text=${encodeURIComponent(msg)}`, '_blank');
                   }}
-                  className="p-3 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-2xl border border-emerald-200 transition shadow-xs"
+                  className="p-3 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-2xl border border-emerald-200 transition shadow-xs cursor-pointer"
                   title="Contactar al motorizado por WhatsApp"
                 >
                   <MessageCircle className="w-5 h-5 text-emerald-600" />

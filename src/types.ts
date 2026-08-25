@@ -18,7 +18,8 @@ export type Settings = {
   showPaymentQR?: boolean;
   printBankDetailsOnTicket?: boolean;
   defaultDeliveryCost?: number;
-  whatsappOrdersPhone?: string; // Número WhatsApp al que se envían los pedidos
+  whatsappOrdersPhone?: string; // Número WhatsApp 1 (Principal) al que se envían los pedidos
+  whatsappOrdersPhone2?: string; // Número WhatsApp 2 (Secundario/Alternativo) al que se envían los pedidos
   whatsappMessageGreeting?: string; // Encabezado / saludo del pedido
   whatsappCustomFooter?: string; // Pie de página o despedida
   whatsappIncludeAddress?: boolean; // Si incluir dirección en delivery

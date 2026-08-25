@@ -278,6 +278,7 @@ export function useStore(tenantId: string) {
     setSunatInvoices,
     setDailyMenuItems,
     setRolePermissions,
+    setPromotions,
     setCurrentUser,
     setSettings: (s: Settings) => setSettings({ ...s, theme: "light" }),
     setIsLoadingFromDB,
@@ -296,7 +297,7 @@ export function useStore(tenantId: string) {
   const [settings, setSettings] = useState<Settings>(() => {
     const isParadero = tenantId === 'paradero';
     const defaultSettings = isParadero ? DEFAULT_SETTINGS_PARADERO : DEFAULT_SETTINGS_LASLOMAS;
-    const defaultLogo = isParadero ? '/assets/logos/logo-104.png' : '/assets/logos/logo-lomas.png';
+    const defaultLogo = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
     const defaultName = isParadero ? 'Paradero 104' : 'Las Lomas Grill';
     const defaultTerminal = isParadero ? 'POS-PARADERO-01' : 'POS-LOMAS-01';
 
@@ -306,8 +307,7 @@ export function useStore(tenantId: string) {
       const isLegacyLogo = !parsed.logoUrl || 
         parsed.logoUrl === '/icono.png' || 
         parsed.logoUrl === '/logo-web.png' || 
-        parsed.logoUrl.includes('/Logo/logo-lomas-grill') || 
-        parsed.logoUrl.includes('/Logo/logo-paradero-104');
+        parsed.logoUrl.includes('/assets/logos/');
       
       const logo = isLegacyLogo ? defaultLogo : parsed.logoUrl;
       return { 
@@ -746,9 +746,34 @@ export function useStore(tenantId: string) {
 
   // ── Helpers para Usuarios ──
   const addUser = useCallback((user: Omit<User, 'id' | 'createdAt'>) => {
-    const newUser: User = { ...user, id: generateUUID(), createdAt: new Date().toISOString() };
-    setUsers(prev => [...prev, newUser]);
+    const newId = generateUUID();
+    const newUser: User = { ...user, id: newId, createdAt: new Date().toISOString() };
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      localStorage.setItem(`${tenantId}_cafetin_users`, JSON.stringify(updated));
+      return updated;
+    });
     svc.upsertUser(tenantId, newUser);
+
+    // Si el usuario es Repartidor, vincularlo automáticamente como chofer activo
+    if (user.role === 'Repartidor') {
+      const newDriver: DeliveryDriver = {
+        id: `drv-${newId.slice(0, 8)}`,
+        userId: newId,
+        name: user.name,
+        phone: user.phone || '987000000',
+        vehicleType: 'Moto',
+        status: 'disponible',
+        activeOrdersCount: 0,
+        isOnline: true,
+      };
+      setDrivers(prev => {
+        const next = [...prev, newDriver];
+        localStorage.setItem(`${tenantId}_cafetin_drivers`, JSON.stringify(next));
+        return next;
+      });
+      svc.upsertDriver(tenantId, newDriver);
+    }
   }, [tenantId]);
 
   const updateUser = useCallback((id: string, user: Partial<User>) => {
@@ -758,16 +783,47 @@ export function useStore(tenantId: string) {
       if (!target) return prev;
       const updated = { ...target, ...user };
       updatedUser = updated;
-      return prev.map(u => u.id === id ? updated : u);
+      const next = prev.map(u => u.id === id ? updated : u);
+      localStorage.setItem(`${tenantId}_cafetin_users`, JSON.stringify(next));
+      return next;
     });
     if (updatedUser) {
       svc.upsertUser(tenantId, updatedUser);
+      // Si el rol es repartidor o cambió de nombre/teléfono, sincronizar chofer
+      setDrivers(prev => {
+        const driver = prev.find(d => d.userId === id || d.name === updatedUser?.name);
+        if (driver && updatedUser) {
+          const updDriver: DeliveryDriver = {
+            ...driver,
+            name: updatedUser.name || driver.name,
+            phone: updatedUser.phone || driver.phone,
+          };
+          svc.upsertDriver(tenantId, updDriver);
+          return prev.map(d => d.id === driver.id ? updDriver : d);
+        }
+        return prev;
+      });
     }
   }, [tenantId]);
 
   const deleteUser = useCallback((id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+    setUsers(prev => {
+      const next = prev.filter(u => u.id !== id);
+      localStorage.setItem(`${tenantId}_cafetin_users`, JSON.stringify(next));
+      return next;
+    });
     svc.deleteUser(tenantId, id);
+    // Eliminar también chofer vinculado si existía
+    setDrivers(prev => {
+      const driver = prev.find(d => d.userId === id);
+      if (driver) {
+        svc.deleteDriver(tenantId, driver.id);
+        const next = prev.filter(d => d.id !== driver.id);
+        localStorage.setItem(`${tenantId}_cafetin_drivers`, JSON.stringify(next));
+        return next;
+      }
+      return prev;
+    });
   }, [tenantId]);
 
   // ── Helpers para Motorizados & GPS ──
@@ -1139,10 +1195,11 @@ export function useStore(tenantId: string) {
   const addPromotion = useCallback((promo: Omit<Promotion, 'id' | 'usageCount'>) => {
     const newPromo: Promotion = {
       ...promo,
-      id: Date.now().toString(),
+      id: ensureUUID(Date.now().toString()),
       usageCount: 0,
       tenant_id: tenantId,
     };
+    svc.upsertPromotion(tenantId, newPromo);
     setPromotions(prev => {
       const updated = [newPromo, ...prev];
       localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));
@@ -1152,6 +1209,10 @@ export function useStore(tenantId: string) {
 
   const updatePromotion = useCallback((id: string, partial: Partial<Promotion>) => {
     setPromotions(prev => {
+      const target = prev.find(p => p.id === id);
+      if (target) {
+        svc.upsertPromotion(tenantId, { ...target, ...partial });
+      }
       const updated = prev.map(p => p.id === id ? { ...p, ...partial } : p);
       localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));
       return updated;
@@ -1159,6 +1220,7 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const deletePromotion = useCallback((id: string) => {
+    svc.deletePromotion(tenantId, id);
     setPromotions(prev => {
       const updated = prev.filter(p => p.id !== id);
       localStorage.setItem(`${tenantId}_cafetin_promotions`, JSON.stringify(updated));

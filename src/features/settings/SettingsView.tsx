@@ -40,6 +40,7 @@ export default function SettingsView() {
     address: settings.address || 'Av. Los Frutales 104, Lima',
     phone: settings.phone || '987-654-321',
     whatsappOrdersPhone: settings.whatsappOrdersPhone || settings.phone || '987654321',
+    whatsappOrdersPhone2: settings.whatsappOrdersPhone2 || '',
     whatsappMessageGreeting: settings.whatsappMessageGreeting || `*PEDIDO — ${settings.companyName.toUpperCase()}*`,
     whatsappCustomFooter: settings.whatsappCustomFooter || 'Por favor confirmar el tiempo estimado de entrega. ¡Muchas gracias!',
     whatsappIncludeAddress: settings.whatsappIncludeAddress ?? true,
@@ -583,49 +584,94 @@ export default function SettingsView() {
                 </p>
               </div>
 
-              {/* Número de WhatsApp Receptor */}
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+              {/* Números de WhatsApp Receptores */}
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-6 space-y-5 shadow-2xs">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-sm">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="font-black text-sm text-emerald-950 uppercase tracking-wide">
-                      Número de WhatsApp para Recepción de Pedidos
+                      Líneas de WhatsApp para Recepción de Pedidos
                     </h3>
                     <p className="text-xs text-emerald-800 font-medium">
-                      Cuando un cliente termine su pedido en la carta web, se abrirá WhatsApp dirigido a este número.
+                      Configura hasta 2 líneas de WhatsApp. Los clientes podrán elegir a cuál de los dos números enviar su pedido en el formulario de delivery.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
-                      +51
-                    </span>
-                    <input 
-                      type="text" 
-                      placeholder="Ej. 987654321" 
-                      value={formData.whatsappOrdersPhone || ''} 
-                      onChange={e => setFormData({ ...formData, whatsappOrdersPhone: e.target.value })} 
-                      className="w-full bg-white border border-emerald-300 focus:border-emerald-500 rounded-xl pl-16 pr-4 py-3 font-mono font-black text-sm text-stone-900 outline-none transition shadow-2xs" 
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {/* Línea 1 (Principal) */}
+                  <div className="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                        Línea 1 (Principal)
+                      </label>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">Por Defecto</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        +51
+                      </span>
+                      <input 
+                        type="text" 
+                        placeholder="Ej. 995881303" 
+                        value={formData.whatsappOrdersPhone || ''} 
+                        onChange={e => setFormData({ ...formData, whatsappOrdersPhone: e.target.value })} 
+                        className="w-full bg-stone-50 border border-emerald-300 focus:border-emerald-500 rounded-xl pl-16 pr-4 py-2.5 font-mono font-black text-sm text-stone-900 outline-none transition" 
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const testUrl = createWhatsAppUrl(
+                          formData.whatsappOrdersPhone || '51995881303',
+                          `*MENSAJE DE PRUEBA (LÍNEA 1) — ${formData.companyName}*\n\n¡La conexión de WhatsApp para recepción de pedidos (Línea 1) está configurada y lista!`
+                        );
+                        window.open(testUrl, '_blank');
+                      }}
+                      className="w-full mt-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Probar Línea 1</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const testUrl = createWhatsAppUrl(
-                        formData.whatsappOrdersPhone || '51987654321',
-                        `*MENSAJE DE PRUEBA — ${formData.companyName}*\n\n¡La conexión de WhatsApp para recepción de pedidos está configurada y lista!`
-                      );
-                      window.open(testUrl, '_blank');
-                    }}
-                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 transition shadow-md whitespace-nowrap active:scale-95"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Probar Envío a este Número</span>
-                  </button>
+
+                  {/* Línea 2 (Secundaria / Alternativa) */}
+                  <div className="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-2xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                        Línea 2 (Alternativa)
+                      </label>
+                      <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold">Opcional</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                        +51
+                      </span>
+                      <input 
+                        type="text" 
+                        placeholder="Ej. 953034562" 
+                        value={formData.whatsappOrdersPhone2 || ''} 
+                        onChange={e => setFormData({ ...formData, whatsappOrdersPhone2: e.target.value })} 
+                        className="w-full bg-stone-50 border border-emerald-300 focus:border-emerald-500 rounded-xl pl-16 pr-4 py-2.5 font-mono font-black text-sm text-stone-900 outline-none transition" 
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const testUrl = createWhatsAppUrl(
+                          formData.whatsappOrdersPhone2 || '51953034562',
+                          `*MENSAJE DE PRUEBA (LÍNEA 2) — ${formData.companyName}*\n\n¡La conexión de WhatsApp para recepción de pedidos (Línea 2) está configurada y lista!`
+                        );
+                        window.open(testUrl, '_blank');
+                      }}
+                      className="w-full mt-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Probar Línea 2</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -50,6 +50,7 @@ interface StoreSetters {
   setSunatInvoices:      Dispatch<SetStateAction<SunatInvoice[]>>;
   setDailyMenuItems:     Dispatch<SetStateAction<DailyMenuItem[]>>;
   setRolePermissions:    Dispatch<SetStateAction<RolePermissionConfig>>;
+  setPromotions?:        Dispatch<SetStateAction<import('../types').Promotion[]>>;
   setSettings:           (s: Settings) => void;
   setCurrentUser?:       Dispatch<SetStateAction<User>>;
   setIsLoadingFromDB:    (v: boolean) => void;
@@ -70,7 +71,7 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
         customers, transactions, products, expenses,
         orders, printers, inventoryItems,
         reservations, users, drivers, zones,
-        sunat, menu, permissions, settings,
+        sunat, menu, permissions, settings, promotions,
       ] = await Promise.all([
         svc.fetchCustomers(tenantId),
         svc.fetchTransactions(tenantId),
@@ -87,6 +88,7 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
         svc.fetchDailyMenuItems(tenantId),
         svc.fetchRolePermissions(tenantId),
         svc.fetchSettings(tenantId),
+        svc.fetchPromotions(tenantId),
       ]);
 
       // Solo sobreescribe si Supabase devolvió datos
@@ -120,6 +122,7 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
       if (menu.length > 0)          setters.setDailyMenuItems(menu);
       if (permissions)              setters.setRolePermissions(permissions);
       if (settings)                 setters.setSettings(settings);
+      if (promotions && promotions.length > 0 && setters.setPromotions) setters.setPromotions(promotions);
 
       console.info(`[Supabase] Datos cargados para "${tenantId}" correctamente.`);
     } catch (err) {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import {
-  MessageCircle, Check, ChevronLeft,
+  MessageCircle, Check, CheckCircle2, ChevronLeft,
   Utensils, Coffee, Cake, Soup, Sparkles,
   User, Phone, MapPin, ArrowRight, Info,
   ChefHat, Flame, Waves, Star, Clock, ShoppingBag,
@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
-import { formatMoney, createWhatsAppUrl } from "../../lib/formatters";
+import { formatMoney, createWhatsAppUrl, formatPhoneDisplay } from "../../lib/formatters";
 
 interface DailyMenuViewProps {
   onBack?: () => void;
@@ -49,7 +49,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         badgeSelected: 'bg-sky-600 text-white',
         stepperBtn: 'bg-sky-600 text-white hover:bg-sky-700',
         logo: '/Logo/logo-paradero-104.png',
-        phone: settings.whatsappOrdersPhone || settings.phone || '51987654321',
+        phone: settings.whatsappOrdersPhone?.trim() || (settings.phone?.includes('/') ? settings.phone.split('/')[0]?.trim() : settings.phone) || '51987654321',
+        phone2: settings.whatsappOrdersPhone2?.trim() || (settings.phone?.includes('/') ? settings.phone.split('/')[1]?.trim() : '') || '51995881303',
       };
     }
     return {
@@ -66,7 +67,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       badgeSelected: 'bg-amber-500 text-stone-950 font-black',
       stepperBtn: 'bg-amber-500 text-stone-950 font-black hover:bg-amber-600',
       logo: '/Logo/logo-lomas-grill.png',
-      phone: settings.whatsappOrdersPhone || settings.phone || '51995881303',
+      phone: settings.whatsappOrdersPhone?.trim() || (settings.phone?.includes('/') ? settings.phone.split('/')[0]?.trim() : settings.phone) || '51995881303',
+      phone2: settings.whatsappOrdersPhone2?.trim() || (settings.phone?.includes('/') ? settings.phone.split('/')[1]?.trim() : '') || '51953034562',
     };
   }, [isParadero, settings]);
 
@@ -110,14 +112,15 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     });
   };
 
-  const [customerName,    setCustomerName]    = useState('');
-  const [customerPhone,   setCustomerPhone]   = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [deliveryType,    setDeliveryType]    = useState<DeliveryType>('delivery');
-  const [payMethod,       setPayMethod]       = useState<PayMethod>('Yape');
-  const [orderNotes,      setOrderNotes]      = useState('');
-  const [showCheckout,    setShowCheckout]    = useState(false);
-  const [copiedLink,      setCopiedLink]      = useState(false);
+  const [customerName,          setCustomerName]          = useState('');
+  const [customerPhone,         setCustomerPhone]         = useState('');
+  const [deliveryAddress,       setDeliveryAddress]       = useState('');
+  const [deliveryType,          setDeliveryType]          = useState<DeliveryType>('delivery');
+  const [payMethod,             setPayMethod]             = useState<PayMethod>('Yape');
+  const [orderNotes,            setOrderNotes]            = useState('');
+  const [selectedWhatsAppPhone, setSelectedWhatsAppPhone] = useState<string>('');
+  const [showCheckout,          setShowCheckout]          = useState(false);
+  const [copiedLink,            setCopiedLink]            = useState(false);
 
   const todayFormatted = useMemo(() => {
     const d = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -131,72 +134,39 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const totalStarters = useMemo(() => starters.reduce((acc, i) => acc + getQty(i.id), 0), [starters, quantities]);
   const totalDrinks   = useMemo(() => drinks.reduce((acc, i) => acc + getQty(i.id), 0), [drinks, quantities]);
   const totalDesserts = useMemo(() => desserts.reduce((acc, i) => acc + getQty(i.id), 0), [desserts, quantities]);
-  const totalItems    = totalMains + totalStarters + totalDrinks + totalDesserts;
-
-  // Cálculo inteligente del total
-  const totalPrice = useMemo(() => {
-    if (totalMains > 0) {
-      let total = totalMains * basePrice;
-      // Adicionales por platos de fondo premium
-      mains.forEach(m => {
-        const q = getQty(m.id);
-        if (q > 0 && m.extraPrice) total += q * m.extraPrice;
-      });
-      // Si el cliente pide más entradas que platos de fondo, las extras se cobran según extraStarterPrice
-      if (totalStarters > totalMains) {
-        total += (totalStarters - totalMains) * extraStarterPrice;
-      }
-      // Si pide más bebidas que fondos, las extras se cobran según extraDrinkPrice
-      if (totalDrinks > totalMains) {
-        total += (totalDrinks - totalMains) * extraDrinkPrice;
-      }
-      // Postres
-      desserts.forEach(d => {
-        const q = getQty(d.id);
-        if (q > 0) total += q * (d.extraPrice ?? defaultDessertPrice);
-      });
-      return total;
-    } else {
-      // Pedido individual a la carta si no escogió fondo
-      let total = 0;
-      starters.forEach(s => { total += getQty(s.id) * (s.extraPrice ?? 6.00); });
-      drinks.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? 3.00); });
-      desserts.forEach(d => { total += getQty(d.id) * (d.extraPrice ?? defaultDessertPrice); });
-      return total;
-    }
-  }, [quantities, totalMains, totalStarters, totalDrinks, totalDesserts, mains, starters, drinks, desserts, basePrice, extraStarterPrice, extraDrinkPrice, defaultDessertPrice]);
-
-  // Lista detallada de ítems seleccionados para resumen
+  
+  // Lista detallada de platos seleccionados para comanda y cálculo
   const selectedItemsList = useMemo(() => {
-    const list: { course: DailyMenuCourse; item: DailyMenuItem; qty: number; courseLabel: string }[] = [];
-    
-    mains.forEach(item => {
+    const list: Array<{ item: DailyMenuItem; qty: number; course: DailyMenuCourse }> = [];
+    dailyMenuItems.forEach(item => {
       const q = getQty(item.id);
-      if (q > 0) list.push({ course: 'fondo', item, qty: q, courseLabel: '🍲 Fondo' });
+      if (q > 0) {
+        list.push({ item, qty: q, course: item.course });
+      }
     });
-
-    starters.forEach(item => {
-      const q = getQty(item.id);
-      if (q > 0) list.push({ course: 'entrada', item, qty: q, courseLabel: '🥣 Entrada' });
-    });
-
-    drinks.forEach(item => {
-      const q = getQty(item.id);
-      if (q > 0) list.push({ course: 'bebida', item, qty: q, courseLabel: '🥤 Bebida' });
-    });
-
-    desserts.forEach(item => {
-      const q = getQty(item.id);
-      if (q > 0) list.push({ course: 'postre', item, qty: q, courseLabel: '🍰 Postre' });
-    });
-
     return list;
-  }, [quantities, mains, starters, drinks, desserts]);
+  }, [dailyMenuItems, quantities]);
 
-  const isReady = totalItems > 0;
+  // Validación: mínimo 1 plato de fondo seleccionado
+  const isReady = totalMains > 0;
+
+  // Cálculo del total a pagar considerando extras de fondo y postres
+  const totalPrice = useMemo(() => {
+    let total = 0;
+    selectedItemsList.forEach(({ item, qty, course }) => {
+      if (course === 'fondo') {
+        const extra = item.extraPrice || 0;
+        total += (basePrice + extra) * qty;
+      } else if (course === 'postre') {
+        const price = item.extraPrice || defaultDessertPrice;
+        total += price * qty;
+      }
+    });
+    return total;
+  }, [selectedItemsList, basePrice, defaultDessertPrice]);
 
   const handleCopyMenuLink = () => {
-    const url = `${window.location.origin}/menu/${tenantKey}`;
+    const url = window.location.href;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -219,13 +189,13 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
         quantity: qty,
         price: unitPrice,
         station: course === 'bebida' ? 'Barra' : 'Cocina',
-        sentToKitchen: false,
+        sentToKitchen: true,
         batchNumber: 1,
       });
     });
 
-    const dOrders = orders.filter(o => o.tableNumber.startsWith("D-") || o.type === "delivery");
-    const nums = dOrders.map(o => parseInt(o.tableNumber.split("-")[1] || "0")).filter(n => !isNaN(n));
+    const dOrders = orders.filter(o => o.tableNumber?.startsWith("D-") || o.type === "delivery");
+    const nums = dOrders.map(o => parseInt(o.tableNumber?.split("-")[1] || "0")).filter(n => !isNaN(n));
     const nextNum = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
     const tableNumber = `D-${nextNum.toString().padStart(2, "0")}`;
 
@@ -237,13 +207,13 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
       dinerName: customerName.trim(),
       customerPhone: customerPhone.trim() || undefined,
       deliveryAddress: deliveryType === 'delivery' ? deliveryAddress.trim() : undefined,
-      status: 'draft',
+      status: 'sent',
       items: orderItems,
       total: totalPrice,
       notes: `Pedido Menú del Día • Pago: ${payMethod} ${orderNotes ? `• Obs: ${orderNotes}` : ''}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      waiterName: 'Pedido Menú Web',
+      waiterName: 'Pedido Web (Menú del Día)',
     });
 
     const modalidad =
@@ -308,7 +278,8 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
     lines.push(`_Por favor confirmar la recepción de mi pedido. ¡Muchas gracias!_`);
 
     const msg = lines.filter(l => l !== '').join('\n');
-    const waUrl = createWhatsAppUrl(theme.phone, msg);
+    const targetPhone = selectedWhatsAppPhone || theme.phone;
+    const waUrl = createWhatsAppUrl(targetPhone, msg);
     window.open(waUrl, '_blank');
     setShowCheckout(false);
   };
@@ -1072,6 +1043,59 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
                       onChange={(e) => setOrderNotes(e.target.value)}
                       className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs font-medium text-stone-900 outline-none focus:border-stone-900 focus:bg-white transition"
                     />
+                  </div>
+
+                  {/* Selector de WhatsApp Receptor */}
+                  <div>
+                    <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+                      <span>Línea WhatsApp de Atención</span>
+                      <span className="text-[10px] text-emerald-700 font-bold">Escoge a cuál enviar</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedWhatsAppPhone(theme.phone)}
+                        className={cn(
+                          "p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between",
+                          (selectedWhatsAppPhone === theme.phone || (!selectedWhatsAppPhone && theme.phone))
+                            ? "border-emerald-600 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500/40 shadow-xs font-bold"
+                            : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Línea 1 (Principal)</span>
+                          {(selectedWhatsAppPhone === theme.phone || (!selectedWhatsAppPhone && theme.phone)) && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="text-xs font-mono font-black">{formatPhoneDisplay(theme.phone)}</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedWhatsAppPhone(theme.phone2)}
+                        className={cn(
+                          "p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between",
+                          selectedWhatsAppPhone === theme.phone2
+                            ? "border-emerald-600 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500/40 shadow-xs font-bold"
+                            : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
+                        )}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Línea 2 (Alternativa)</span>
+                          {selectedWhatsAppPhone === theme.phone2 && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="text-xs font-mono font-black">{formatPhoneDisplay(theme.phone2)}</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Método de Pago */}

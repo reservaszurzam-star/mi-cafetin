@@ -30,9 +30,12 @@ export const CustomerSummaryCard: React.FC<CustomerSummaryCardProps> = ({
       alert("El cliente no tiene un teléfono registrado.");
       return;
     }
-    const msg = `Hola ${customer.name}, le saludamos de *${settings.companyName}*.\n` +
-      `Le informamos que su saldo pendiente es de *${formatMoney(balance, settings.currency)}*.\n` +
-      `Agradecemos su pronta regularización. ¡Muchas gracias!`;
+    const msg = `¡Hola *${customer.name}*! 👋\n\n` +
+      `Te saludamos cordialmente de *${settings.companyName}* 🍽️✨\n\n` +
+      `Te recordamos de manera atenta que mantienes un saldo pendiente de:\n` +
+      `💳 *${formatMoney(balance, settings.currency)}*\n\n` +
+      `Si ya realizaste el abono mediante Yape, Plin o transferencia, por favor compártenos tu constancia de pago por este medio.\n\n` +
+      `_¡Muchas gracias por tu confianza y preferencia!_ 🙏`;
 
     const url = createWhatsAppUrl(customer.phone, msg);
     window.open(url, '_blank');

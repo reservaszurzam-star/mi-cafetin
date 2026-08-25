@@ -30,6 +30,7 @@ import type {
   DailyMenuItem,
   RolePermissionConfig,
   RoleType,
+  Promotion,
 } from '../types';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -60,21 +61,44 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
   if (error) { handleError('fetchSettings', error); return null; }
   if (!data) return null;
 
+  const isParadero = tenantId === 'paradero';
+
   return {
     theme: 'light',
-    companyName: tenantId === 'paradero' ? 'Paradero 104' : 'Las Lomas Grill',
-    currency: 'S/',
-    lowStockThreshold:          data.low_stock_threshold,
-    overdueDaysThreshold:       data.overdue_days_threshold,
-    kitchenDelayThresholdMins:  data.kitchen_delay_threshold_mins,
-    deliveryDelayThresholdMins: data.delivery_delay_threshold_mins,
-    soundAlertsEnabled:         data.sound_alerts_enabled,
-    autoSendToKitchen:          data.auto_send_to_kitchen,
-    enablePreCountPrint:        data.enable_pre_count_print,
-    showPaymentQR:              data.show_payment_qr,
-    printBankDetailsOnTicket:   data.print_bank_details_on_ticket,
-    defaultDeliveryCost:        data.default_delivery_cost,
-    posTerminalId:              data.pos_terminal_id,
+    companyName:                data.company_name || (isParadero ? 'Paradero 104' : 'Las Lomas Grill'),
+    slogan:                     data.slogan || (isParadero ? 'Cevichería & Sabor Marino' : 'Brasas, Parrillas & Sabor'),
+    companyRuc:                 data.company_ruc || (isParadero ? '20601234567' : '20609876543'),
+    address:                    data.address || (isParadero ? 'Av. Principal 104' : 'Av. Las Lomas 234'),
+    phone:                      data.phone || (isParadero ? '+51 987 654 321' : '+51 995 881 303'),
+    logoUrl:                    data.logo_url || (isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png'),
+    currency:                   data.currency || 'S/',
+    lowStockThreshold:          data.low_stock_threshold ?? 5,
+    overdueDaysThreshold:       data.overdue_days_threshold ?? 30,
+    kitchenDelayThresholdMins:  data.kitchen_delay_threshold_mins ?? 20,
+    deliveryDelayThresholdMins: data.delivery_delay_threshold_mins ?? 35,
+    soundAlertsEnabled:         data.sound_alerts_enabled ?? true,
+    autoSendToKitchen:          data.auto_send_to_kitchen ?? true,
+    enablePreCountPrint:        data.enable_pre_count_print ?? true,
+    showPaymentQR:              data.show_payment_qr ?? true,
+    printBankDetailsOnTicket:   data.print_bank_details_on_ticket ?? true,
+    defaultDeliveryCost:        data.default_delivery_cost ?? 5.0,
+    posTerminalId:              data.pos_terminal_id || (isParadero ? 'POS-PARADERO-01' : 'POS-LOMAS-01'),
+    whatsappOrdersPhone:        data.whatsapp_orders_phone || (isParadero ? '51987654321' : '51995881303'),
+    whatsappOrdersPhone2:       data.whatsapp_orders_phone2 || (isParadero ? '51995881303' : '51953034562'),
+    whatsappMessageGreeting:    data.whatsapp_message_greeting,
+    whatsappCustomFooter:       data.whatsapp_custom_footer,
+    whatsappIncludeAddress:     data.whatsapp_include_address ?? true,
+    whatsappIncludePayment:     data.whatsapp_include_payment ?? true,
+    whatsappIncludeNotes:       data.whatsapp_include_notes ?? true,
+    dailyMenuPrice:             data.daily_menu_price ?? (isParadero ? 18 : 16),
+    dailyMenuEnabled:           data.daily_menu_enabled ?? true,
+    dailyMenuStartTime:         data.daily_menu_start_time || '12:00',
+    dailyMenuEndTime:           data.daily_menu_end_time || '16:30',
+    dailyMenuTitle:             data.daily_menu_title || (isParadero ? 'Menú Marino & Criollo' : 'Almuerzo Criollo & Brasas'),
+    dailyMenuSubtitle:          data.daily_menu_subtitle || 'Entrada + Fondo + Bebida',
+    dailyMenuExtraStarterPrice: data.daily_menu_extra_starter_price ?? 5.0,
+    dailyMenuExtraDrinkPrice:   data.daily_menu_extra_drink_price ?? 3.0,
+    dailyMenuDefaultDessertPrice: data.daily_menu_default_dessert_price ?? 3.5,
     paymentDetails: {
       yape:              data.yape_number,
       yapeHolder:        data.yape_holder,
@@ -99,6 +123,13 @@ export async function fetchSettings(tenantId: string): Promise<Settings | null> 
 export async function saveSettings(tenantId: string, s: Partial<Settings>): Promise<void> {
   const row: Record<string, unknown> = {
     tenant_id:                    tenantId,
+    company_name:                 s.companyName,
+    slogan:                       s.slogan,
+    company_ruc:                  s.companyRuc,
+    address:                      s.address,
+    phone:                        s.phone,
+    logo_url:                     s.logoUrl,
+    currency:                     s.currency || 'S/',
     low_stock_threshold:          s.lowStockThreshold,
     overdue_days_threshold:       s.overdueDaysThreshold,
     kitchen_delay_threshold_mins: s.kitchenDelayThresholdMins,
@@ -110,6 +141,22 @@ export async function saveSettings(tenantId: string, s: Partial<Settings>): Prom
     print_bank_details_on_ticket: s.printBankDetailsOnTicket,
     default_delivery_cost:        s.defaultDeliveryCost,
     pos_terminal_id:              s.posTerminalId,
+    whatsapp_orders_phone:        s.whatsappOrdersPhone,
+    whatsapp_orders_phone2:       s.whatsappOrdersPhone2,
+    whatsapp_message_greeting:    s.whatsappMessageGreeting,
+    whatsapp_custom_footer:       s.whatsappCustomFooter,
+    whatsapp_include_address:     s.whatsappIncludeAddress,
+    whatsapp_include_payment:     s.whatsappIncludePayment,
+    whatsapp_include_notes:       s.whatsappIncludeNotes,
+    daily_menu_price:             s.dailyMenuPrice,
+    daily_menu_enabled:           s.dailyMenuEnabled,
+    daily_menu_start_time:        s.dailyMenuStartTime,
+    daily_menu_end_time:          s.dailyMenuEndTime,
+    daily_menu_title:             s.dailyMenuTitle,
+    daily_menu_subtitle:          s.dailyMenuSubtitle,
+    daily_menu_extra_starter_price: s.dailyMenuExtraStarterPrice,
+    daily_menu_extra_drink_price:   s.dailyMenuExtraDrinkPrice,
+    daily_menu_default_dessert_price: s.dailyMenuDefaultDessertPrice,
     ...(s.paymentDetails ? {
       yape_number:       s.paymentDetails.yape,
       yape_holder:       s.paymentDetails.yapeHolder,
@@ -896,4 +943,48 @@ export async function insertAuditLog(tenantId: string, entry: {
     payload:     entry.payload ?? null,
   });
   if (error) handleError('insertAuditLog', error);
+}
+
+// ─── PROMOTIONS ───────────────────────────────────────────────────────────────
+
+export async function fetchPromotions(tenantId: string): Promise<Promotion[]> {
+  const { data, error } = await db(tenantId)
+    .from('promotions')
+    .select('*')
+    .eq('tenant_id', tenantId);
+  if (error) { handleError('fetchPromotions', error); return []; }
+  return (data ?? []).map(p => ({
+    id:            p.id,
+    title:         p.title,
+    type:          p.type,
+    discountValue: p.discount_value,
+    description:   p.description,
+    status:        p.status,
+    usageCount:    p.usage_count || 0,
+    startDate:     p.start_date,
+    endDate:       p.end_date,
+    tenant_id:     p.tenant_id,
+  }));
+}
+
+export async function upsertPromotion(tenantId: string, promo: Promotion): Promise<void> {
+  const { error } = await db(tenantId).from('promotions').upsert({
+    id:             ensureUUID(promo.id),
+    tenant_id:      tenantId,
+    title:          promo.title,
+    type:           promo.type,
+    discount_value: promo.discountValue ?? null,
+    description:    promo.description || '',
+    status:         promo.status || 'Activo',
+    usage_count:    promo.usageCount || 0,
+    start_date:     promo.startDate ?? null,
+    end_date:       promo.endDate ?? null,
+  }, { onConflict: 'id' });
+  if (error) handleError('upsertPromotion', error);
+}
+
+export async function deletePromotion(tenantId: string, id: string): Promise<void> {
+  const validId = ensureUUID(id);
+  const { error } = await db(tenantId).from('promotions').delete().eq('id', validId).eq('tenant_id', tenantId);
+  if (error) handleError('deletePromotion', error);
 }

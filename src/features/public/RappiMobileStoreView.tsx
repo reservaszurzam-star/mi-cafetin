@@ -44,7 +44,7 @@ function getCategoryIcon(category: string, className = 'w-4 h-4') {
   return <ChefHat className={className} />;
 }
 
-import { createWhatsAppUrl } from "../../lib/formatters";
+import { createWhatsAppUrl, formatPhoneDisplay } from "../../lib/formatters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props) {
@@ -69,11 +69,21 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [orderType, setOrderType] = useState<OrderType>('recojo');
+  const [orderType, setOrderType] = useState<OrderType>('delivery');
   const [payMethod, setPayMethod] = useState<PayMethod>('Yape');
+  const [selectedWhatsAppPhone, setSelectedWhatsAppPhone] = useState<string>('');
 
   const isParadero = settings.companyName.toLowerCase().includes('paradero');
   const logoImage = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
+
+  const defaultPhone1 = isParadero ? '51987654321' : '51995881303';
+  const defaultPhone2 = isParadero ? '51995881303' : '51953034562';
+
+  const rawPhone1 = settings.whatsappOrdersPhone || (settings.phone?.includes('/') ? settings.phone.split('/')[0]?.trim() : settings.phone) || defaultPhone1;
+  const rawPhone2 = settings.whatsappOrdersPhone2 || (settings.phone?.includes('/') ? settings.phone.split('/')[1]?.trim() : '') || defaultPhone2;
+
+  const phone1 = rawPhone1.trim() || defaultPhone1;
+  const phone2 = rawPhone2.trim() || defaultPhone2;
 
   // ─── Categorías ────────────────────────────────────────────────────────────
   const categories = useMemo(() => {
@@ -150,12 +160,12 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       price: i.product.price,
       notes: i.notes || undefined,
       station: i.product.station || 'Cocina & Parrilla',
-      sentToKitchen: false,
+      sentToKitchen: true,
       batchNumber: 1,
     }));
 
-    const dOrders = orders.filter(o => o.tableNumber.startsWith("D-") || o.type === "delivery");
-    const nums = dOrders.map(o => parseInt(o.tableNumber.split("-")[1] || "0")).filter(n => !isNaN(n));
+    const dOrders = orders.filter(o => o.tableNumber?.startsWith("D-") || o.type === "delivery");
+    const nums = dOrders.map(o => parseInt(o.tableNumber?.split("-")[1] || "0")).filter(n => !isNaN(n));
     const nextNum = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
     const tableNumber = `D-${nextNum.toString().padStart(2, "0")}`;
 
@@ -168,13 +178,13 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       customerPhone: customerPhone.trim() || undefined,
       deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() : undefined,
       deliveryCost: orderType === 'delivery' ? deliveryFee : 0,
-      status: 'draft',
+      status: 'sent',
       items: orderItems,
       total: total,
-      notes: `Pedido Web Carta Digital • Pago: ${payMethod}`,
+      notes: `Pedido Web Carta Digital • Pago: ${payMethod}${customerPhone ? ` • Cel: ${customerPhone}` : ''}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      waiterName: 'Pedido Web Cliente',
+      waiterName: 'Pedido Web (Carta Digital)',
     });
 
     // 2. Formatear y abrir WhatsApp
@@ -207,7 +217,7 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       footer ? `\n${footer}` : '',
     ].filter(line => line !== null && line !== undefined && line !== '');
 
-    const targetPhone = settings.whatsappOrdersPhone || settings.phone || settings.paymentDetails?.yape || '51995881303';
+    const targetPhone = selectedWhatsAppPhone || phone1;
     const waUrl = createWhatsAppUrl(targetPhone, msgParts.join('\n'));
     window.open(waUrl, '_blank');
     setIsCartOpen(false);
@@ -320,7 +330,37 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
       </header>
 
       {/* ══ CUERPO ═══════════════════════════════════════════════════════════ */}
-      <main className="px-4 py-5 space-y-8 pb-36">
+      <main className="px-4 py-5 space-y-6 pb-36">
+
+        {/* Banner de Acceso Rápido al Menú del Día */}
+        {onViewDailyMenu && (
+          <div className={`rounded-2xl p-4 flex items-center justify-between shadow-sm transition border ${
+            isParadero 
+              ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white border-sky-500/30' 
+              : 'bg-gradient-to-r from-amber-500 to-orange-600 text-stone-950 border-amber-400/30'
+          }`}>
+            <div className="space-y-0.5">
+              <span className={`text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md ${
+                isParadero ? 'bg-white/20 text-white' : 'bg-black/15 text-stone-950'
+              }`}>
+                {isParadero ? '🌊 Menú Marino' : '🔥 Almuerzo de Hoy'}
+              </span>
+              <h3 className="font-black text-sm text-white">
+                {isParadero ? 'Menú Marino Ejecutivo' : 'Menú Criollo & Brasas del Día'}
+              </h3>
+              <p className={`text-xs font-medium ${isParadero ? 'text-sky-100' : 'text-amber-100'}`}>
+                Entrada + Plato de Fondo + Bebida por S/ {(settings.dailyMenuPrice || (isParadero ? 18 : 16)).toFixed(2)}
+              </p>
+            </div>
+            <button
+              onClick={onViewDailyMenu}
+              className="bg-stone-950 hover:bg-stone-900 text-white font-black text-xs px-3.5 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer ml-3"
+            >
+              <span>Ver Menú</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Loading vacío */}
         {products.length === 0 && (
@@ -749,6 +789,59 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
                       </div>
                     )}
 
+                    {/* Selector de WhatsApp Receptor */}
+                    <div>
+                      <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                        <span>Línea WhatsApp de Atención</span>
+                        <span className="text-[11px] text-teal-700 font-bold">Escoge a cuál enviar</span>
+                      </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedWhatsAppPhone(phone1)}
+                            className={cn(
+                              'p-3 rounded-xl border-2 text-left transition flex flex-col justify-between',
+                              (selectedWhatsAppPhone === phone1 || (!selectedWhatsAppPhone && phone1))
+                                ? 'border-teal-500 bg-teal-50 text-teal-950 ring-1 ring-teal-500/40 shadow-xs'
+                                : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                            )}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-[10px] uppercase font-black tracking-wider text-teal-700">Línea 1 (Principal)</span>
+                              {(selectedWhatsAppPhone === phone1 || (!selectedWhatsAppPhone && phone1)) && (
+                                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                              <span className="text-xs font-mono font-black">{formatPhoneDisplay(phone1)}</span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedWhatsAppPhone(phone2)}
+                            className={cn(
+                              'p-3 rounded-xl border-2 text-left transition flex flex-col justify-between',
+                              selectedWhatsAppPhone === phone2
+                                ? 'border-teal-500 bg-teal-50 text-teal-950 ring-1 ring-teal-500/40 shadow-xs'
+                                : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                            )}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-[10px] uppercase font-black tracking-wider text-teal-700">Línea 2 (Alternativa)</span>
+                              {selectedWhatsAppPhone === phone2 && (
+                                <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                              <span className="text-xs font-mono font-black">{formatPhoneDisplay(phone2)}</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
                     {/* Método de pago */}
                     <div>
                       <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-2">
@@ -833,8 +926,61 @@ export default function RappiMobileStoreView({ onBack, onViewDailyMenu }: Props)
                       </div>
                     </div>
 
+                    {/* Selector de WhatsApp Receptor en Confirmación */}
+                    <div>
+                      <label className="text-xs font-black text-stone-700 uppercase tracking-wider block mb-2 flex items-center justify-between">
+                        <span>Línea WhatsApp de Atención</span>
+                        <span className="text-[11px] text-teal-700 font-bold">Toca para cambiar de número</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedWhatsAppPhone(phone1)}
+                          className={cn(
+                            'p-3 rounded-xl border-2 text-left transition flex flex-col justify-between cursor-pointer',
+                            (selectedWhatsAppPhone === phone1 || (!selectedWhatsAppPhone && phone1))
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500/40 shadow-xs'
+                              : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                          )}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Línea 1 (Principal)</span>
+                            {(selectedWhatsAppPhone === phone1 || (!selectedWhatsAppPhone && phone1)) && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-xs font-mono font-black">{formatPhoneDisplay(phone1)}</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedWhatsAppPhone(phone2)}
+                          className={cn(
+                            'p-3 rounded-xl border-2 text-left transition flex flex-col justify-between cursor-pointer',
+                            selectedWhatsAppPhone === phone2
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500/40 shadow-xs'
+                              : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                          )}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Línea 2 (Alternativa)</span>
+                            {selectedWhatsAppPhone === phone2 && (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-xs font-mono font-black">{formatPhoneDisplay(phone2)}</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
                     <p className="text-xs text-stone-400 text-center">
-                      Al confirmar, se abrirá WhatsApp con tu pedido ya listo para enviar al restaurante.
+                      Al presionar el botón, tu pedido se guardará en el sistema y se abrirá WhatsApp con el pedido listo para enviar a la <strong>{selectedWhatsAppPhone === phone2 ? 'Línea 2' : 'Línea 1'} ({formatPhoneDisplay(selectedWhatsAppPhone || phone1)})</strong>.
                     </p>
                   </div>
                 )}

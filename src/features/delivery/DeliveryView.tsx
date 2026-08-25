@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from "../../hooks/StoreContext";
 import { 
   Bike, Navigation, Share2, Radio, Database
@@ -25,18 +25,30 @@ import { SupabaseSyncTab } from "./SupabaseSyncTab";
 import { AssignDriverModal } from "./AssignDriverModal";
 import { DriverFormModal } from "./DriverFormModal";
 import { ZoneFormModal } from "./ZoneFormModal";
+import DriverAppView from "./DriverAppView";
 
 export default function DeliveryView() {
   const { 
     orders, updateOrder, updateOrderStatus,
     drivers, addDriver, updateDriver, deleteDriver,
     deliveryZones, addDeliveryZone, deleteDeliveryZone,
-    users, currentUser,
+    users, currentUser, ownerSimulatedRole,
     updateDriverGpsLocation,
     settings 
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<'kanban' | 'map' | 'drivers' | 'zones' | 'supabase'>('kanban');
+  const isCourierRole = currentUser.role === 'Repartidor' || ownerSimulatedRole === 'Repartidor';
+
+  const [activeTab, setActiveTab] = useState<'driver_app' | 'kanban' | 'map' | 'drivers' | 'zones' | 'supabase'>(() => {
+    return isCourierRole ? 'driver_app' : 'kanban';
+  });
+
+  // Si cambia el rol simulado a Repartidor, cambiar de inmediato a la app
+  useEffect(() => {
+    if (isCourierRole) {
+      setActiveTab('driver_app');
+    }
+  }, [isCourierRole]);
 
   // Modales
   const [assigningOrder, setAssigningOrder] = useState<RestaurantOrder | null>(null);
@@ -305,33 +317,40 @@ export default function DeliveryView() {
 
           <div className="flex bg-stone-100 p-1 rounded-xl border border-stone-200 overflow-x-auto">
             <button
+              onClick={() => setActiveTab('driver_app')}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer", activeTab === 'driver_app' ? "bg-sky-600 text-white shadow-sm" : "text-sky-700 bg-sky-50 hover:bg-sky-100")}
+            >
+              <Bike className="w-3.5 h-3.5" />
+              <span>🛵 App Motorizado</span>
+            </button>
+            <button
               onClick={() => setActiveTab('kanban')}
-              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap", activeTab === 'kanban' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap cursor-pointer", activeTab === 'kanban' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
             >
               Tablero Envíos
             </button>
             <button
               onClick={() => setActiveTab('map')}
-              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 whitespace-nowrap", activeTab === 'map' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer", activeTab === 'map' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
             >
               <Navigation className="w-3.5 h-3.5 text-amber-500" />
               <span>Mapa & Ruteo GPS</span>
             </button>
             <button
               onClick={() => setActiveTab('drivers')}
-              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap", activeTab === 'drivers' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap cursor-pointer", activeTab === 'drivers' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
             >
               Motorizados ({drivers.length})
             </button>
             <button
               onClick={() => setActiveTab('zones')}
-              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap", activeTab === 'zones' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition whitespace-nowrap cursor-pointer", activeTab === 'zones' ? "bg-stone-900 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
             >
               Zonas & Tarifas
             </button>
             <button
               onClick={() => setActiveTab('supabase')}
-              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 whitespace-nowrap", activeTab === 'supabase' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer", activeTab === 'supabase' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-600 hover:text-stone-900")}
             >
               <Database className="w-3.5 h-3.5" />
               <span>Supabase Nube</span>
@@ -339,6 +358,11 @@ export default function DeliveryView() {
           </div>
         </div>
       </div>
+
+      {/* ═══ TAB 0: APP MÓVIL DEL MOTORIZADO (ACEPTAR & RUTAS GPS) ═══ */}
+      {activeTab === 'driver_app' && (
+        <DriverAppView onBackToAdmin={isCourierRole ? undefined : () => setActiveTab('kanban')} />
+      )}
 
       {/* ═══ TAB 1: KANBAN DE ENVÍOS ═══ */}
       {activeTab === 'kanban' && (

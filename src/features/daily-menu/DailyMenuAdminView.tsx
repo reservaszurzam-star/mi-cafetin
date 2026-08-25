@@ -69,7 +69,8 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const [cfgStartTime, setCfgStartTime] = useState<string>(settings.dailyMenuStartTime || '12:00');
   const [cfgEndTime, setCfgEndTime] = useState<string>(settings.dailyMenuEndTime || '16:30');
   const [cfgEnabled, setCfgEnabled] = useState<boolean>(settings.dailyMenuEnabled !== false);
-  const [cfgPhone, setCfgPhone] = useState<string>(settings.whatsappOrdersPhone || settings.phone || '');
+  const [cfgPhone, setCfgPhone] = useState<string>(settings.whatsappOrdersPhone || (isParadero ? '51987654321' : '51995881303'));
+  const [cfgPhone2, setCfgPhone2] = useState<string>(settings.whatsappOrdersPhone2 || (isParadero ? '51995881303' : '51953034562'));
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   // Estados de platos
@@ -186,6 +187,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
       dailyMenuEndTime: cfgEndTime,
       dailyMenuEnabled: cfgEnabled,
       whatsappOrdersPhone: cfgPhone.trim(),
+      whatsappOrdersPhone2: cfgPhone2.trim(),
     });
 
     setSaveSuccessMsg('¡Configuración guardada y sincronizada en Supabase con éxito!');
@@ -519,23 +521,47 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-black text-stone-800 block mb-1">
-                  WhatsApp Receptor de Pedidos del Menú
-                </label>
-                <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
-                  <Phone className="w-4 h-4 text-emerald-600" />
-                  <input
-                    type="tel"
-                    placeholder="Ej: 51995881303"
-                    value={cfgPhone}
-                    onChange={e => setCfgPhone(e.target.value)}
-                    className="w-full bg-transparent text-xs font-bold text-stone-900 outline-none"
-                  />
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-black text-stone-800">
+                      WhatsApp Receptor 1 (Línea Principal)
+                    </label>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Principal</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
+                    <Phone className="w-4 h-4 text-emerald-600" />
+                    <input
+                      type="tel"
+                      placeholder="Ej: 51995881303"
+                      value={cfgPhone}
+                      onChange={e => setCfgPhone(e.target.value)}
+                      className="w-full bg-transparent text-xs font-bold text-stone-900 outline-none"
+                    />
+                  </div>
                 </div>
-                <p className="text-[10px] text-stone-400 mt-1">
-                  Número que recibirá las comandas enviadas por los clientes vía WhatsApp (formato: 51995881303).
-                </p>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-black text-stone-800">
+                      WhatsApp Receptor 2 (Línea Alternativa)
+                    </label>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">Opcional</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-stone-50 border border-stone-300 rounded-xl px-3.5 py-2">
+                    <Phone className="w-4 h-4 text-emerald-600" />
+                    <input
+                      type="tel"
+                      placeholder="Ej: 51953034562"
+                      value={cfgPhone2}
+                      onChange={e => setCfgPhone2(e.target.value)}
+                      className="w-full bg-transparent text-xs font-bold text-stone-900 outline-none"
+                    />
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    Los clientes podrán elegir entre estas 2 líneas de WhatsApp al enviar su pedido.
+                  </p>
+                </div>
               </div>
 
               {/* Toggle Activo */}

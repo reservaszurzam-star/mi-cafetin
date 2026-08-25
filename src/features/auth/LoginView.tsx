@@ -31,37 +31,82 @@ export default function LoginView({ onLoginSuccess }: Props) {
 
     try {
       const trimmed = identifier.trim().toLowerCase();
+      const trimmedPassword = password.trim();
       const finalEmail = trimmed.includes('@') ? trimmed : `${trimmed}@cafetin.com`;
 
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: finalEmail,
-        password,
-      });
+      // 1. Intentar autenticar con Supabase Auth (Cuentas principales / Owner)
+      try {
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: finalEmail,
+          password: trimmedPassword,
+        });
 
-      if (authError || !data.session) {
-        setError('Usuario o contraseña incorrectos. Intenta de nuevo.');
-        setLoading(false);
-        return;
+        if (data?.session && !authError) {
+          const appMeta  = (data.user.app_metadata || {}) as Record<string, unknown>;
+          const userMeta = (data.user.user_metadata || {}) as Record<string, unknown>;
+          const role    = (appMeta.role as string) || (userMeta.role as string) || 'Owner';
+          let tenants   = (appMeta.tenants as string[]) || (userMeta.tenants as string[]) || [];
+
+          if (tenants.length === 0) {
+            tenants = ['paradero', 'laslomas'];
+          }
+
+          onLoginSuccess({
+            tenants,
+            role,
+            email: data.user.email ?? finalEmail,
+            userId: data.user.id,
+          });
+          return;
+        }
+      } catch {
+        // Continuar con verificación de PIN en base de datos
       }
 
-      const appMeta  = (data.user.app_metadata || {}) as Record<string, unknown>;
-      const userMeta = (data.user.user_metadata || {}) as Record<string, unknown>;
-      const role    = (appMeta.role as string) || (userMeta.role as string) || 'Owner';
-      let tenants   = (appMeta.tenants as string[]) || (userMeta.tenants as string[]) || [];
+      // 2. Buscar en la tabla 'users' de Supabase (Personal registrado en la web)
+      try {
+        const { data: dbUsers } = await supabase
+          .from('users')
+          .select('*')
+          .or(`username.ilike.${trimmed},email.ilike.${trimmed},name.ilike.${trimmed}`);
 
-      if (tenants.length === 0) {
-        tenants = ['paradero', 'laslomas'];
+        let matchedUser = dbUsers?.find(u => 
+          (u.pin === trimmedPassword || u.pin === password) && u.active !== false
+        );
+
+        // 3. Si no respondió la red, buscar en el almacenamiento local de usuarios
+        if (!matchedUser) {
+          const localLomas = localStorage.getItem('laslomas_cafetin_users');
+          const localParadero = localStorage.getItem('paradero_cafetin_users');
+          const allLocal = [
+            ...(localLomas ? JSON.parse(localLomas) : []),
+            ...(localParadero ? JSON.parse(localParadero) : [])
+          ];
+          matchedUser = allLocal.find(u => 
+            (u.username?.toLowerCase() === trimmed || u.email?.toLowerCase() === trimmed || u.name?.toLowerCase() === trimmed) &&
+            (u.pin === trimmedPassword || u.pin === password) &&
+            u.active !== false
+          );
+        }
+
+        if (matchedUser) {
+          const userTenant = matchedUser.tenant_id || 'laslomas';
+          onLoginSuccess({
+            tenants: [userTenant],
+            role: matchedUser.role || 'Mozo',
+            email: matchedUser.email || `${matchedUser.username}@cafetin.com`,
+            userId: matchedUser.id,
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('Error al verificar personal en BD:', err);
       }
 
-      onLoginSuccess({
-        tenants,
-        role,
-        email: data.user.email ?? finalEmail,
-        userId: data.user.id,
-      });
-
+      setError('Usuario o PIN incorrecto. Intenta de nuevo.');
+      setLoading(false);
     } catch {
-      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+      setError('Error al iniciar sesión. Verifica tus datos.');
       setLoading(false);
     }
   };
@@ -138,7 +183,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
                     onChange={(e) => setIdentifier(e.target.value)}
                     required
                     autoComplete="username"
-                    placeholder="valentino@sentinel.com"
+                    placeholder="Ej: valentino, marcos1 o correo"
                     className="w-full pl-11 pr-4 py-3.5 bg-[#fcfbf8] border border-[#fcfbf8] rounded-xl text-[14px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#d8a85c] transition-all [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_#fcfbf8] [&:-webkit-autofill]:-webkit-text-fill-color-black"
                   />
                 </div>
@@ -146,7 +191,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-[#c49a45] uppercase tracking-wider ml-1">
-                  Contraseña
+                  Contraseña o PIN (4 dígitos)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
@@ -158,7 +203,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    placeholder="••••••••"
+                    placeholder="PIN (ej: 1234) o contraseña"
                     className="w-full pl-11 pr-12 py-3.5 bg-[#fcfbf8] border border-[#fcfbf8] rounded-xl text-[14px] text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#d8a85c] transition-all tracking-[0.2em] font-medium [&:-webkit-autofill]:shadow-[inset_0_0_0px_1000px_#fcfbf8] [&:-webkit-autofill]:-webkit-text-fill-color-black"
                   />
                   <button
