@@ -36,8 +36,8 @@ export default function SettingsView() {
   const [formData, setFormData] = useState<SettingsType>(() => ({
     ...settings,
     slogan: settings.slogan || (settings.companyName.includes('Paradero') ? 'Barra Cevichera' : 'Restaurante & Grill'),
-    companyRuc: settings.companyRuc || '20601234567',
-    address: settings.address || 'Av. Los Frutales 104, Lima',
+    companyRuc: (settings.companyRuc && !settings.companyRuc.startsWith('2060')) ? settings.companyRuc : '10437453701',
+    address: settings.address || 'Jr. Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú',
     phone: settings.phone || '987-654-321',
     whatsappOrdersPhone: settings.whatsappOrdersPhone || settings.phone || '987654321',
     whatsappOrdersPhone2: settings.whatsappOrdersPhone2 || '',

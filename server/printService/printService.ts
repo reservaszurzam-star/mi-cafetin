@@ -140,7 +140,7 @@ export class PrintService {
         header: {
           companyName: settings.companyName || 'Mi Cafetín',
           slogan: settings.slogan,
-          ruc: settings.companyRuc || settings.ruc,
+          ruc: (settings.companyRuc && !settings.companyRuc.startsWith('2060')) ? settings.companyRuc : '10437453701',
         },
         station: extraDetails.stationName || selectedPrinter.station || 'COCINA',
         orderNumber: orderNo,
@@ -163,7 +163,7 @@ export class PrintService {
         header: {
           companyName: settings.companyName || 'Mi Cafetín',
           slogan: settings.slogan,
-          ruc: settings.companyRuc || settings.ruc,
+          ruc: (settings.companyRuc && !settings.companyRuc.startsWith('2060')) ? settings.companyRuc : '10437453701',
           address: settings.companyAddress || settings.address,
           phone: settings.companyPhone || settings.phone,
         },

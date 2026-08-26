@@ -138,7 +138,9 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
 
   const displayCompanyName = settings?.companyName || (isParadero ? "PARADERO 104" : "LAS LOMAS GRILL");
   const businessSubtitle = isParadero ? "SANGUCHERÍA & JUGUERÍA" : "POLLERÍA & PARRILLAS";
-  const businessRuc = (settings?.companyRuc && settings.companyRuc.length === 11) ? settings.companyRuc : "10437453701";
+  const businessRuc = (settings?.companyRuc && settings.companyRuc !== "20601234567" && settings.companyRuc !== "20123456789" && !settings.companyRuc.startsWith("2060")) 
+    ? settings.companyRuc 
+    : "10437453701";
   const businessAddress = (settings?.companyAddress && !settings.companyAddress.includes("Av. Principal") && !settings.companyAddress.includes("Av. Las Lomas 234") && !settings.companyAddress.includes("Av. Próceres"))
     ? settings.companyAddress
     : (isParadero 
