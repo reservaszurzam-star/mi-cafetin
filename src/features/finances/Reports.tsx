@@ -18,6 +18,7 @@ export default function Reports() {
   const [reportType, setReportType] = useState<"daily" | "monthly">("daily");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showThermalReport, setShowThermalReport] = useState(false);
+  const [selectedSaleToPrint, setSelectedSaleToPrint] = useState<any | null>(null);
 
   const now = new Date();
   const periodStart = reportType === "daily" ? startOfDay(now) : startOfMonth(now);
@@ -352,10 +353,21 @@ export default function Reports() {
                 </p>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="font-mono font-black text-base text-stone-900">
-                  {settings.currency} {sale.total.toFixed(2)}
-                </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedSaleToPrint(sale)}
+                  className="px-2.5 py-1.5 bg-stone-100 hover:bg-amber-500 hover:text-stone-950 text-stone-700 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                  title="Ver e Imprimir Ticket de esta Venta"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Ver Ticket</span>
+                </button>
+                <div className="text-right shrink-0">
+                  <span className="font-mono font-black text-base text-stone-900">
+                    {settings.currency} {sale.total.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -392,6 +404,28 @@ export default function Reports() {
             totalGuests: relevantSales.length * 4
           }}
           onClose={() => setShowThermalReport(false)}
+        />
+      )}
+
+      {/* ── MODAL VER / RE-IMPRIMIR TICKET DE VENTA SELECCIONADA ── */}
+      {selectedSaleToPrint && (
+        <ThermalTicket
+          order={{
+            id: selectedSaleToPrint.id || 'sale-tk',
+            type: selectedSaleToPrint.tableNumber?.startsWith('D-') ? 'delivery' : 'salón',
+            floor: 1,
+            tableNumber: selectedSaleToPrint.tableNumber || 'Directa',
+            status: 'paid',
+            items: selectedSaleToPrint.items || [],
+            total: selectedSaleToPrint.total || 0,
+            waiterName: selectedSaleToPrint.waiterName || 'Caja',
+            createdAt: selectedSaleToPrint.date || new Date().toISOString(),
+            updatedAt: selectedSaleToPrint.date || new Date().toISOString(),
+          }}
+          settings={settings}
+          ticketType="boleta_venta"
+          paymentMethod={selectedSaleToPrint.paymentMethod || 'Efectivo'}
+          onClose={() => setSelectedSaleToPrint(null)}
         />
       )}
 

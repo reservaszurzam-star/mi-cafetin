@@ -23,6 +23,7 @@ export default function CashRegisterView() {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [shiftClosedSuccessfully, setShiftClosedSuccessfully] = useState(false);
+  const [selectedSaleToPrint, setSelectedSaleToPrint] = useState<any | null>(null);
 
   // Modal para agregar gasto rápido
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -488,6 +489,7 @@ export default function CashRegisterView() {
                     <th className="py-3 px-3">Mozo / Atendido</th>
                     <th className="py-3 px-3">Método de Pago</th>
                     <th className="py-3 px-3 text-right">Total</th>
+                    <th className="py-3 px-3 text-center">Ticket</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 font-semibold text-stone-800">
@@ -515,6 +517,17 @@ export default function CashRegisterView() {
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-black text-sm text-stone-900">
                         {formatMoney(s.total, settings.currency)}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSaleToPrint(s)}
+                          className="px-2.5 py-1 bg-stone-100 hover:bg-amber-500 hover:text-stone-950 text-stone-700 rounded-xl text-xs font-bold transition flex items-center gap-1 mx-auto cursor-pointer shadow-2xs"
+                          title="Ver e Imprimir Ticket de Venta"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Ver Ticket</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -749,6 +762,28 @@ export default function CashRegisterView() {
           ticketType="reporte_ventas"
           salesReportData={salesReportData}
           onClose={() => setShowPrintModal(false)}
+        />
+      )}
+
+      {/* ── MODAL VER / RE-IMPRIMIR TICKET DE VENTA SELECCIONADA ── */}
+      {selectedSaleToPrint && (
+        <ThermalTicket
+          order={{
+            id: selectedSaleToPrint.id || 'sale-tk',
+            type: selectedSaleToPrint.tableNumber?.startsWith('D-') ? 'delivery' : 'salón',
+            floor: 1,
+            tableNumber: selectedSaleToPrint.tableNumber || 'Directa',
+            status: 'paid',
+            items: selectedSaleToPrint.items || [],
+            total: selectedSaleToPrint.total || 0,
+            waiterName: selectedSaleToPrint.waiterName || 'Caja',
+            createdAt: selectedSaleToPrint.date || new Date().toISOString(),
+            updatedAt: selectedSaleToPrint.date || new Date().toISOString(),
+          }}
+          settings={settings}
+          ticketType="boleta_venta"
+          paymentMethod={selectedSaleToPrint.paymentMethod || 'Efectivo'}
+          onClose={() => setSelectedSaleToPrint(null)}
         />
       )}
 
