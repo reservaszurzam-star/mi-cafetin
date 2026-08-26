@@ -46,9 +46,9 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
     setTempCustomerName(activeOrder?.dinerName || '');
   }, [activeOrder?.dinerName, selectedTable]);
 
-  const items = activeOrder?.items || [];
-  const unsentCount = items.filter(i => !i.sentToKitchen).length;
-  const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const items = Array.isArray(activeOrder?.items) ? activeOrder.items : [];
+  const unsentCount = items.filter(i => i && !i.sentToKitchen).length;
+  const total = items.reduce((sum, item) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 1)), 0);
 
   const handleStartEditNote = (item: OrderItem) => {
     const targetId = item.id || item.productId;

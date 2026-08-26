@@ -45,13 +45,15 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
   // Mapa de cantidades ya agregadas en la comanda activa
   const itemQuantities = useMemo(() => {
     const map = new Map<string, number>();
-    if (activeOrder?.items) {
+    if (Array.isArray(activeOrder?.items)) {
       for (const item of activeOrder.items) {
+        if (!item) continue;
+        const qty = Number(item.quantity) || 1;
         if (item.productId) {
-          map.set(item.productId, (map.get(item.productId) || 0) + item.quantity);
+          map.set(String(item.productId), (map.get(String(item.productId)) || 0) + qty);
         }
-        if (item.productName) {
-          map.set(item.productName.toLowerCase(), (map.get(item.productName.toLowerCase()) || 0) + item.quantity);
+        if (item.productName && typeof item.productName === 'string') {
+          map.set(item.productName.toLowerCase(), (map.get(item.productName.toLowerCase()) || 0) + qty);
         }
       }
     }

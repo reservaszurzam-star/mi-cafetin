@@ -623,20 +623,23 @@ export function useStore(tenantId: string) {
   const sendOrderToKitchen = useCallback((orderId: string, customStation?: string) => {
     let sentItemsResult: OrderItem[] = [];
     let currentBatch = 1;
+    let updatedOrderToSave: RestaurantOrder | null = null;
 
     setOrders((prev) => {
-      return prev.map((order) => {
-        if (order.id !== orderId) return order;
+      return (prev || []).map((order) => {
+        if (!order || order.id !== orderId) return order;
 
-        const maxBatch = Math.max(0, ...order.items.map((i) => i.batchNumber || 1));
-        const hasUnsent = order.items.some((i) => !i.sentToKitchen);
+        const orderItems = Array.isArray(order.items) ? order.items : [];
+        const maxBatch = Math.max(0, ...orderItems.map((i) => i?.batchNumber || 1));
+        const hasUnsent = orderItems.some((i) => !i?.sentToKitchen);
         currentBatch = hasUnsent ? maxBatch + 1 : maxBatch;
 
-        const updatedItems = order.items.map((item) => {
+        const updatedItems = orderItems.map((item) => {
+          if (!item) return item;
           if (!item.sentToKitchen) {
             const newItem = {
               ...item,
-              station: customStation && customStation !== 'auto' ? customStation : item.station,
+              station: customStation && customStation !== 'auto' ? customStation : (item.station || "Cocina & Parrilla"),
               sentToKitchen: true,
               sentAt: new Date().toISOString(),
               batchNumber: currentBatch,
@@ -647,17 +650,25 @@ export function useStore(tenantId: string) {
           return item;
         });
 
-        return {
+        const updated = {
           ...order,
           items: updatedItems,
-          status: "sent",
+          status: "sent" as const,
           updatedAt: new Date().toISOString(),
         };
+        updatedOrderToSave = updated;
+        return updated;
       });
     });
 
+    if (updatedOrderToSave) {
+      svc.upsertOrder(tenantId, updatedOrderToSave).catch(err => {
+        console.warn('Error sincronizando orden enviada a cocina:', err);
+      });
+    }
+
     return { sentItems: sentItemsResult, batchNumber: currentBatch };
-  }, []);
+  }, [tenantId]);
 
   const deleteOrder = useCallback((orderId: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));

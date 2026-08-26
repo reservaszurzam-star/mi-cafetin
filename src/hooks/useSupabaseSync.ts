@@ -197,13 +197,16 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
                 const local = prevMap.get(rem.id);
                 if (!local) return rem;
 
+                const localItems = Array.isArray(local.items) ? local.items : [];
+                const remItems = Array.isArray(rem?.items) ? rem.items : [];
+
                 // Si la orden local tiene más platos, conservarla siempre
-                if (local.items.length > rem.items.length) {
+                if (localItems.length > remItems.length) {
                   return local;
                 }
 
-                const localTime = new Date(local.updatedAt || local.createdAt).getTime();
-                const remTime = new Date(rem.updatedAt || rem.createdAt).getTime();
+                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
+                const remTime = new Date(rem.updatedAt || rem.createdAt || 0).getTime();
 
                 // Si la versión local es más reciente
                 if (localTime > remTime) {

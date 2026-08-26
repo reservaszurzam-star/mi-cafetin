@@ -41,9 +41,9 @@ export default function POSView() {
     () => orders.find((o) => o.tableNumber === selectedTable && o.status !== 'paid' && o.status !== 'cancelled'),
     [orders, selectedTable]
   );
-  const currentItems = activeOrder?.items ?? [];
-  const currentTotal = currentItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const totalItemCount = currentItems.reduce((s, i) => s + i.quantity, 0);
+  const currentItems = Array.isArray(activeOrder?.items) ? activeOrder.items : [];
+  const currentTotal = currentItems.reduce((s, i) => s + ((Number(i?.price) || 0) * (Number(i?.quantity) || 1)), 0);
+  const totalItemCount = currentItems.reduce((s, i) => s + (Number(i?.quantity) || 1), 0);
 
   // ── Handlers de Carrito ──
   const handleAddProduct = (product: Product) => {
