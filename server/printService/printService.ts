@@ -134,13 +134,21 @@ export class PrintService {
     const orderNo = order.dailyOrderNumber || order.orderNumber || (order.id ? order.id.slice(-4) : '0001');
     const paper = selectedPrinter.paperWidth || (extraDetails.paperWidth || '80mm');
 
+    const isParadero = settings?.businessType === 'cafetin' || 
+                       (settings?.companyName && settings.companyName.toLowerCase().includes('paradero'));
+    const compName = isParadero ? "PARADERO 104" : "LAS LOMAS GRILL";
+    const compRuc = "10437453701";
+    const compAddress = isParadero 
+      ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
+      : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú";
+    const compPhone = isParadero ? "995881303" : "995881303/953034562";
+
     let buffer: Buffer;
     if (ticketType === 'comanda_cocina') {
       buffer = buildKitchenTicketEscPos({
         header: {
-          companyName: settings.companyName || 'Mi Cafetín',
-          slogan: settings.slogan,
-          ruc: (settings.companyRuc && !settings.companyRuc.startsWith('2060')) ? settings.companyRuc : '10437453701',
+          companyName: compName,
+          ruc: compRuc,
         },
         station: extraDetails.stationName || selectedPrinter.station || 'COCINA',
         orderNumber: orderNo,
@@ -161,11 +169,10 @@ export class PrintService {
     } else {
       buffer = buildReceiptTicketEscPos({
         header: {
-          companyName: settings.companyName || 'Mi Cafetín',
-          slogan: settings.slogan,
-          ruc: (settings.companyRuc && !settings.companyRuc.startsWith('2060')) ? settings.companyRuc : '10437453701',
-          address: settings.companyAddress || settings.address,
-          phone: settings.companyPhone || settings.phone,
+          companyName: compName,
+          ruc: compRuc,
+          address: compAddress,
+          phone: compPhone,
         },
         orderNumber: orderNo,
         tableNumber: order.tableNumber || '01',
