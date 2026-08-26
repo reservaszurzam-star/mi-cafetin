@@ -142,7 +142,7 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
     ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
     : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú";
   const businessPhone = isParadero 
-    ? "995881303" 
+    ? "932208729" 
     : "995881303/953034562";
 
   // Tipo de comprobante SUNAT: 01=Factura, 03=Boleta

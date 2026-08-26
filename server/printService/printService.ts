@@ -141,7 +141,7 @@ export class PrintService {
     const compAddress = isParadero 
       ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
       : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú";
-    const compPhone = isParadero ? "995881303" : "995881303/953034562";
+    const compPhone = isParadero ? "932208729" : "995881303/953034562";
 
     let buffer: Buffer;
     if (ticketType === 'comanda_cocina') {
