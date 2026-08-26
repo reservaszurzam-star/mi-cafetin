@@ -19,9 +19,8 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
   order,
   onConfirmSend,
 }) => {
-  const { kitchenScreens } = useAppStore();
   const [selectedScreenOption, setSelectedScreenOption] = useState<string>('auto');
-  const [printTicket, setPrintTicket] = useState<boolean>(true);
+  const [printTicket, setPrintTicket] = useState<boolean>(false);
 
   if (!isOpen || !order) return null;
 

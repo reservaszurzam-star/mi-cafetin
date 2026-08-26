@@ -209,16 +209,7 @@ export default function POSView() {
     sendOrderToKitchen(activeOrder.id, options.targetStation);
 
     if (options.printTicket) {
-      // 1. Despacho real a impresoras térmicas físicas Bienex por TCP/IP Socket
-      routeAndPrintOrderApi(orderSnapshot, printers, settings, {
-        onlyUnsent: true,
-        targetStation: options.targetStation,
-        batchNumber: newBatch,
-      }).catch(err => {
-        console.warn('Error al despachar a impresoras físicas TCP:', err);
-      });
-
-      // 2. Previsualización / respaldo en pantalla
+      // Previsualización y confirmación en pantalla solo si el usuario marcó imprimir
       setTicketOrderToPrint(orderSnapshot);
       setTicketTypeToPrint("comanda_cocina");
       setShowPrintModal(true);
