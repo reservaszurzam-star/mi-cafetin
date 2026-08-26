@@ -130,11 +130,19 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
   const formattedDate = dateObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const formattedTime = dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
-  const displayCompanyName = settings?.companyName || (isParadero ? "EL PARADERO 104" : "LAS LOMAS GRILL");
+  const displayCompanyName = settings?.companyName || (isParadero ? "PARADERO 104" : "LAS LOMAS GRILL");
   const businessSubtitle = isParadero ? "SANGUCHERÍA & JUGUERÍA" : "POLLERÍA & PARRILLAS";
-  const businessRuc = settings?.companyRuc || "20601234567";
-  const businessAddress = settings?.companyAddress || "Av. Principal 123 - Lima";
-  const businessPhone = settings?.companyPhone || "987 654 321";
+  const businessRuc = (settings?.companyRuc && settings.companyRuc.length === 11) ? settings.companyRuc : "10437453701";
+  const businessAddress = (settings?.companyAddress && !settings.companyAddress.includes("Av. Principal") && !settings.companyAddress.includes("Av. Las Lomas 234") && !settings.companyAddress.includes("Av. Próceres"))
+    ? settings.companyAddress
+    : (isParadero 
+        ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
+        : "Jr. Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú");
+  const businessPhone = (settings?.companyPhone && !settings.companyPhone.includes("987 654 321") && !settings.companyPhone.includes("987654321"))
+    ? settings.companyPhone
+    : (isParadero 
+        ? "995881303" 
+        : "995881303 / 953034562");
 
   // Tipo de comprobante SUNAT: 01=Factura, 03=Boleta
   const tipoComprobante = customerDocType === 'RUC' ? '01' : '03';
