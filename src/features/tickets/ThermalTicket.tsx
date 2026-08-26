@@ -113,22 +113,28 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
   const isParadero = settings.businessType === 'cafetin' || (settings.companyName && settings.companyName.toLowerCase().includes('paradero'));
   const logoSrc = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
 
+  const safeStationName = typeof stationName === 'string' && stationName.trim() ? stationName : "General";
+
   const isDelivery = order?.type === 'delivery';
-  const displayOrderNo = order?.dailyOrderNumber || order?.orderNumber || (order?.id ? order.id.slice(-4) : '0001');
+  const displayOrderNo = order?.dailyOrderNumber || order?.orderNumber || (order?.id ? String(order.id).slice(-4) : '0001');
 
   // Filtrado de items si es comanda por estación
-  const items = order?.items || [];
-  const filteredItems = (ticketType === 'comanda_cocina' && stationName !== 'General')
-    ? items.filter(item => (item.station || 'Cocina & Parrilla').toLowerCase().includes(stationName.toLowerCase()))
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const filteredItems = (ticketType === 'comanda_cocina' && safeStationName !== 'General' && safeStationName !== 'auto')
+    ? items.filter(item => (item?.station || 'Cocina & Parrilla').toLowerCase().includes(safeStationName.toLowerCase()))
     : items;
 
-  const totalAmount = order?.total || filteredItems.reduce((s, i) => s + (i.price * i.quantity), 0);
-  const opGravada = totalAmount / 1.105;
-  const igv = totalAmount - opGravada;
+  const totalAmount = Number(order?.total ?? filteredItems.reduce((s, i) => s + ((Number(i?.price) || 0) * (Number(i?.quantity) || 1)), 0));
+  const opGravada = (totalAmount || 0) / 1.105;
+  const igv = (totalAmount || 0) - opGravada;
 
   const dateObj = new Date(order?.createdAt || Date.now());
-  const formattedDate = dateObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const formattedTime = dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const formattedDate = !isNaN(dateObj.getTime()) 
+    ? dateObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }) 
+    : new Date().toLocaleDateString('es-PE');
+  const formattedTime = !isNaN(dateObj.getTime())
+    ? dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+    : new Date().toLocaleTimeString('es-PE');
 
   const displayCompanyName = settings?.companyName || (isParadero ? "PARADERO 104" : "LAS LOMAS GRILL");
   const businessSubtitle = isParadero ? "SANGUCHERÍA & JUGUERÍA" : "POLLERÍA & PARRILLAS";
@@ -150,7 +156,7 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
   const effectiveHash = hash || 'a8f9c2e1b4d093fe';
 
   // Cadena QR Fiscal Oficial SUNAT (Formato Anexo 7)
-  const qrFiscalData = `${businessRuc}|${tipoComprobante}|${invoiceSeries}|${invoiceNumber}|${igv.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdquirente}|${customerDocNumber || '00000000'}|${effectiveHash}|`;
+  const qrFiscalData = `${businessRuc}|${tipoComprobante}|${invoiceSeries || 'B001'}|${invoiceNumber || '00001048'}|${igv.toFixed(2)}|${totalAmount.toFixed(2)}|${formattedDate}|${tipoDocAdquirente}|${customerDocNumber || '00000000'}|${effectiveHash}|`;
 
   // Disparador de Impresión Nativa Térmica
   const handlePrint = () => {

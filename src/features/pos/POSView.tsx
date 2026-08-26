@@ -467,7 +467,7 @@ export default function POSView() {
       />
 
       {/* ── MODAL IMPRESIÓN TÉRMICA ── */}
-      {(showPrintModal || ticketOrderToPrint) && (
+      {showPrintModal && (
         <ThermalTicket
           order={ticketOrderToPrint || activeOrder || {
             id: "t",
