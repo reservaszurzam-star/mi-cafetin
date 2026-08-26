@@ -71,11 +71,15 @@ export type StationPrinter = {
   name: string;
   station: OrderStation | string;
   categories: string[]; // Categorías de platos asociadas a esta impresora
-  connectionType?: "network" | "usb" | "bluetooth";
+  connectionType?: "tcp" | "network" | "usb" | "bluetooth";
   ipAddress?: string;
-  status: "online" | "offline";
+  port?: number;
+  status: "online" | "offline" | "connecting" | "error";
   autoPrint?: boolean;
   paperWidth?: "58mm" | "80mm";
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Customer = {

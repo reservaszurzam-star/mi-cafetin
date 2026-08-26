@@ -520,14 +520,27 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
               </button>
               {priceTiers.map((p, idx) => {
                 const label = tierLabels[idx] || `Nivel ${idx + 1}`;
-                const count = mains.filter(m => (m.price === p) || (m.priceTier?.toLowerCase() === label.toLowerCase())).length;
+                const count = mains.filter(m => {
+                  if (m.price !== undefined && m.price !== null && Number(m.price) === Number(p)) return true;
+                  if (m.priceTier && label) {
+                    const pTier = m.priceTier.toLowerCase();
+                    const tLabel = label.toLowerCase();
+                    if (pTier === tLabel || tLabel.includes(pTier) || pTier.includes(tLabel)) return true;
+                    if (idx === 0 && (pTier.includes('econ') || pTier.includes('1'))) return true;
+                    if (idx === 1 && (pTier.includes('clás') || pTier.includes('clas') || pTier.includes('2'))) return true;
+                    if (idx === 2 && (pTier.includes('ejec') || pTier.includes('marin') || pTier.includes('3'))) return true;
+                    if (idx === 3 && (pTier.includes('espec') || pTier.includes('prem') || pTier.includes('4'))) return true;
+                  }
+                  if ((m.price === undefined || m.price === null) && !m.priceTier && idx === 1) return true;
+                  return false;
+                }).length;
                 if (count === 0) return null;
                 return (
                   <button
                     key={p}
                     onClick={() => setCustomerPriceFilter(p)}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-black transition border shrink-0 flex items-center gap-1.5",
+                      "px-3 py-1.5 rounded-xl text-xs font-black transition border shrink-0 flex items-center gap-1.5 cursor-pointer",
                       customerPriceFilter === p
                         ? "bg-amber-500 text-stone-950 border-amber-600 shadow-xs font-black"
                         : "bg-white text-stone-700 border-stone-200 hover:bg-amber-50"
@@ -546,8 +559,20 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
               {mains.filter(item => {
                 if (customerPriceFilter === 'all') return true;
                 const idx = priceTiers.indexOf(customerPriceFilter);
-                const label = idx >= 0 ? tierLabels[idx] : '';
-                return (item.price === customerPriceFilter) || (label && item.priceTier?.toLowerCase() === label.toLowerCase());
+                if (idx < 0) return item.price === customerPriceFilter;
+                const label = tierLabels[idx] || '';
+                if (item.price !== undefined && item.price !== null && Number(item.price) === Number(customerPriceFilter)) return true;
+                if (item.priceTier && label) {
+                  const pTier = item.priceTier.toLowerCase();
+                  const tLabel = label.toLowerCase();
+                  if (pTier === tLabel || tLabel.includes(pTier) || pTier.includes(tLabel)) return true;
+                  if (idx === 0 && (pTier.includes('econ') || pTier.includes('1'))) return true;
+                  if (idx === 1 && (pTier.includes('clás') || pTier.includes('clas') || pTier.includes('2'))) return true;
+                  if (idx === 2 && (pTier.includes('ejec') || pTier.includes('marin') || pTier.includes('3'))) return true;
+                  if (idx === 3 && (pTier.includes('espec') || pTier.includes('prem') || pTier.includes('4'))) return true;
+                }
+                if ((item.price === undefined || item.price === null) && !item.priceTier && idx === 1) return true;
+                return false;
               }).map((item) => {
                 const qty = getQty(item.id);
                 const isSelected = qty > 0;

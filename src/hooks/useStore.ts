@@ -61,8 +61,28 @@ import { generateUUID } from "../lib/utils";
 import { getSunatConfig, generateCanonicalHash, buildSunatQRString } from "../lib/sunatService";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function stringToDeterministicUUID(str: string): string {
+  let hash1 = 5381;
+  let hash2 = 52711;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash1 = ((hash1 << 5) + hash1) ^ char;
+    hash2 = ((hash2 << 5) + hash2) ^ char;
+  }
+  const s1 = Math.abs(hash1).toString(16).padStart(8, '0');
+  const s2 = Math.abs(hash2).toString(16).padStart(8, '0');
+  const s3 = Math.abs(hash1 ^ hash2).toString(16).padStart(8, '0');
+  const s4 = Math.abs((hash1 << 3) ^ (hash2 >> 3)).toString(16).padStart(8, '0');
+  const full = (s1 + s2 + s3 + s4).slice(0, 32);
+  return `${full.slice(0, 8)}-${full.slice(8, 12)}-4${full.slice(13, 16)}-8${full.slice(17, 20)}-${full.slice(20, 32)}`;
+}
+
 function ensureUUID(val?: string | null): string {
   if (val && UUID_REGEX.test(val)) return val;
+  if (val && typeof val === 'string' && val.trim().length > 0) {
+    return stringToDeterministicUUID(val.trim());
+  }
   return generateUUID();
 }
 
@@ -450,6 +470,7 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const updatePrinters = useCallback((newPrinters: StationPrinter[]) => {
+    localStorage.setItem(`${tenantId}_restaurant_printers`, JSON.stringify(newPrinters));
     setPrinters(prev => {
       const newIds = new Set(newPrinters.map(p => p.id));
       prev.forEach(oldP => {
@@ -1237,12 +1258,20 @@ export function useStore(tenantId: string) {
   }, [tenantId]);
 
   const updateDailyMenuItem = useCallback((id: string, updates: Partial<DailyMenuItem>) => {
+    let updatedItem: DailyMenuItem | undefined;
     setDailyMenuItems(prev => {
-      const next = prev.map(i => i.id === id ? { ...i, ...updates } : i);
-      const updated = next.find(i => i.id === id);
-      if (updated) svc.upsertDailyMenuItem(tenantId, updated);
+      const next = prev.map(i => {
+        if (i.id === id) {
+          updatedItem = { ...i, ...updates };
+          return updatedItem;
+        }
+        return i;
+      });
       return next;
     });
+    if (updatedItem) {
+      svc.upsertDailyMenuItem(tenantId, updatedItem);
+    }
   }, [tenantId]);
 
   const deleteDailyMenuItem = useCallback((id: string) => {
@@ -1252,8 +1281,9 @@ export function useStore(tenantId: string) {
 
   const resetDailyMenuItems = useCallback(() => {
     const defaultSet = tenantId === 'paradero' ? DEFAULT_DAILY_MENU_ITEMS_PARADERO : DEFAULT_DAILY_MENU_ITEMS_LASLOMAS;
-    setDailyMenuItems(defaultSet);
-    defaultSet.forEach(item => svc.upsertDailyMenuItem(tenantId, item));
+    const normalizedSet = defaultSet.map(i => ({ ...i, id: ensureUUID(i.id) }));
+    setDailyMenuItems(normalizedSet);
+    normalizedSet.forEach(item => svc.upsertDailyMenuItem(tenantId, item));
   }, [tenantId]);
 
   // ── Role Permissions CRUD ──

@@ -37,8 +37,27 @@ import type {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function ensureUUID(val: string | undefined | null): string {
+function stringToDeterministicUUID(str: string): string {
+  let hash1 = 5381;
+  let hash2 = 52711;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash1 = ((hash1 << 5) + hash1) ^ char;
+    hash2 = ((hash2 << 5) + hash2) ^ char;
+  }
+  const s1 = Math.abs(hash1).toString(16).padStart(8, '0');
+  const s2 = Math.abs(hash2).toString(16).padStart(8, '0');
+  const s3 = Math.abs(hash1 ^ hash2).toString(16).padStart(8, '0');
+  const s4 = Math.abs((hash1 << 3) ^ (hash2 >> 3)).toString(16).padStart(8, '0');
+  const full = (s1 + s2 + s3 + s4).slice(0, 32);
+  return `${full.slice(0, 8)}-${full.slice(8, 12)}-4${full.slice(13, 16)}-8${full.slice(17, 20)}-${full.slice(20, 32)}`;
+}
+
+export function ensureUUID(val: string | undefined | null): string {
   if (val && UUID_REGEX.test(val)) return val;
+  if (val && typeof val === 'string' && val.trim().length > 0) {
+    return stringToDeterministicUUID(val.trim());
+  }
   return generateUUID();
 }
 
@@ -678,16 +697,29 @@ export async function insertInventoryMovement(tenantId: string, m: InventoryMove
 // ─── PRINTERS ────────────────────────────────────────────────────────────────
 
 function mapDbPrinter(p: Record<string, unknown>): StationPrinter {
+  const rawIp = (p.ip_address as string) || '';
+  let ip = rawIp;
+  let port = 9100;
+  if (rawIp.includes(':') && !rawIp.toLowerCase().startsWith('usb')) {
+    const parts = rawIp.split(':');
+    ip = parts[0];
+    port = parseInt(parts[1], 10) || 9100;
+  }
+
   return {
     id:             p.id as string,
     name:           p.name as string,
     station:        p.station as string,
-    categories:     p.categories as string[],
-    connectionType: p.connection_type as StationPrinter['connectionType'],
-    ipAddress:      p.ip_address as string | undefined,
-    status:         p.status as StationPrinter['status'],
+    categories:     (p.categories as string[]) || [],
+    connectionType: (p.connection_type as StationPrinter['connectionType']) || 'tcp',
+    ipAddress:      ip || undefined,
+    port:           port,
+    status:         (p.status as StationPrinter['status']) || 'offline',
     autoPrint:      p.auto_print as boolean | undefined,
-    paperWidth:     p.paper_width as StationPrinter['paperWidth'],
+    paperWidth:     (p.paper_width as StationPrinter['paperWidth']) || '80mm',
+    isActive:       true,
+    createdAt:      p.created_at as string | undefined,
+    updatedAt:      p.updated_at as string | undefined,
   };
 }
 
@@ -702,11 +734,23 @@ export async function fetchPrinters(tenantId: string): Promise<StationPrinter[]>
 }
 
 export async function upsertPrinter(tenantId: string, p: StationPrinter): Promise<void> {
+  let targetIp = p.ipAddress ?? null;
+  if (targetIp && p.connectionType === 'tcp' && p.port && p.port !== 9100) {
+    targetIp = `${p.ipAddress}:${p.port}`;
+  }
+
   const { error } = await db(tenantId).from('printers').upsert({
-    id: ensureUUID(p.id), tenant_id: tenantId, name: p.name, station: p.station,
-    categories: p.categories, connection_type: p.connectionType ?? null,
-    ip_address: p.ipAddress ?? null, status: p.status,
-    auto_print: p.autoPrint ?? true, paper_width: p.paperWidth ?? '80mm',
+    id: ensureUUID(p.id),
+    tenant_id: tenantId,
+    name: p.name,
+    station: p.station,
+    categories: p.categories || [],
+    connection_type: p.connectionType ?? 'tcp',
+    ip_address: targetIp,
+    status: p.status || 'offline',
+    auto_print: p.autoPrint ?? true,
+    paper_width: p.paperWidth ?? '80mm',
+    updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
   if (error) handleError('upsertPrinter', error);
 }
@@ -901,12 +945,12 @@ function mapDbDailyMenuItem(m: Record<string, unknown>): DailyMenuItem {
   // Extraer etiquetas de metadatos si existen
   const metaMatch = desc.match(/<!--tier:(.*?)\|price:(.*?)-->/);
   if (metaMatch) {
-    priceTier = metaMatch[1] || undefined;
+    priceTier = metaMatch[1] ? metaMatch[1].trim() : undefined;
     price = parseFloat(metaMatch[2]) || undefined;
     desc = desc.replace(/<!--tier:(.*?)\|price:(.*?)-->/g, '').trim();
   } else if (m.course === 'fondo') {
-    const extra = m.extra_price as number;
-    if (extra && extra >= 10) {
+    const extra = Number(m.extra_price);
+    if (extra && extra > 0) {
       price = extra;
     }
   }
@@ -937,9 +981,9 @@ export async function fetchDailyMenuItems(tenantId: string): Promise<DailyMenuIt
 
 export async function upsertDailyMenuItem(tenantId: string, item: DailyMenuItem): Promise<void> {
   let cleanDesc = item.description || '';
+  cleanDesc = cleanDesc.replace(/<!--tier:(.*?)\|price:(.*?)-->/g, '').trim();
   if (item.course === 'fondo' && (item.price || item.priceTier)) {
-    cleanDesc = cleanDesc.replace(/<!--tier:(.*?)\|price:(.*?)-->/g, '').trim();
-    cleanDesc = `${cleanDesc}<!--tier:${item.priceTier || ''}|price:${item.price || ''}-->`;
+    cleanDesc = `${cleanDesc}<!--tier:${item.priceTier || ''}|price:${item.price || ''}-->`.trim();
   }
 
   const { error } = await db(tenantId).from('daily_menu_items').upsert({

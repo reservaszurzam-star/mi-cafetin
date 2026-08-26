@@ -53,10 +53,43 @@ const EMPTY_ITEM: Omit<DailyMenuItem, 'id'> = {
   priceTier: undefined,
 };
 
-export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
-  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems, settings, updateSettings } = useAppStore();
+export function matchDishToTier(
+  item: DailyMenuItem,
+  tier: { price: number; label: string },
+  tierIndex: number,
+  allTiers: { price: number; label: string }[]
+): boolean {
+  if (item.course !== 'fondo') return false;
 
-  const isParadero = settings.companyName.toLowerCase().includes('paradero');
+  // 1. Coincidencia exacta por precio numérico
+  if (item.price !== undefined && item.price !== null && Number(item.price) === Number(tier.price)) {
+    return true;
+  }
+
+  // 2. Coincidencia por etiqueta de nivel (case-insensitive)
+  if (item.priceTier) {
+    const pTier = item.priceTier.trim().toLowerCase();
+    const tLabel = tier.label.trim().toLowerCase();
+    if (pTier === tLabel || tLabel.includes(pTier) || pTier.includes(tLabel)) return true;
+
+    if (tierIndex === 0 && (pTier.includes('econ') || pTier.includes('1'))) return true;
+    if (tierIndex === 1 && (pTier.includes('clás') || pTier.includes('clas') || pTier.includes('2') || pTier.includes('estandar'))) return true;
+    if (tierIndex === 2 && (pTier.includes('ejec') || pTier.includes('marin') || pTier.includes('3'))) return true;
+    if (tierIndex === 3 && (pTier.includes('espec') || pTier.includes('prem') || pTier.includes('4'))) return true;
+  }
+
+  // 3. Si no tiene precio ni etiqueta asignada, se asigna al Nivel 2 (Clásico / Estándar) por defecto
+  if ((item.price === undefined || item.price === null) && !item.priceTier && tierIndex === 1) {
+    return true;
+  }
+
+  return false;
+}
+
+export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
+  const { dailyMenuItems, addDailyMenuItem, updateDailyMenuItem, deleteDailyMenuItem, resetDailyMenuItems, settings, updateSettings, tenantId } = useAppStore();
+
+  const isParadero = tenantId === 'paradero' || settings.companyName.toLowerCase().includes('paradero');
   const tenantKey = isParadero ? 'paradero' : 'laslomas';
   const clientMenuUrl = `${window.location.origin}/menu/${tenantKey}`;
 
@@ -74,15 +107,15 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     ? settings.dailyMenuTierLabels 
     : defaultTierLabels;
 
-  const [cfgTier1, setCfgTier1] = useState<number>(initialTiers[0] ?? 14);
-  const [cfgTier2, setCfgTier2] = useState<number>(initialTiers[1] ?? 16);
-  const [cfgTier3, setCfgTier3] = useState<number>(initialTiers[2] ?? 18);
-  const [cfgTier4, setCfgTier4] = useState<number>(initialTiers[3] ?? 22);
+  const [cfgTier1, setCfgTier1] = useState<number>(initialTiers[0] ?? (isParadero ? 16 : 14));
+  const [cfgTier2, setCfgTier2] = useState<number>(initialTiers[1] ?? (isParadero ? 18 : 16));
+  const [cfgTier3, setCfgTier3] = useState<number>(initialTiers[2] ?? (isParadero ? 22 : 18));
+  const [cfgTier4, setCfgTier4] = useState<number>(initialTiers[3] ?? (isParadero ? 26 : 22));
 
-  const [cfgLabel1, setCfgLabel1] = useState<string>(initialTierLabels[0] ?? 'Económico');
-  const [cfgLabel2, setCfgLabel2] = useState<string>(initialTierLabels[1] ?? 'Clásico');
-  const [cfgLabel3, setCfgLabel3] = useState<string>(initialTierLabels[2] ?? 'Ejecutivo');
-  const [cfgLabel4, setCfgLabel4] = useState<string>(initialTierLabels[3] ?? 'Especial');
+  const [cfgLabel1, setCfgLabel1] = useState<string>(initialTierLabels[0] ?? defaultTierLabels[0]);
+  const [cfgLabel2, setCfgLabel2] = useState<string>(initialTierLabels[1] ?? defaultTierLabels[1]);
+  const [cfgLabel3, setCfgLabel3] = useState<string>(initialTierLabels[2] ?? defaultTierLabels[2]);
+  const [cfgLabel4, setCfgLabel4] = useState<string>(initialTierLabels[3] ?? defaultTierLabels[3]);
 
   const [cfgBasePrice, setCfgBasePrice] = useState<number>(settings.dailyMenuPrice || initialTiers[1] || 16.00);
   const [cfgExtraStarter, setCfgExtraStarter] = useState<number>(settings.dailyMenuExtraStarterPrice ?? 5.00);
@@ -293,12 +326,8 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
     // Fondos por 4 Niveles de Precio
     lines.push(`🍲 *PLATOS DE FONDO POR PRECIO:*`);
     
-    activeTiers.forEach(tier => {
-      const tierMains = mains.filter(m => {
-        if (m.price) return m.price === tier.price;
-        if (m.priceTier) return m.priceTier.toLowerCase() === tier.label.toLowerCase();
-        return tier.price === Number(cfgTier2);
-      });
+    activeTiers.forEach((tier, tierIdx) => {
+      const tierMains = mains.filter(m => matchDishToTier(m, tier, tierIdx, activeTiers));
 
       lines.push(`💵 *${tier.label.toUpperCase()} — S/ ${tier.price.toFixed(2)}:*`);
       if (tierMains.length > 0) {
@@ -573,12 +602,10 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {activeTiers.map(tier => {
+                  {activeTiers.map((tier, tierIdx) => {
                     const tierMains = dailyMenuItems.filter(i => {
                       if (i.course !== 'fondo' || !i.available) return false;
-                      if (i.price) return i.price === tier.price;
-                      if (i.priceTier) return i.priceTier.toLowerCase() === tier.label.toLowerCase();
-                      return tier.price === Number(cfgTier2);
+                      return matchDishToTier(i, tier, tierIdx, activeTiers);
                     });
 
                     return (
@@ -976,8 +1003,8 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                 >
                   Todos los Precios
                 </button>
-                {activeTiers.map(t => {
-                  const count = dailyMenuItems.filter(i => i.course === 'fondo' && ((i.price === t.price) || (i.priceTier === t.label))).length;
+                {activeTiers.map((t, idx) => {
+                  const count = dailyMenuItems.filter(i => matchDishToTier(i, t, idx, activeTiers)).length;
                   return (
                     <button
                       key={t.price}
@@ -1010,7 +1037,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                   </div>
                   <div>
                     <h3 className="font-black text-stone-900">¿Restaurar menú?</h3>
-                    <p className="text-xs text-stone-500">Se cargarán los 12 platos predeterminados según la sede activa.</p>
+                    <p className="text-xs text-stone-500">Se cargarán los platos predeterminados según la sede activa.</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -1039,12 +1066,10 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
               let items = dailyMenuItems.filter(i => i.course === course);
 
               if (course === 'fondo' && selectedPriceFilter !== 'all') {
-                const targetTier = activeTiers.find(t => t.price === selectedPriceFilter);
-                items = items.filter(i => {
-                  if (i.price) return i.price === selectedPriceFilter;
-                  if (i.priceTier && targetTier) return i.priceTier.toLowerCase() === targetTier.label.toLowerCase();
-                  return false;
-                });
+                const targetTierIdx = activeTiers.findIndex(t => t.price === selectedPriceFilter);
+                if (targetTierIdx !== -1) {
+                  items = items.filter(i => matchDishToTier(i, activeTiers[targetTierIdx], targetTierIdx, activeTiers));
+                }
               }
 
               if (searchTerm) {
@@ -1133,6 +1158,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
                               onDelete={() => handleDelete(item.id)}
                               onToggleAvailable={() => handleToggleAvailable(item)}
                               onTogglePopular={() => handleTogglePopular(item)}
+                              onSelectTier={(price, label) => updateDailyMenuItem(item.id, { price, priceTier: label })}
                               activeTiers={activeTiers}
                             />
                           );
@@ -1158,19 +1184,21 @@ interface ItemRowProps {
   onDelete: () => void;
   onToggleAvailable: () => void;
   onTogglePopular: () => void;
+  onSelectTier: (price: number, label: string) => void;
   activeTiers: { price: number; label: string; color: string; badge: string }[];
 }
 
-function ItemRow({ item, onEdit, onDelete, onToggleAvailable, onTogglePopular, activeTiers }: ItemRowProps) {
+function ItemRow({ item, onEdit, onDelete, onToggleAvailable, onTogglePopular, onSelectTier, activeTiers }: ItemRowProps) {
   const isPostre = item.course === 'postre';
   const isFondo = item.course === 'fondo';
 
-  // Buscar badge de tier
-  const tierMatch = activeTiers.find(t => t.price === item.price || (item.priceTier && t.label.toLowerCase() === item.priceTier.toLowerCase()));
+  // Buscar coincidencia de tier con función inteligente
+  const matchedTierIdx = isFondo ? activeTiers.findIndex((t, idx) => matchDishToTier(item, t, idx, activeTiers)) : -1;
+  const tierMatch = matchedTierIdx !== -1 ? activeTiers[matchedTierIdx] : undefined;
 
   return (
     <div className={cn(
-      'flex items-center justify-between px-5 py-3.5 gap-4 transition-colors',
+      'flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3.5 gap-3 transition-colors',
       !item.available && 'opacity-50 bg-stone-50/60'
     )}>
       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -1196,11 +1224,11 @@ function ItemRow({ item, onEdit, onDelete, onToggleAvailable, onTogglePopular, a
             </span>
 
             {/* Badge de Precio / Nivel en Fondos */}
-            {isFondo && item.price && (
-              <span className={cn('px-2 py-0.5 rounded-md text-[11px] font-black border flex items-center gap-1', tierMatch ? tierMatch.badge : 'bg-amber-100 text-amber-900 border-amber-300')}>
+            {isFondo && tierMatch && (
+              <span className={cn('px-2 py-0.5 rounded-md text-[11px] font-black border flex items-center gap-1', tierMatch.badge)}>
                 <Tag className="w-3 h-3" />
-                <span>S/ {item.price.toFixed(2)}</span>
-                {item.priceTier && <span className="opacity-80">· {item.priceTier}</span>}
+                <span>S/ {tierMatch.price.toFixed(2)}</span>
+                <span className="opacity-80">· {tierMatch.label}</span>
               </span>
             )}
 
@@ -1225,11 +1253,41 @@ function ItemRow({ item, onEdit, onDelete, onToggleAvailable, onTogglePopular, a
               {item.description}
             </p>
           )}
+
+          {/* Selectores rápidos de 4 precios en 1 solo clic para Fondos */}
+          {isFondo && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] font-black text-stone-600 uppercase">Cambiar Nivel:</span>
+              {activeTiers.map((t, idx) => {
+                const isSelected = matchedTierIdx === idx;
+                return (
+                  <button
+                    key={t.price}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTier(t.price, t.label);
+                    }}
+                    className={cn(
+                      "px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1",
+                      isSelected
+                        ? cn("font-black shadow-xs ring-1 ring-amber-500 scale-105", t.badge)
+                        : "bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:border-amber-300"
+                    )}
+                    title={`Asignar este plato a ${t.label} (S/ ${t.price.toFixed(2)})`}
+                  >
+                    <span>{t.label}</span>
+                    <span className="font-black">S/ {t.price.toFixed(2)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Acciones */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
         <button
           onClick={onTogglePopular}
           className={cn(
@@ -1312,7 +1370,8 @@ function ItemForm({ formData, onChange, onSave, onCancel, course, isNew, activeT
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {activeTiers.map(t => {
-              const isSelected = formData.price === t.price || formData.priceTier === t.label;
+              const isSelected = (formData.price !== undefined && Number(formData.price) === Number(t.price)) ||
+                (formData.priceTier && (formData.priceTier.toLowerCase() === t.label.toLowerCase() || t.label.toLowerCase().includes(formData.priceTier.toLowerCase())));
               return (
                 <button
                   type="button"

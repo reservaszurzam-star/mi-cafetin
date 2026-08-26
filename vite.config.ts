@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, loadEnv, Plugin } from 'vite';
+import { handlePrinterApiRequest } from './server/api/printerRouter';
 
 const OFFICIAL_LOOKUP_TOKEN = 'sk_18750.Kz5Db2bkVuxXsVXdz5yXs5rugHLpQTIf';
 
@@ -119,10 +120,24 @@ function docLookupPlugin(): Plugin {
   };
 }
 
+function printerApiPlugin(): Plugin {
+  return {
+    name: 'printer-api-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const handled = await handlePrinterApiRequest(req, res);
+        if (!handled) {
+          next();
+        }
+      });
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss(), docLookupPlugin()],
+    plugins: [react(), tailwindcss(), docLookupPlugin(), printerApiPlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

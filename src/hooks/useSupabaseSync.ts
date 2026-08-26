@@ -268,6 +268,26 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
           });
         }
       )
+      // Cambios en Menú del Día en tiempo real
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_menu_items', filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          svc.fetchDailyMenuItems(tenantId).then(items => {
+            if (items && items.length > 0) setters.setDailyMenuItems(items);
+          });
+        }
+      )
+      // Cambios en Configuración general y precios de menú
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'settings', filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          svc.fetchSettings(tenantId).then(s => {
+            if (s) setters.setSettings(s);
+          });
+        }
+      )
       .subscribe();
 
     realtimeChannel.current = channel as unknown as ReturnType<typeof getSupabaseForTenant>['channel'];

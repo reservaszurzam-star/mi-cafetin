@@ -153,8 +153,8 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
             <div className="flex items-center gap-2.5">
               <Printer className="w-4 h-4 text-stone-600" />
               <div>
-                <p className="text-xs font-black text-stone-900">Imprimir Comanda Física (80mm)</p>
-                <p className="text-[10px] text-stone-500 font-medium">Emitir ticket térmico para los cocineros</p>
+                <p className="text-xs font-black text-stone-900">Imprimir Comanda Física (Ticketeras Bienex TCP)</p>
+                <p className="text-[10px] text-stone-500 font-medium">Ruteo automático por estación (Cocina, Horno, Barra) en puerto 9100</p>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${printTicket ? 'bg-amber-500 border-amber-500 text-stone-950' : 'border-stone-300 bg-white'}`}>

@@ -30,9 +30,9 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
     if (!componentRef.current) return;
 
     const scrollHeightPx = componentRef.current.scrollHeight || 450;
-    const calculatedHeightMm = Math.max(100, Math.ceil(scrollHeightPx * 0.264583) + 12);
+    const calculatedHeightMm = Math.max(100, Math.ceil(scrollHeightPx * 0.264583) + 16);
 
-    const printWindow = window.open('', '_blank', 'width=450,height=800');
+    const printWindow = window.open('', '_blank', 'width=480,height=800');
     if (!printWindow) {
       window.print();
       return;
@@ -65,7 +65,7 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
                 width: 100% !important;
                 max-width: 100% !important;
                 margin: 0 !important;
-                padding: 2mm 3mm !important;
+                padding: 2mm 2.5mm !important;
                 box-sizing: border-box !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
@@ -79,40 +79,39 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
               box-sizing: border-box;
               margin: 0;
               padding: 0;
+              color: #000 !important;
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-              font-size: 12px;
-              line-height: 1.25;
+              font-size: 14.5px;
+              font-weight: 600;
+              line-height: 1.3;
               color: #000;
               background: #fff;
               width: 100%;
               max-width: 80mm;
               margin: 0 auto;
-              padding: 4mm 3mm;
+              padding: 3mm 2mm;
             }
             .ticket-container {
               width: 100%;
               margin: 0 auto;
             }
             .text-center { text-align: center; }
+            .font-black { font-weight: 900; }
             .font-bold { font-weight: bold; }
             .uppercase { text-transform: uppercase; }
             .divider {
-              border-top: 1px dashed #000;
-              margin: 4px 0;
-            }
-            .divider-double {
-              border-top: 2px dashed #000;
+              border-top: 2.5px dashed #000;
               margin: 6px 0;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 4px 0;
+              margin: 5px 0;
             }
             th, td {
-              padding: 3px 0;
+              padding: 4px 0;
               vertical-align: top;
             }
           </style>
@@ -136,22 +135,31 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
     printWindow.document.close();
   };
 
+  // Filtrado de items por estación
+  const filteredItems = stationName === "COCINA" || stationName === "General"
+    ? order.items
+    : order.items.filter(item => {
+        const prod = products.find(p => p.id === item.productId);
+        const itemStation = (item.station || prod?.station || '').toLowerCase();
+        return itemStation.includes(stationName.toLowerCase());
+      });
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex flex-col items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       
-      {/* Botones de acción */}
-      <div className="flex gap-3 mb-4">
-        <button
-          onClick={onClose}
-          className="h-11 px-5 rounded-2xl font-bold bg-white text-stone-800 hover:bg-stone-100 flex items-center gap-2 transition shadow-md cursor-pointer text-xs"
-        >
-          <X className="w-4 h-4" /> Cancelar
-        </button>
+      {/* Botones Flotantes Superiores */}
+      <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
         <button
           onClick={handlePrint}
           className="h-11 px-6 rounded-2xl font-black bg-amber-500 hover:bg-amber-400 text-stone-950 flex items-center gap-2 shadow-lg shadow-amber-500/20 transition cursor-pointer text-xs active:scale-95"
         >
           <Printer className="w-4 h-4" /> Imprimir Comanda Térmica (80mm)
+        </button>
+        <button
+          onClick={onClose}
+          className="w-11 h-11 bg-white/20 hover:bg-white/30 text-white rounded-2xl flex items-center justify-center transition cursor-pointer"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
 
@@ -166,27 +174,29 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
             maxWidth: '78mm',
             padding: '5mm 3.5mm',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            fontSize: '12px',
+            fontSize: '14px',
             color: '#000',
-            lineHeight: '1.25',
+            lineHeight: '1.3',
             boxSizing: 'border-box',
             border: '1px solid #d1d5db',
           }}
         >
           
           {/* Header con Logo */}
-          <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-            <div style={{ padding: '2px 0 6px 0', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+            <div style={{ padding: '2px 0 4px 0', display: 'flex', justifyContent: 'center' }}>
               <img
                 src={logoSrc}
                 alt={displayCompanyName}
+                className="ticket-logo"
                 style={{
-                  maxHeight: '52px',
-                  maxWidth: '65mm',
+                  maxHeight: '85px',
+                  maxWidth: '72mm',
+                  width: 'auto',
+                  height: 'auto',
                   margin: '0 auto',
                   display: 'block',
                   objectFit: 'contain',
-                  filter: 'contrast(115%) brightness(95%)',
                 }}
                 onError={(e) => {
                   const fallback = isParadero ? '/Logo/logo-paradero-104.png' : '/Logo/logo-lomas-grill.png';
@@ -196,33 +206,35 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
                 }}
               />
             </div>
-            <div style={{ fontSize: '15px', fontWeight: '900', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', lineHeight: '1.15' }}>
               {displayCompanyName}
             </div>
-            <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', marginTop: '1px' }}>
               {businessSubtitle}
             </div>
           </div>
 
-          <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px dashed #000', margin: '3px 0' }} />
 
           {/* Título de la Comanda */}
           <div style={{ 
-            background: '#000',
-            color: '#fff',
-            padding: '5px 3px', 
+            border: '1.5px solid #000',
+            color: '#000',
+            background: '#fff',
+            padding: '3px 2px', 
             textAlign: 'center', 
             fontWeight: '900', 
-            fontSize: '14px',
-            margin: '3px 0',
-            letterSpacing: '0.05em'
+            fontSize: '11.5px',
+            margin: '2px 0',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase'
           }}>
-            ★ COMANDA: {stationName.toUpperCase()} ★
+            ★ COMANDA: {(stationName || 'GENERAL').toUpperCase()} ★
           </div>
 
           {/* Info de Mesa & Orden */}
-          <div style={{ fontSize: '11px', margin: '4px 0', lineHeight: '1.3' }}>
-            <div style={{ fontSize: '16px', fontWeight: '900', borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '2px' }}>
+          <div style={{ fontSize: '10px', margin: '3px 0', lineHeight: '1.25', fontWeight: '700' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: '900', borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '2px' }}>
               MESA: {order.tableNumber} {isDelivery ? '(DELIVERY)' : ''}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -239,28 +251,28 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
             )}
           </div>
 
-          <div style={{ borderTop: '2px dashed #000', margin: '4px 0' }} />
+          <div style={{ borderTop: '1.5px dashed #000', margin: '3px 0' }} />
 
           {/* Tabla de Items */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
             <thead>
-              <tr style={{ borderBottom: '1.5px solid #000' }}>
-                <th style={{ textAlign: 'left', width: '15%', padding: '2px 0', fontWeight: '900' }}>CANT</th>
+              <tr style={{ borderBottom: '1px solid #000' }}>
+                <th style={{ textAlign: 'left', width: '18%', padding: '2px 0', fontWeight: '900' }}>CANT</th>
                 <th style={{ textAlign: 'left', padding: '2px 0', fontWeight: '900' }}>PLATO / NOTA</th>
               </tr>
             </thead>
             <tbody>
-              {order.items.map((item, idx) => (
+              {filteredItems.map((item, idx) => (
                 <tr key={item.id + idx} style={{ borderBottom: '1px dashed #000' }}>
-                  <td style={{ verticalAlign: 'top', padding: '4px 0', fontSize: '16px', fontWeight: '900' }}>
-                    {item.quantity}
+                  <td style={{ verticalAlign: 'top', padding: '2.5px 0', fontSize: '11.5px', fontWeight: '900' }}>
+                    {item.quantity}x
                   </td>
-                  <td style={{ verticalAlign: 'top', padding: '4px 0' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', lineHeight: '1.2' }}>
-                      {products.find(p => p.id === item.productId)?.name || item.productName}
+                  <td style={{ verticalAlign: 'top', padding: '2.5px 0' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', lineHeight: '1.2' }}>
+                      {item.productName}
                     </div>
                     {item.notes && (
-                      <div style={{ fontSize: '10.5px', fontWeight: 'bold', background: '#000', color: '#fff', padding: '2px 4px', marginTop: '2px', display: 'inline-block', borderRadius: '2px' }}>
+                      <div style={{ fontSize: '8.5px', fontWeight: 'bold', border: '1px solid #000', color: '#000', background: '#fff', padding: '1px 3px', marginTop: '2px', display: 'inline-block', borderRadius: '2px' }}>
                         ⚠️ NOTA: {item.notes}
                       </div>
                     )}
@@ -270,15 +282,17 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
             </tbody>
           </table>
 
-          <div style={{ borderTop: '2px dashed #000', margin: '6px 0' }} />
+          <div style={{ borderTop: '1.5px dashed #000', margin: '6px 0' }} />
 
-          <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '11px', textTransform: 'uppercase' }}>
+          {/* Mensaje de Cierre */}
+          <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: '900', marginTop: '6px' }}>
             *** DESPACHAR DE INMEDIATO ***
           </div>
 
         </div>
 
       </div>
+
     </div>
   );
 }

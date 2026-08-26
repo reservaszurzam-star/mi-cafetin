@@ -11,6 +11,7 @@ import { POSSendKitchenModal } from "./POSSendKitchenModal";
 import { Utensils, ClipboardList } from "lucide-react";
 import { formatMoney } from "../../lib/formatters";
 import { generateUUID } from "../../lib/utils";
+import { routeAndPrintOrderApi } from "../../lib/printerService";
 
 export default function POSView() {
   const {
@@ -193,13 +194,32 @@ export default function POSView() {
   const handleConfirmSendToKitchen = (options: { targetStation: string; printTicket: boolean }) => {
     if (!activeOrder || activeOrder.items.length === 0) return;
 
+    const orderSnapshot: RestaurantOrder = {
+      ...activeOrder,
+      items: activeOrder.items.map(item => ({ ...item })),
+    };
+
     const newBatch = (activeOrder.items.reduce((max, i) => Math.max(max, i.batchNumber || 0), 0)) + 1;
     setLastBatchNumber(newBatch);
 
+    // Cerrar modal de envío
+    setIsSendKitchenModalOpen(false);
+
+    // Enviar a cocina en estado de la app
     sendOrderToKitchen(activeOrder.id, options.targetStation);
 
     if (options.printTicket) {
-      setTicketOrderToPrint(activeOrder);
+      // 1. Despacho real a impresoras térmicas físicas Bienex por TCP/IP Socket
+      routeAndPrintOrderApi(orderSnapshot, printers, settings, {
+        onlyUnsent: true,
+        targetStation: options.targetStation,
+        batchNumber: newBatch,
+      }).catch(err => {
+        console.warn('Error al despachar a impresoras físicas TCP:', err);
+      });
+
+      // 2. Previsualización / respaldo en pantalla
+      setTicketOrderToPrint(orderSnapshot);
       setTicketTypeToPrint("comanda_cocina");
       setShowPrintModal(true);
     }
@@ -310,8 +330,8 @@ export default function POSView() {
         onQuickSale={handleQuickDirectSale}
       />
 
-      {/* ── SELECTOR MÓVIL: CATÁLOGO vs COMANDA ── */}
-      <div className="flex lg:hidden bg-stone-200/80 p-1 rounded-2xl gap-1 border border-stone-200/50 shadow-2xs">
+      {/* ── SELECTOR MÓVIL: CATÁLOGO vs COMANDA (solo en celulares pequeños) ── */}
+      <div className="flex md:hidden bg-stone-200/80 p-1 rounded-2xl gap-1 border border-stone-200/50 shadow-2xs">
         <button
           type="button"
           onClick={() => setMobileTab('catalog')}
@@ -342,11 +362,11 @@ export default function POSView() {
         </button>
       </div>
 
-      {/* ── CUERPO PRINCIPAL DEL POS: CATÁLOGO + COMANDA ── */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-280px)] lg:h-[calc(100vh-280px)] lg:min-h-[580px] pb-16 lg:pb-0">
+      {/* ── CUERPO PRINCIPAL DEL POS: CATÁLOGO + COMANDA (LADO A LADO EN LAPTOPS Y PCS) ── */}
+      <div className="flex flex-col md:flex-row gap-4 h-[calc(100dvh-260px)] md:h-[calc(100vh-260px)] md:min-h-[580px] pb-16 md:pb-0">
         
         {/* Catálogo Táctil */}
-        <div className={`flex-1 flex flex-col min-h-0 h-full ${mobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`flex-1 min-w-0 flex flex-col min-h-0 h-full ${mobileTab === 'catalog' ? 'flex' : 'hidden md:flex'}`}>
           <POSProductCatalog
             products={products}
             selectedCategory={selectedCategory}
@@ -360,7 +380,7 @@ export default function POSView() {
         </div>
 
         {/* Barra Lateral de Comanda / Carrito */}
-        <div className={`w-full lg:w-96 flex flex-col min-h-0 h-full ${mobileTab === 'cart' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`w-full md:w-80 lg:w-96 shrink-0 flex flex-col min-h-0 h-full ${mobileTab === 'cart' ? 'flex' : 'hidden md:flex'}`}>
           <POSCartSidebar
             activeOrder={activeOrder || null}
             selectedTable={selectedTable}
@@ -382,7 +402,7 @@ export default function POSView() {
 
       {/* ── BOTÓN FLOTANTE EN MÓVIL PARA REVISAR COMANDA RÁPIDO ── */}
       {mobileTab === 'catalog' && totalItemCount > 0 && (
-        <div className="fixed bottom-16 left-3 right-3 z-40 lg:hidden animate-in slide-in-from-bottom-2">
+        <div className="fixed bottom-16 left-3 right-3 z-40 md:hidden animate-in slide-in-from-bottom-2">
           <button
             type="button"
             onClick={() => setMobileTab('cart')}
@@ -470,6 +490,7 @@ export default function POSView() {
             updatedAt: new Date().toISOString(),
             waiterName: currentUser.name || "Mesero",
           }}
+          settings={settings}
           ticketType={ticketTypeToPrint}
           batchNumber={lastBatchNumber}
           showQR={settings.showPaymentQR ?? true}
