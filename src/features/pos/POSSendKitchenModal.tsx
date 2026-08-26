@@ -19,12 +19,18 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
   order,
   onConfirmSend,
 }) => {
+  const store = useAppStore();
+  const kitchenScreens = store?.kitchenScreens || [];
   const [selectedScreenOption, setSelectedScreenOption] = useState<string>('auto');
   const [printTicket, setPrintTicket] = useState<boolean>(false);
 
   if (!isOpen || !order) return null;
 
-  const unsentItems = order.items.filter(i => !i.sentToKitchen);
+  const orderItems = Array.isArray(order?.items) ? order.items : [];
+  const unsentItems = orderItems.filter(i => i && !i.sentToKitchen);
+  const maxBatch = Math.max(0, ...orderItems.map(i => i?.batchNumber || 1));
+  const hasSent = orderItems.some(i => i?.sentToKitchen);
+  const nextBatch = hasSent ? maxBatch + 1 : 1;
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,12 +76,12 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
                 Platos a Enviar ({unsentItems.length})
               </span>
               <span className="text-[10px] font-bold text-amber-700 bg-amber-200/70 px-2 py-0.5 rounded-full">
-                Tanda #{((order.items.filter(i => i.sentToKitchen).length > 0) ? (Math.max(0, ...order.items.map(i => i.batchNumber || 1)) + 1) : 1)}
+                Tanda #{nextBatch}
               </span>
             </div>
             <div className="max-h-32 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-              {unsentItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-xl bg-white border border-amber-100 font-bold">
+              {unsentItems.map((item, idx) => (
+                <div key={item.id || `unsent-${idx}`} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-xl bg-white border border-amber-100 font-bold">
                   <div className="flex items-center gap-2 truncate">
                     <span className="text-amber-600">{item.quantity}x</span>
                     <span className="text-stone-900 truncate">{item.productName}</span>
