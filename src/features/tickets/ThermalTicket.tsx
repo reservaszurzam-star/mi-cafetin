@@ -495,10 +495,7 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
               <div style={{ fontSize: paperWidth === '58mm' ? '13px' : '15px', fontWeight: '900', letterSpacing: '0.02em', textTransform: 'uppercase', lineHeight: '1.15' }}>
                 {displayCompanyName}
               </div>
-              <div style={{ fontSize: paperWidth === '58mm' ? '10px' : '11px', fontWeight: '800', marginTop: '1px', textTransform: 'uppercase' }}>
-                {businessSubtitle}
-              </div>
-              <div style={{ fontSize: paperWidth === '58mm' ? '9.5px' : '10.5px', marginTop: '1px', fontWeight: '700' }}>
+              <div style={{ fontSize: paperWidth === '58mm' ? '9.5px' : '10.5px', marginTop: '2px', fontWeight: '700' }}>
                 RUC: {businessRuc}
               </div>
               <div style={{ fontSize: paperWidth === '58mm' ? '9px' : '10px', marginTop: '1px', color: '#000', fontWeight: '600' }}>

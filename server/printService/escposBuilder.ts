@@ -462,9 +462,6 @@ export function buildReceiptTicketEscPos(payload: ReceiptTicketPayload): Buffer 
    .size('normal')
    .bold(false);
 
-  if (payload.header.slogan) {
-    b.bold(true).textLine(payload.header.slogan.toUpperCase()).bold(false);
-  }
   if (payload.header.ruc) {
     b.textLine(`RUC: ${payload.header.ruc}`);
   }

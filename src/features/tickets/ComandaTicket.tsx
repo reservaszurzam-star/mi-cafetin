@@ -209,9 +209,6 @@ export default function ComandaTicket({ order, stationName = "COCINA", batchNumb
             <div style={{ fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', lineHeight: '1.15' }}>
               {displayCompanyName}
             </div>
-            <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', marginTop: '1px' }}>
-              {businessSubtitle}
-            </div>
           </div>
 
           <div style={{ borderTop: '1px dashed #000', margin: '3px 0' }} />
