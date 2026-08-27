@@ -73,7 +73,7 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
         order,
         printers,
         settings,
-        ticketType,
+        ticketType: ticketType as 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta',
         details: {
           stationName,
           batchNumber,

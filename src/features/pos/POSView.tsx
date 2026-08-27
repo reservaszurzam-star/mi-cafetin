@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAppStore } from "../../hooks/StoreContext";
-import { Product, PaymentMethod, ProductCategory, RestaurantOrder, OrderItem } from "../../types";
+import { Product, PaymentMethod, ProductCategory, RestaurantOrder, OrderItem, DailyMenuItem } from "../../types";
 import { PisoSelector } from "./PisoSelector";
 import { ThermalTicket, TicketType } from "../tickets/ThermalTicket";
 import { POSProductCatalog } from "./POSProductCatalog";
@@ -18,7 +18,7 @@ export default function POSView() {
     products, settings, customers, orders,
     saveOrderDraft, sendOrderToKitchen, closeOrderAndPay,
     updateOrder, deleteOrder, printers, updateOrderStatus,
-    currentUser
+    currentUser, dailyMenuItems, tenantId
   } = useAppStore();
 
   const [activeFloor, setActiveFloor] = useState<number>(1);
@@ -105,6 +105,102 @@ export default function POSView() {
       total: newTotal,
       status: orderToUpdate.status === "served" || orderToUpdate.status === "sent" ? "partially_sent" : "draft",
     });
+  };
+
+  const handleAddDailyMenuItem = (item: DailyMenuItem) => {
+    const isParadero = tenantId === 'paradero' || settings.companyName.toLowerCase().includes('paradero');
+    const baseMenuPrice = settings.dailyMenuPrice || (isParadero ? 18.00 : 16.00);
+
+    let price = 0;
+    let station = "Cocina & Parrilla";
+    let prefix = "";
+
+    if (item.course === 'fondo') {
+      price = item.price || baseMenuPrice;
+      station = "Cocina & Parrilla";
+      prefix = "";
+    } else if (item.course === 'postre') {
+      price = item.extraPrice || settings.dailyMenuDefaultDessertPrice || 3.50;
+      station = "Estación Postres";
+      prefix = "Postre: ";
+    } else if (item.course === 'bebida') {
+      price = item.extraPrice || settings.dailyMenuExtraDrinkPrice || 3.00;
+      station = "Barra & Bebidas";
+      prefix = "Bebida: ";
+    } else if (item.course === 'entrada') {
+      price = item.extraPrice || settings.dailyMenuExtraStarterPrice || 5.00;
+      station = "Cocina & Parrilla";
+      prefix = "Entrada: ";
+    }
+
+    const prod: Product = {
+      id: item.id,
+      name: `${prefix}${item.name}`,
+      price,
+      category: `Menú: ${item.course === 'fondo' ? 'Platos de Fondo' : item.course === 'entrada' ? 'Entradas' : item.course === 'bebida' ? 'Bebidas' : 'Postres'}`,
+      station,
+    };
+
+    handleAddProduct(prod);
+  };
+
+  const handleAddDailyMenuCombo = (combo: {
+    starter?: DailyMenuItem | null;
+    main: DailyMenuItem;
+    drink?: DailyMenuItem | null;
+    dessert?: DailyMenuItem | null;
+    notes?: string;
+  }) => {
+    const isParadero = tenantId === 'paradero' || settings.companyName.toLowerCase().includes('paradero');
+    const baseMenuPrice = settings.dailyMenuPrice || (isParadero ? 18.00 : 16.00);
+    const mainPrice = combo.main.price || baseMenuPrice;
+    const dessertPrice = combo.dessert ? (combo.dessert.extraPrice || settings.dailyMenuDefaultDessertPrice || 3.50) : 0;
+    const totalPrice = mainPrice + dessertPrice;
+
+    const parts = [
+      combo.starter ? `Entrada: ${combo.starter.name}` : null,
+      combo.drink ? `Bebida: ${combo.drink.name}` : null,
+      combo.dessert ? `Postre: ${combo.dessert.name}` : null,
+      combo.notes ? `Nota: ${combo.notes}` : null,
+    ].filter(Boolean).join(' | ');
+
+    const newId = generateUUID();
+    const newItem: OrderItem = {
+      id: newId,
+      productId: `menu-combo-${newId.substring(0, 8)}`,
+      productName: `Menú: ${combo.main.name}${combo.main.priceTier ? ` (${combo.main.priceTier})` : ''}`,
+      quantity: 1,
+      price: totalPrice,
+      station: "Cocina & Parrilla",
+      sentToKitchen: false,
+      batchNumber: 1,
+      notes: parts || undefined,
+    };
+
+    if (!activeOrder) {
+      const newOrderId = generateUUID();
+      const newOrder: RestaurantOrder = {
+        id: newOrderId,
+        type: selectedTable.startsWith("D-") ? "delivery" : selectedTable.startsWith("Venta") ? "venta_libre" : "salón",
+        floor: (activeFloor as 1|2|3|4) || 1,
+        tableNumber: selectedTable,
+        status: "draft",
+        items: [newItem],
+        total: totalPrice,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        waiterName: currentUser.name || "Mesero",
+      };
+      saveOrderDraft(newOrder);
+    } else {
+      const newItems = [...activeOrder.items, newItem];
+      const newTotal = newItems.reduce((s, i) => s + i.price * i.quantity, 0);
+      updateOrder(activeOrder.id, {
+        items: newItems,
+        total: newTotal,
+        status: activeOrder.status === "served" || activeOrder.status === "sent" ? "partially_sent" : "draft",
+      });
+    }
   };
 
   const handleUpdateQuantity = (itemIdOrProductId: string, delta: number) => {
@@ -354,19 +450,23 @@ export default function POSView() {
       </div>
 
       {/* ── CUERPO PRINCIPAL DEL POS: CATÁLOGO + COMANDA (LADO A LADO EN LAPTOPS Y PCS) ── */}
-      <div className="flex flex-col md:flex-row gap-4 h-[calc(100dvh-260px)] md:h-[calc(100vh-260px)] md:min-h-[580px] pb-16 md:pb-0">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 flex-1 min-h-[460px] md:h-[calc(100vh-260px)] md:min-h-[580px] pb-24 md:pb-0">
         
         {/* Catálogo Táctil */}
         <div className={`flex-1 min-w-0 flex flex-col min-h-0 h-full ${mobileTab === 'catalog' ? 'flex' : 'hidden md:flex'}`}>
           <POSProductCatalog
             products={products}
+            dailyMenuItems={dailyMenuItems}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onAddProduct={handleAddProduct}
+            onAddDailyMenuItem={handleAddDailyMenuItem}
+            onAddDailyMenuCombo={handleAddDailyMenuCombo}
             settings={settings}
             activeOrder={activeOrder || null}
+            tenantId={tenantId}
           />
         </div>
 
