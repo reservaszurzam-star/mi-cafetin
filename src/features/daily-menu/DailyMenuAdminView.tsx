@@ -5,11 +5,12 @@ import {
   ChevronDown, ChevronUp, Utensils, Coffee, UtensilsCrossed,
   Cake, DollarSign, ArrowLeft, Save, RotateCcw, AlertCircle, Copy, ExternalLink,
   Search, Sparkles, CheckCircle2, XCircle, Sliders, Settings as SettingsIcon, Clock, Phone,
-  Printer, FileText, Share2, MessageCircle, Layers, Tag
+  Printer, FileText, Share2, MessageCircle, Layers, Tag, QrCode
 } from 'lucide-react';
 import { cn, generateUUID } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
 import { createWhatsAppUrl } from "../../lib/formatters";
+import { DailyMenuQRModal } from './DailyMenuQRModal';
 
 const COURSE_CONFIG: Record<DailyMenuCourse, { label: string; icon: React.ElementType; color: string; bg: string; border: string }> = {
   entrada: {
@@ -168,6 +169,7 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
   const [selectedPriceFilter, setSelectedPriceFilter] = useState<number | 'all'>('all');
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedWhatsAppMsg, setCopiedWhatsAppMsg] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   const activeTiers = useMemo(() => [
     { price: Number(cfgTier1), label: cfgLabel1.trim() || 'Nivel 1', color: 'from-blue-600 to-indigo-700', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
@@ -412,6 +414,16 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition shadow-2xs cursor-pointer"
+              title="Generar y descargar código QR o imprimir cartel para mesas"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden sm:inline">📱 Código QR & Mesas</span>
+              <span className="sm:hidden">QR</span>
+            </button>
+
             <button
               onClick={handleCopyLink}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 transition cursor-pointer"
@@ -1172,6 +1184,14 @@ export default function DailyMenuAdminView({ onBack }: { onBack: () => void }) {
           </div>
         </>
       )}
+
+      {/* ── MODAL DE CÓDIGO QR Y CARTEL DE MESAS ── */}
+      <DailyMenuQRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        settings={settings}
+        tenantId={tenantId}
+      />
     </div>
   );
 }

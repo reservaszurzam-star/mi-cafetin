@@ -5,12 +5,13 @@ import {
   Utensils, Coffee, Cake, Soup, Sparkles,
   User, Phone, MapPin, ArrowRight, ArrowLeft, Info,
   ChefHat, Flame, Waves, Star, Clock, ShoppingBag,
-  ExternalLink, Share2, Copy, Plus, Minus, X, Trash2
+  ExternalLink, Share2, Copy, Plus, Minus, X, Trash2, QrCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from "../../lib/utils";
 import { DailyMenuItem, DailyMenuCourse } from "../../types";
 import { formatMoney, createWhatsAppUrl, formatPhoneDisplay } from "../../lib/formatters";
+import { DailyMenuQRModal } from '../daily-menu/DailyMenuQRModal';
 
 interface DailyMenuViewProps {
   onBack?: () => void;
@@ -129,6 +130,7 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
   const [selectedWhatsAppPhone, setSelectedWhatsAppPhone] = useState<string>('');
   const [showCheckout,          setShowCheckout]          = useState(false);
   const [copiedLink,            setCopiedLink]            = useState(false);
+  const [showQRModal,           setShowQRModal]           = useState(false);
   const [customerPriceFilter,   setCustomerPriceFilter]   = useState<number | 'all'>('all');
 
   const priceTiers = useMemo(() => {
@@ -369,6 +371,16 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-100 hover:bg-amber-200 text-amber-950 transition border border-amber-300 shadow-2xs cursor-pointer"
+              title="Ver código QR para compartir"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden sm:inline">Código QR</span>
+              <span className="sm:hidden">QR</span>
+            </button>
+
             <button
               onClick={handleCopyMenuLink}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
@@ -1251,6 +1263,14 @@ export default function DailyMenuView({ onBack, onViewFullMenu }: DailyMenuViewP
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── MODAL DE CÓDIGO QR PARA MESAS / COMPARTIR ── */}
+      <DailyMenuQRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        settings={settings}
+        tenantId={tenantKey}
+      />
 
     </div>
   );

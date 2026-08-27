@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, Plus, Check, Utensils, BookOpen, Sparkles, Soup, 
   Coffee, Cake, Flame, ChefHat, Clock, ArrowLeft, ArrowRight,
-  Layers, ShoppingBag, X, CheckCircle2, ChevronRight
+  Layers, ShoppingBag, X, CheckCircle2, ChevronRight, QrCode
 } from 'lucide-react';
 import { 
   Product, ProductCategory, Settings, RestaurantOrder, 
   DailyMenuItem, DailyMenuCourse 
 } from '../../types';
 import { formatMoney } from '../../lib/formatters';
+import { DailyMenuQRModal } from '../daily-menu/DailyMenuQRModal';
 
 interface POSProductCatalogProps {
   products: Product[];
@@ -60,6 +61,9 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
   const [selectedDrink, setSelectedDrink] = useState<DailyMenuItem | null>(null);
   const [selectedDessert, setSelectedDessert] = useState<DailyMenuItem | null>(null);
   const [comboNotes, setComboNotes] = useState('');
+
+  // Modal de Código QR del Menú del Día
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   // Precios y configuración del menú del día según el negocio
   const defaultTiers = isParadero ? [16, 18, 22, 26] : [14, 16, 18, 22];
@@ -311,9 +315,23 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
                   <div className="w-9 h-9 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-amber-500 text-stone-950 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                     <Soup className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
-                  <span className="text-[10px] sm:text-[11px] font-black text-amber-700 bg-amber-100/80 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg sm:rounded-xl border border-amber-300">
-                    Desde {formatMoney(baseMenuPrice, settings.currency)}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsQRModalOpen(true);
+                      }}
+                      className="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-white hover:bg-amber-100 text-amber-900 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] border border-amber-300 shadow-2xs flex items-center gap-1 cursor-pointer transition active:scale-95"
+                      title="Ver e imprimir Código QR para las mesas"
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Ver QR</span>
+                    </button>
+                    <span className="text-[10px] sm:text-[11px] font-black text-amber-700 bg-amber-100/80 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg sm:rounded-xl border border-amber-300">
+                      Desde {formatMoney(baseMenuPrice, settings.currency)}
+                    </span>
+                  </div>
                 </div>
 
                 <div>
@@ -558,15 +576,28 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
               ))}
             </div>
 
-            {/* Botón Destacado: Armar Menú Completo */}
-            <button
-              type="button"
-              onClick={() => handleOpenComboModal()}
-              className="px-3 py-1.2 bg-stone-900 hover:bg-black text-amber-400 hover:text-amber-300 font-black text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 active:scale-95 shrink-0 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>⚡ Armar Menú Completo</span>
-            </button>
+            {/* Botones de Acción */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsQRModalOpen(true)}
+                className="px-2.5 sm:px-3 py-1.2 bg-amber-100/90 hover:bg-amber-200 text-amber-950 font-black text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 active:scale-95 cursor-pointer border border-amber-300"
+                title="Ver y compartir Código QR del Menú del Día"
+              >
+                <QrCode className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden sm:inline">Código QR</span>
+              </button>
+
+              {/* Botón Destacado: Armar Menú Completo */}
+              <button
+                type="button"
+                onClick={() => handleOpenComboModal()}
+                className="px-3 py-1.2 bg-stone-900 hover:bg-black text-amber-400 hover:text-amber-300 font-black text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>⚡ Armar Menú Completo</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -980,6 +1011,14 @@ export const POSProductCatalog: React.FC<POSProductCatalogProps> = ({
           </div>
         </div>
       )}
+
+      {/* ── MODAL DE CÓDIGO QR DEL MENÚ DEL DÍA ── */}
+      <DailyMenuQRModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        settings={settings}
+        tenantId={tenantId}
+      />
 
     </div>
   );
