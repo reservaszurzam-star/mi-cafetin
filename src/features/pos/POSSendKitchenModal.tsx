@@ -22,7 +22,7 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
   const store = useAppStore();
   const kitchenScreens = store?.kitchenScreens || [];
   const [selectedScreenOption, setSelectedScreenOption] = useState<string>('auto');
-  const [printTicket, setPrintTicket] = useState<boolean>(false);
+  const [printTicket, setPrintTicket] = useState<boolean>(true);
 
   if (!isOpen || !order) return null;
 
@@ -158,8 +158,8 @@ export const POSSendKitchenModal: React.FC<POSSendKitchenModalProps> = ({
             <div className="flex items-center gap-2.5">
               <Printer className="w-4 h-4 text-stone-600" />
               <div>
-                <p className="text-xs font-black text-stone-900">Imprimir Comanda Física (Ticketeras Bienex TCP)</p>
-                <p className="text-[10px] text-stone-500 font-medium">Ruteo automático por estación (Cocina, Horno, Barra) en puerto 9100</p>
+                <p className="text-xs font-black text-stone-900">Imprimir Comanda Física (Red TCP, USB o Bluetooth)</p>
+                <p className="text-[10px] text-stone-500 font-medium">Ruteo automático e impresión instantánea en ticketeras de Cocina</p>
               </div>
             </div>
             <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${printTicket ? 'bg-amber-500 border-amber-500 text-stone-950' : 'border-stone-300 bg-white'}`}>

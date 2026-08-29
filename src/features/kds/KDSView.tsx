@@ -10,6 +10,7 @@ import { ThermalTicket } from "../tickets/ThermalTicket";
 import { RestaurantOrder, KitchenScreen, OrderItem } from "../../types";
 import { KDSConfigModal } from "./KDSConfigModal";
 import { routeAndPrintOrderApi } from "../../lib/printerService";
+import { bluetoothPrinter } from "../../lib/bluetoothPrinter";
 
 // Reproductor de Chime de Cocina con Web Audio API (cero dependencias externas)
 function playKitchenChime() {
@@ -141,22 +142,38 @@ export default function KDSView() {
 
   // Auto-Impresión automática en KDS de Cocina al recibir comandas de las meseras
   useEffect(() => {
-    if (!autoPrintEnabled || printers.length === 0) return;
+    if (!autoPrintEnabled) return;
 
     screenOrders.forEach(order => {
       const unsentOrNewItems = order.items.filter(item => !printedItemIdsRef.current.has(item.id));
       if (unsentOrNewItems.length > 0) {
         unsentOrNewItems.forEach(item => printedItemIdsRef.current.add(item.id));
 
+        // 1. Enviar a servicio de impresión de red / USB / Spooler
         routeAndPrintOrderApi(
           {
             ...order,
             items: unsentOrNewItems,
           },
-          printers,
+          printers || [],
           settings,
           { targetStation: activeScreen.station }
         ).catch(err => console.log("KDS Auto-print error:", err));
+
+        // 2. Si este dispositivo de cocina tiene ticketera Bluetooth vinculada, imprimir directo
+        if (bluetoothPrinter.getConnectedDeviceInfo()?.connected) {
+          bluetoothPrinter.printOrderTicket(
+            {
+              ...order,
+              items: unsentOrNewItems,
+            },
+            settings,
+            {
+              ticketType: 'comanda_cocina',
+              paperWidth: bluetoothPrinter.getConnectedDeviceInfo()?.paperWidth || '58mm',
+            }
+          ).catch(err => console.log("KDS Direct BT Auto-print error:", err));
+        }
       }
     });
   }, [screenOrders, autoPrintEnabled, printers, settings, activeScreen.station]);

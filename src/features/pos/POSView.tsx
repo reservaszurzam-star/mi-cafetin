@@ -12,6 +12,7 @@ import { Utensils, ClipboardList } from "lucide-react";
 import { formatMoney } from "../../lib/formatters";
 import { generateUUID } from "../../lib/utils";
 import { routeAndPrintOrderApi } from "../../lib/printerService";
+import { bluetoothPrinter } from "../../lib/bluetoothPrinter";
 
 export default function POSView() {
   const {
@@ -304,18 +305,28 @@ export default function POSView() {
     // Enviar a cocina en estado de la app
     sendOrderToKitchen(activeOrder.id, options.targetStation);
 
-    // Auto-Impresión y ruteo automático en segundo plano para las ticketeras configuradas
-    if (printers && printers.some(p => p.isActive !== false)) {
-      routeAndPrintOrderApi(
+    // Auto-Impresión y ruteo automático en segundo plano para las ticketeras configuradas o USB/Windows
+    routeAndPrintOrderApi(
+      orderSnapshot,
+      printers || [],
+      settings,
+      {
+        onlyUnsent: true,
+        targetStation: options.targetStation,
+        batchNumber: newBatch,
+      }
+    ).catch(err => console.log("Auto-routing print error:", err));
+
+    // Si hay una ticketera Bluetooth conectada en este navegador, imprimir también directamente
+    if (bluetoothPrinter.getConnectedDeviceInfo()?.connected) {
+      bluetoothPrinter.printOrderTicket(
         orderSnapshot,
-        printers,
         settings,
         {
-          onlyUnsent: true,
-          targetStation: options.targetStation,
-          batchNumber: newBatch,
+          ticketType: 'comanda_cocina',
+          paperWidth: bluetoothPrinter.getConnectedDeviceInfo()?.paperWidth || '58mm',
         }
-      ).catch(err => console.log("Auto-routing print error:", err));
+      ).catch(err => console.log("Direct BT auto-print error:", err));
     }
 
     if (options.printTicket) {
