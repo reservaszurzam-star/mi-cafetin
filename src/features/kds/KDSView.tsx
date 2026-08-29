@@ -11,7 +11,6 @@ import { RestaurantOrder, KitchenScreen, OrderItem } from "../../types";
 import { KDSConfigModal } from "./KDSConfigModal";
 import { routeAndPrintOrderApi } from "../../lib/printerService";
 import { bluetoothPrinter } from "../../lib/bluetoothPrinter";
-import { printVisualTicket } from "../../lib/htmlTicketPrinter";
 
 // Reproductor de Chime de Cocina con Web Audio API (cero dependencias externas)
 function playKitchenChime() {
@@ -155,12 +154,7 @@ export default function KDSView() {
           items: unsentOrNewItems,
         };
 
-        // 1. Disparar impresión visual idéntica a pantalla con logo oficial y marcos
-        printVisualTicket(orderToPrint, settings, {
-          ticketType: 'comanda_cocina',
-          stationName: activeScreen.station,
-        });
-
+        // Impresión automática: el Bluetooth printer ya usa canvas bitmap con el diseño visual
         // 2. Enviar a servicio de impresión de red / USB / Spooler
         routeAndPrintOrderApi(
           orderToPrint,
