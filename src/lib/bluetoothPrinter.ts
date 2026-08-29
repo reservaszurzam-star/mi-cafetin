@@ -60,8 +60,17 @@ class BluetoothPrinterManager {
 
   public async pairBleDevice(paperWidth: '58mm' | '80mm' = '58mm'): Promise<BluetoothDeviceInfo> {
     const nav = navigator as any;
+    const isHttps = typeof window !== 'undefined' && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isIOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1));
+
     if (!nav.bluetooth) {
-      throw new Error("Tu navegador no soporta Web Bluetooth API. Por favor usa Google Chrome, Edge o un navegador compatible en Android/Windows/Mac.");
+      if (isIOS) {
+        throw new Error("En iPhone/iPad, Safari no tiene Bluetooth web por restricciones de Apple. Para imprimir vía Bluetooth en iOS, abre el sistema con la app gratuita 'Bluefy - Web BLE Browser' desde la App Store.");
+      }
+      if (!isHttps) {
+        throw new Error(`Google Chrome en celulares bloquea el Bluetooth en páginas HTTP (requiere HTTPS o habilitar origen seguro). En Chrome de tu celular abre: chrome://flags/#unsafely-treat-insecure-origin-as-secure, ingresa "${typeof window !== 'undefined' ? window.location.origin : 'http://...'}", actívalo y reinicia Chrome.`);
+      }
+      throw new Error("Tu navegador no soporta Web Bluetooth API o el Bluetooth está apagado en el celular. Usa Google Chrome y asegúrate de encender el Bluetooth y la Ubicación (GPS).");
     }
 
     try {
