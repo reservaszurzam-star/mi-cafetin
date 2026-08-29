@@ -3,7 +3,7 @@ import QRCode from "react-qr-code";
 import { 
   Printer, X, CheckCircle2, DollarSign, Calendar, Clock, 
   Store, Phone, MapPin, Tag, Utensils, AlertTriangle, 
-  CreditCard, User, Layers, RefreshCw, Zap, Check, Bluetooth
+  CreditCard, User, Layers, RefreshCw, Zap, Check, Bluetooth, Smartphone
 } from "lucide-react";
 import { RestaurantOrder, Settings } from "../../types";
 import { useAppStore } from "../../hooks/StoreContext";
@@ -106,6 +106,29 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
       });
     } finally {
       setBluetoothPrinting(false);
+    }
+  };
+
+  const handlePrintRawBT = () => {
+    if (!order) return;
+    try {
+      bluetoothPrinter.printViaRawBT(
+        order,
+        settings,
+        {
+          ticketType: ticketType as 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta',
+          customerName,
+          customerDocNumber,
+          paymentMethod,
+          paperWidth,
+        }
+      );
+      if (onConfirmPrint) onConfirmPrint();
+    } catch (err: any) {
+      setDirectFeedback({
+        success: false,
+        message: err.message || "Error al enviar a la app de impresión"
+      });
     }
   };
 
@@ -461,6 +484,14 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
             >
               <Bluetooth className={`w-4 h-4 ${bluetoothPrinting ? 'animate-spin' : ''}`} />
               <span>{bluetoothPrinting ? 'Enviando por Bluetooth...' : '📲 Imprimir por Bluetooth Inalámbrico'}</span>
+            </button>
+
+            <button
+              onClick={handlePrintRawBT}
+              className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-200 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+            >
+              <Smartphone className="w-4 h-4 text-blue-600" />
+              <span>📱 Imprimir vía App Celular (RawBT / Universal)</span>
             </button>
 
             <button

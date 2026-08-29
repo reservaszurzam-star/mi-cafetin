@@ -1,4 +1,4 @@
-/**
+﻿/**
  * bluetoothPrinter.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Servicio universal de conexión e impresión térmica vía Bluetooth (BLE & Serial)
@@ -8,6 +8,7 @@
  *  - Ticketeras Bluetooth portátiles (POS-58, MTP-II, PT-210, Goojprt, Zjiang, etc.)
  *  - Web Bluetooth API (GATT ESC/POS standard services)
  *  - Web Serial API (Puertos COM virtuales Bluetooth en Windows / Mac)
+ *  - RawBT / Android Bluetooth Print Intent (Universal para Android)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,14 +17,21 @@ import { RestaurantOrder, Settings } from '../types';
 // UUIDs de servicios GATT comúnmente utilizados por ticketeras Bluetooth ESC/POS
 const BLE_PRINTER_SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb', // Estándar ESC/POS
+  '000018f1-0000-1000-8000-00805f9b34fb',
   '0000ff00-0000-1000-8000-00805f9b34fb', // POS-58 / POS-80 genéricos
-  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC BLE Serial
-  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / CC2541 / Goojprt / MTP
+  '0000ff01-0000-1000-8000-00805f9b34fb',
+  '0000ff02-0000-1000-8000-00805f9b34fb',
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC BLE Serial (MTP-II / Goojprt)
+  '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / CC2541 / Goojprt / PT-210
+  '0000ffe1-0000-1000-8000-00805f9b34fb',
   'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Zebra / Rongta
   '0000ae00-0000-1000-8000-00805f9b34fb',
   '0000af00-0000-1000-8000-00805f9b34fb',
   '0000fff0-0000-1000-8000-00805f9b34fb',
   '0000180a-0000-1000-8000-00805f9b34fb', // Device Info
+  '0000fee7-0000-1000-8000-00805f9b34fb',
+  '0000feff-0000-1000-8000-00805f9b34fb',
+  '00001101-0000-1000-8000-00805f9b34fb',
 ];
 
 export interface BluetoothDeviceInfo {
@@ -65,12 +73,12 @@ class BluetoothPrinterManager {
 
     if (!nav.bluetooth) {
       if (isIOS) {
-        throw new Error("En iPhone/iPad, Safari no tiene Bluetooth web por restricciones de Apple. Para imprimir vía Bluetooth en iOS, abre el sistema con la app gratuita 'Bluefy - Web BLE Browser' desde la App Store.");
+        throw new Error("En iPhone/iPad, Safari no incluye Bluetooth web por restricciones de Apple. Para imprimir vía Bluetooth en iOS, abre el sistema con la app gratuita 'Bluefy - Web BLE Browser' de la App Store.");
       }
       if (!isHttps) {
-        throw new Error(`Google Chrome en celulares bloquea el Bluetooth en páginas HTTP (requiere HTTPS o habilitar origen seguro). En Chrome de tu celular abre: chrome://flags/#unsafely-treat-insecure-origin-as-secure, ingresa "${typeof window !== 'undefined' ? window.location.origin : 'http://...'}", actívalo y reinicia Chrome.`);
+        throw new Error(`Google Chrome en móviles bloquea el Bluetooth si la URL no es HTTPS. Si estás en red local, activa: chrome://flags/#unsafely-treat-insecure-origin-as-secure y añade tu dirección actual.`);
       }
-      throw new Error("Tu navegador no soporta Web Bluetooth API o el Bluetooth está apagado en el celular. Usa Google Chrome y asegúrate de encender el Bluetooth y la Ubicación (GPS).");
+      throw new Error("Tu navegador o dispositivo no tiene habilitado Web Bluetooth. Asegúrate de usar Google Chrome y tener el Bluetooth y Ubicación (GPS) encendidos.");
     }
 
     try {
@@ -92,18 +100,41 @@ class BluetoothPrinterManager {
       this.bleServer = server;
 
       let writeChar: any = null;
-      const services = await server.getPrimaryServices();
-      for (const service of services) {
-        try {
-          const chars = await service.getCharacteristics();
-          for (const char of chars) {
-            if (char.properties.write || char.properties.writeWithoutResponse) {
-              writeChar = char;
-              break;
+
+      // 1. Probar listar todos los servicios
+      try {
+        const services = await server.getPrimaryServices();
+        for (const service of services) {
+          try {
+            const chars = await service.getCharacteristics();
+            for (const char of chars) {
+              if (char.properties.write || char.properties.writeWithoutResponse) {
+                writeChar = char;
+                break;
+              }
             }
-          }
-          if (writeChar) break;
-        } catch {}
+            if (writeChar) break;
+          } catch {}
+        }
+      } catch {}
+
+      // 2. Si no encontró, probar los UUIDs conocidos uno por uno
+      if (!writeChar) {
+        for (const uuid of BLE_PRINTER_SERVICES) {
+          try {
+            const service = await server.getPrimaryService(uuid);
+            if (service) {
+              const chars = await service.getCharacteristics();
+              for (const char of chars) {
+                if (char.properties.write || char.properties.writeWithoutResponse) {
+                  writeChar = char;
+                  break;
+                }
+              }
+              if (writeChar) break;
+            }
+          } catch {}
+        }
       }
 
       if (!writeChar) {
@@ -188,9 +219,8 @@ class BluetoothPrinterManager {
     throw new Error("No hay ninguna ticketera Bluetooth conectada actualmente. Vincula la impresora primero.");
   }
 
-  public async printTestTicket(companyName: string = "Mi Cafetín", slogan: string = "Restaurante & Bar"): Promise<boolean> {
-    const width = this.currentDeviceInfo?.paperWidth || '58mm';
-    const builder = new ClientEscPosBuilder(width);
+  public buildTestTicketBytes(companyName: string = "Mi Cafetín", slogan: string = "Restaurante & Bar", paperWidth: '58mm' | '80mm' = '58mm'): Uint8Array {
+    const builder = new ClientEscPosBuilder(paperWidth);
 
     builder
       .init()
@@ -212,12 +242,12 @@ class BluetoothPrinterManager {
       .newLine()
       .text(`Ticketera: ${this.currentDeviceInfo?.name || 'BT Printer'}`)
       .newLine()
-      .text(`Ancho: ${width}`)
+      .text(`Ancho: ${paperWidth}`)
       .newLine()
       .text("================================")
       .newLine()
       .alignLeft()
-      .text("1x Café Americano      S/ 6.00")
+      .text("1x Cafe Americano       S/ 6.00")
       .newLine()
       .text("1x 1/4 Pollo a la Brasa S/ 22.00")
       .newLine()
@@ -230,16 +260,15 @@ class BluetoothPrinterManager {
       .bold(false)
       .newLine()
       .alignCenter()
-      .text("¡Conexión Bluetooth lista para emitir comandas y boletas!")
+      .text("¡Conexion Bluetooth lista para emitir comandas y boletas!")
       .newLine()
       .feed(4)
       .cut();
 
-    const bytes = builder.getBytes();
-    return await this.sendRaw(bytes);
+    return builder.getBytes();
   }
 
-  public async printOrderTicket(
+  public buildOrderTicketBytes(
     order: RestaurantOrder,
     settings?: Partial<Settings>,
     options?: {
@@ -249,7 +278,7 @@ class BluetoothPrinterManager {
       paymentMethod?: string;
       paperWidth?: '58mm' | '80mm';
     }
-  ): Promise<boolean> {
+  ): Uint8Array {
     const width = options?.paperWidth || this.currentDeviceInfo?.paperWidth || '58mm';
     const builder = new ClientEscPosBuilder(width);
     const type = options?.ticketType || 'boleta_venta';
@@ -371,8 +400,61 @@ class BluetoothPrinterManager {
         .cut();
     }
 
-    const bytes = builder.getBytes();
+    return builder.getBytes();
+  }
+
+  public async printTestTicket(companyName: string = "Mi Cafetín", slogan: string = "Restaurante & Bar"): Promise<boolean> {
+    const width = this.currentDeviceInfo?.paperWidth || '58mm';
+    const bytes = this.buildTestTicketBytes(companyName, slogan, width);
     return await this.sendRaw(bytes);
+  }
+
+  public async printOrderTicket(
+    order: RestaurantOrder,
+    settings?: Partial<Settings>,
+    options?: {
+      ticketType?: 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta';
+      customerName?: string;
+      customerDocNumber?: string;
+      paymentMethod?: string;
+      paperWidth?: '58mm' | '80mm';
+    }
+  ): Promise<boolean> {
+    const bytes = this.buildOrderTicketBytes(order, settings, options);
+    return await this.sendRaw(bytes);
+  }
+
+  public printViaRawBT(
+    order: RestaurantOrder,
+    settings?: Partial<Settings>,
+    options?: {
+      ticketType?: 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta';
+      customerName?: string;
+      customerDocNumber?: string;
+      paymentMethod?: string;
+      paperWidth?: '58mm' | '80mm';
+    }
+  ): boolean {
+    const bytes = this.buildOrderTicketBytes(order, settings, options);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    window.location.href = "rawbt:base64," + base64;
+    return true;
+  }
+
+  public printTestViaRawBT(companyName: string = "Mi Cafetín", slogan: string = "Restaurante & Bar"): boolean {
+    const width = this.currentDeviceInfo?.paperWidth || '58mm';
+    const bytes = this.buildTestTicketBytes(companyName, slogan, width);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    window.location.href = "rawbt:base64," + base64;
+    return true;
   }
 
   public disconnect(): void {

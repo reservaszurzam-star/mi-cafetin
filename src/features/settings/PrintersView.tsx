@@ -453,7 +453,19 @@ export default function PrintersView() {
             className="flex-1 lg:flex-none h-11 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
           >
             <Printer className="w-4 h-4 text-blue-300" />
-            <span>Probar Impresión</span>
+            <span>Probar Directo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              bluetoothPrinter.printTestViaRawBT(settings.companyName || "Mi Cafetín", settings.slogan);
+            }}
+            title="Imprimir vía app RawBT instalada en Android"
+            className="flex-1 lg:flex-none h-11 px-3.5 bg-blue-700/60 hover:bg-blue-600/70 border border-blue-400/40 text-blue-100 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+          >
+            <Smartphone className="w-4 h-4 text-blue-300" />
+            <span>App RawBT (Android)</span>
           </button>
         </div>
       </div>
