@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bluetoothPrinter.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Servicio universal de conexión e impresión térmica vía Bluetooth (BLE & Serial)
@@ -274,127 +274,228 @@ class BluetoothPrinterManager {
     options?: {
       ticketType?: 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta';
       customerName?: string;
+      customerDocType?: string;
       customerDocNumber?: string;
+      invoiceSeries?: string;
+      invoiceNumber?: string;
       paymentMethod?: string;
+      amountPaid?: number;
+      changeDue?: number;
+      stationName?: string;
+      batchNumber?: number;
       paperWidth?: '58mm' | '80mm';
     }
   ): Uint8Array {
     const width = options?.paperWidth || this.currentDeviceInfo?.paperWidth || '58mm';
     const builder = new ClientEscPosBuilder(width);
     const type = options?.ticketType || 'boleta_venta';
-    const company = settings?.companyName || "Mi Cafetín";
+    
+    const isParadero = settings?.companyName 
+      ? settings.companyName.toLowerCase().includes('paradero') 
+      : true;
+    const company = settings?.companyName || (isParadero ? "PARADERO 104" : "LAS LOMAS GRILL");
+    const ruc = settings?.companyRuc || "10437453701";
+    const address = settings?.address || (isParadero 
+      ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
+      : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú");
+    const phone = settings?.phone || (isParadero ? "932208729" : "995881303/953034562");
+
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('es-PE');
+    const formattedTime = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const orderNo = (order as any).dailyOrderNumber || (order as any).orderNumber || (order.id ? order.id.replace(/\D/g, '').slice(-4) || '0001' : '0001');
+    const dividerChar = width === '80mm' ? "------------------------------------------------" : "--------------------------------";
+    const doubleDivider = width === '80mm' ? "================================================" : "================================";
 
     builder.init().alignCenter();
 
+    // ═══ MODO 1: COMANDA DE COCINA (TÉRMICO) ═══
     if (type === 'comanda_cocina') {
-      builder
-        .bold(true)
-        .textDoubleBoth()
-        .text("--- COMANDA DE COCINA ---")
-        .newLine()
-        .textNormal()
-        .textDoubleHeight()
-        .text(`MESA: ${order.tableNumber || 'S/N'}`)
-        .newLine()
-        .textNormal()
-        .text(`Origen: ${(order.type || 'salón').toUpperCase()} | Piso ${order.floor || 1}`)
-        .newLine()
-        .text(`Mozo: ${order.waiterName || 'Caja'}`)
-        .newLine()
-        .text(`Hora: ${new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`)
-        .newLine()
-        .text("================================")
-        .newLine()
-        .alignLeft()
-        .bold(true);
-
-      (order.items || []).forEach(item => {
-        builder
-          .textDoubleHeight()
-          .text(`[${item.quantity}] ${item.productName}`)
-          .newLine()
-          .textNormal();
-        if (item.notes) {
-          builder.text(`   * Nota: ${item.notes}`).newLine();
-        }
-      });
-
-      builder
-        .newLine()
-        .alignCenter()
-        .text("================================")
-        .feed(4)
-        .cut();
-
-    } else {
       builder
         .bold(true)
         .textDoubleBoth()
         .text(company.toUpperCase())
         .newLine()
-        .textNormal();
-
-      if (settings?.companyRuc) {
-        builder.text(`RUC: ${settings.companyRuc}`).newLine();
-      }
-      if (settings?.address) {
-        builder.text(settings.address).newLine();
-      }
-
-      builder
-        .text("--------------------------------")
-        .newLine()
-        .bold(true)
-        .text(type === 'boleta_cliente' ? "=== PRE-CUENTA DE CONSUMO ===" : "=== BOLETA DE VENTA ===")
-        .newLine()
+        .textNormal()
         .bold(false)
-        .text(`Mesa: ${order.tableNumber || '1'} | Mozo: ${order.waiterName || 'Caja'}`)
+        .text(`RUC: ${ruc}`)
         .newLine()
-        .text(`Fecha: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`)
-        .newLine();
-
-      if (options?.customerName) {
-        builder.text(`Cliente: ${options.customerName}`).newLine();
-      }
-      if (options?.customerDocNumber) {
-        builder.text(`Doc: ${options.customerDocNumber}`).newLine();
-      }
-
-      builder
-        .text("--------------------------------")
+        .text(address)
         .newLine()
-        .alignLeft()
-        .bold(true)
-        .text(width === '80mm' ? "CANT  DESCRIPCION                    IMPORTE" : "CANT DESCRIPCION         TOTAL")
+        .text(`TEL: ${phone}`)
         .newLine()
-        .bold(false)
-        .text("--------------------------------")
-        .newLine();
-
-      (order.items || []).forEach(item => {
-        const qtyStr = `${item.quantity}x`.padEnd(5);
-        const priceTotal = (item.price * item.quantity).toFixed(2);
-        const nameMaxLen = width === '80mm' ? 30 : 18;
-        const shortName = item.productName.slice(0, nameMaxLen).padEnd(nameMaxLen);
-        builder.text(`${qtyStr} ${shortName} S/ ${priceTotal}`).newLine();
-      });
-
-      builder
-        .text("--------------------------------")
+        .text(dividerChar)
         .newLine()
-        .alignRight()
         .bold(true)
         .textDoubleHeight()
-        .text(`TOTAL: S/ ${Number(order.total || 0).toFixed(2)}`)
+        .text(`★ COMANDA: ${(options?.stationName || 'COCINA').toUpperCase()} ★`)
         .newLine()
         .textNormal()
         .bold(false)
-        .text(`Metodo: ${options?.paymentMethod || 'Efectivo'}`)
+        .text(doubleDivider)
         .newLine()
-        .text("--------------------------------")
+        .alignLeft()
+        .bold(true)
+        .textDoubleHeight()
+        .text(`MESA: ${order.tableNumber || 'S/N'} ${order.type === 'delivery' ? '(DELIVERY)' : ''}`)
+        .newLine()
+        .textNormal()
+        .bold(false)
+        .text(`N° ORDEN: #${orderNo} | TANDA: #${options?.batchNumber || 1}`)
+        .newLine()
+        .text(`HORA: ${formattedTime} | FECHA: ${formattedDate}`)
+        .newLine()
+        .text(`MESERO: ${order.waiterName || 'Mesero'}`)
+        .newLine();
+
+      if (order.dinerName || options?.customerName) {
+        builder.text(`CLIENTE: ${(order.dinerName || options?.customerName || '').toUpperCase()}`).newLine();
+      }
+
+      builder
+        .text(dividerChar)
+        .newLine()
+        .bold(true)
+        .text(width === '80mm' ? "CANT  PRODUCTO / NOTA" : "CANT PRODUCTO / NOTA")
+        .newLine()
+        .bold(false)
+        .text(dividerChar)
+        .newLine();
+
+      (order.items || []).forEach(item => {
+        builder
+          .bold(true)
+          .textDoubleHeight()
+          .text(`${item.quantity}x ${item.productName.toUpperCase()}`)
+          .newLine()
+          .textNormal()
+          .bold(false);
+
+        if (item.notes && item.notes.trim()) {
+          builder
+            .bold(true)
+            .text(`   ⚠️ NOTA: ${item.notes.toUpperCase()}`)
+            .newLine()
+            .bold(false);
+        }
+        builder.text(dividerChar).newLine();
+      });
+
+      builder
+        .alignCenter()
+        .bold(true)
+        .text("*** DESPACHAR DE INMEDIATO ***")
+        .newLine()
+        .feed(3)
+        .cut();
+
+    } else {
+      // ═══ MODO 2: BOLETA / FACTURA / PRE-CUENTA CLIENTE ═══
+      const docTitle = options?.customerDocType === 'RUC' 
+        ? "FACTURA ELECTRÓNICA" 
+        : type === 'boleta_cliente' ? "PRE-CUENTA DE CONSUMO" : "BOLETA ELECTRÓNICA";
+      const seriesNum = `${options?.invoiceSeries || 'B001'} - ${options?.invoiceNumber || orderNo}`;
+
+      builder
+        .bold(true)
+        .textDoubleBoth()
+        .text(company.toUpperCase())
+        .newLine()
+        .textNormal()
+        .bold(false)
+        .text(`RUC: ${ruc}`)
+        .newLine()
+        .text(address)
+        .newLine()
+        .text(`TEL: ${phone}`)
+        .newLine()
+        .text(dividerChar)
+        .newLine()
+        .bold(true)
+        .textDoubleHeight()
+        .text(docTitle)
+        .newLine()
+        .textNormal()
+        .text(seriesNum)
+        .newLine()
+        .bold(false)
+        .text(dividerChar)
+        .newLine()
+        .alignLeft()
+        .text(`FECHA: ${formattedDate} | HORA: ${formattedTime}`)
+        .newLine()
+        .text(`MESA: ${order.tableNumber || '1'} ${order.type === 'delivery' ? '(DELIVERY)' : ''}`)
+        .newLine()
+        .text(`ORDEN: #${orderNo} | ATENDIÓ: ${order.waiterName || 'Caja'}`)
+        .newLine();
+
+      if (options?.customerDocNumber) {
+        builder.text(`${options.customerDocType || 'DOC'}: ${options.customerDocNumber}`).newLine();
+      }
+      if (options?.customerName || order.dinerName) {
+        builder.text(`CLIENTE: ${(options?.customerName || order.dinerName || '').toUpperCase()}`).newLine();
+      }
+
+      builder
+        .text(dividerChar)
+        .newLine()
+        .bold(true)
+        .text(width === '80mm' ? "CANT  DESCRIPCIÓN                    TOTAL" : "CANT DESCRIPCIÓN         TOTAL")
+        .newLine()
+        .bold(false)
+        .text(dividerChar)
+        .newLine();
+
+      const total = Number(order.total || 0);
+      const opGravada = total / 1.105;
+      const igv = total - opGravada;
+
+      (order.items || []).forEach(item => {
+        const qtyStr = `${item.quantity}x`.padEnd(4);
+        const priceTotal = (item.price * item.quantity).toFixed(2);
+        const nameMaxLen = width === '80mm' ? 30 : 18;
+        const shortName = item.productName.slice(0, nameMaxLen).padEnd(nameMaxLen);
+        builder.text(`${qtyStr} ${shortName} ${priceTotal}`).newLine();
+        if (item.notes) {
+          builder.text(`   * ${item.notes}`).newLine();
+        }
+      });
+
+      builder
+        .text(dividerChar)
+        .newLine()
+        .alignRight()
+        .text(`OP. GRAVADA: S/ ${opGravada.toFixed(2)}`)
+        .newLine()
+        .text(`I.G.V. (10.5%): S/ ${igv.toFixed(2)}`)
+        .newLine()
+        .text(doubleDivider)
+        .newLine()
+        .bold(true)
+        .textDoubleHeight()
+        .text(`TOTAL A PAGAR: S/ ${total.toFixed(2)}`)
+        .newLine()
+        .textNormal()
+        .bold(false)
+        .text(`FORMA DE PAGO: ${(options?.paymentMethod || 'Efectivo').toUpperCase()}`)
+        .newLine();
+
+      if (options?.amountPaid !== undefined && options.amountPaid > 0) {
+        builder.text(`IMPORTE RECIBIDO: S/ ${Number(options.amountPaid).toFixed(2)}`).newLine();
+      }
+      if (options?.changeDue !== undefined && options.changeDue > 0) {
+        builder.bold(true).text(`VUELTO: S/ ${Number(options.changeDue).toFixed(2)}`).newLine().bold(false);
+      }
+
+      builder
+        .text(dividerChar)
         .newLine()
         .alignCenter()
-        .text("¡Gracias por su preferencia!")
+        .text("¡GRACIAS POR SU PREFERENCIA!")
+        .newLine()
+        .text("Representación impresa de Boleta Electrónica.")
+        .newLine()
+        .text("Consulte su documento en www.sunat.gob.pe")
         .newLine()
         .feed(4)
         .cut();

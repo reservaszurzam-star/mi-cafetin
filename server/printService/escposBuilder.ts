@@ -350,12 +350,24 @@ export function buildKitchenTicketEscPos(payload: KitchenTicketPayload): Buffer 
   const paper = payload.paperWidth || '80mm';
   const b = new EscPosBuilder(paper);
 
+  const company = payload.header.companyName || 'PARADERO 104';
+  const isParadero = company.toLowerCase().includes('paradero');
+  const ruc = payload.header.ruc || '10437453701';
+  const address = payload.header.address || (isParadero 
+    ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
+    : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú");
+  const phone = payload.header.phone || (isParadero ? "932208729" : "995881303/953034562");
+
+  // 1. Cabecera Institucional
   b.alignCenter()
    .bold(true)
    .size('double')
-   .textLine(payload.header.companyName.toUpperCase())
+   .textLine(company.toUpperCase())
    .size('normal')
-   .bold(false);
+   .bold(false)
+   .textLine(`RUC: ${ruc}`)
+   .textLine(address)
+   .textLine(`TEL: ${phone}`);
 
   if (payload.header.slogan) {
     b.textLine(payload.header.slogan.toUpperCase());
@@ -363,16 +375,17 @@ export function buildKitchenTicketEscPos(payload: KitchenTicketPayload): Buffer 
 
   b.dashedDivider();
 
-  // Banner llamativo con la estación
+  // 2. Banner llamativo de Comanda de Estación
   b.alignCenter()
    .bold(true)
    .size('double')
-   .textLine(`★ COMANDA: ${(payload.station || 'GENERAL').toUpperCase()} ★`)
+   .textLine(`★ COMANDA: ${(payload.station || 'COCINA').toUpperCase()} ★`)
    .size('normal')
-   .bold(false)
-   .feed(1);
+   .bold(false);
 
-  // Información del pedido / mesa
+  b.doubleDivider();
+
+  // 3. Información destacada del pedido / mesa
   b.alignLeft()
    .bold(true)
    .size('double_height')
@@ -380,45 +393,47 @@ export function buildKitchenTicketEscPos(payload: KitchenTicketPayload): Buffer 
    .size('normal')
    .bold(false);
 
-  b.twoColumns(`ORDEN: #${payload.orderNumber}`, `TANDA: #${payload.batchNumber}`);
-  b.twoColumns(`FECHA: ${payload.date.split(' ')[0]}`, `HORA: ${payload.date.split(' ')[1] || ''}`);
+  b.twoColumns(`N° ORDEN: #${payload.orderNumber}`, `TANDA: #${payload.batchNumber}`);
+  b.twoColumns(`HORA: ${payload.date.split(' ')[1] || ''}`, `FECHA: ${payload.date.split(' ')[0]}`);
   
   if (payload.waiterName) {
     b.textLine(`MESERO: ${payload.waiterName}`);
   }
   if (payload.dinerName) {
-    b.textLine(`CLIENTE: ${payload.dinerName}`);
+    b.textLine(`CLIENTE: ${payload.dinerName.toUpperCase()}`);
   }
 
-  b.doubleDivider();
+  b.dashedDivider();
 
-  // Encabezado de la lista de platos
+  // 4. Encabezado de la lista de platos
   b.bold(true);
   if (paper === '80mm') {
-    b.textLine('CANT  DESCRIPCIÓN / OBSERVACIÓN');
+    b.textLine('CANT  PRODUCTO / OBSERVACIÓN');
   } else {
-    b.textLine('CANT  PLATO / NOTA');
+    b.textLine('CANT  PRODUCTO / NOTA');
   }
   b.bold(false);
   b.dashedDivider();
 
-  // Lista de platos
+  // 5. Lista de platos
   payload.items.forEach((item) => {
     b.bold(true)
-     .tableRow(`${item.quantity}x`, item.productName.toUpperCase())
+     .size('double_height')
+     .textLine(`${item.quantity}x ${item.productName.toUpperCase()}`)
+     .size('normal')
      .bold(false);
 
     if (item.notes && item.notes.trim()) {
       b.bold(true)
-       .textLine(`   >> NOTA: ${item.notes.toUpperCase()}`)
+       .textLine(`   ⚠️ NOTA: ${item.notes.toUpperCase()}`)
        .bold(false);
     }
     b.dashedDivider();
   });
 
+  // 6. Pie de Comanda
   b.alignCenter()
    .bold(true)
-   .feed(1)
    .textLine('*** DESPACHAR DE INMEDIATO ***')
    .beep()
    .cut(true);
@@ -454,22 +469,27 @@ export function buildReceiptTicketEscPos(payload: ReceiptTicketPayload): Buffer 
   const paper = payload.paperWidth || '80mm';
   const b = new EscPosBuilder(paper);
 
-  // 1. Cabecera con nombre de empresa
+  const company = payload.header.companyName || 'PARADERO 104';
+  const isParadero = company.toLowerCase().includes('paradero');
+  const ruc = payload.header.ruc || '10437453701';
+  const address = payload.header.address || (isParadero 
+    ? "Jr. Los Tordos 1009, San Juan de Lurigancho 15427, Perú" 
+    : "Jr, Templo del Sol 589 urb, San Juan de Lurigancho 15427, Perú");
+  const phone = payload.header.phone || (isParadero ? "932208729" : "995881303/953034562");
+
+  // 1. Cabecera Institucional
   b.alignCenter()
    .bold(true)
    .size('double')
-   .textLine(payload.header.companyName.toUpperCase())
+   .textLine(company.toUpperCase())
    .size('normal')
-   .bold(false);
+   .bold(false)
+   .textLine(`RUC: ${ruc}`)
+   .textLine(address)
+   .textLine(`TEL: ${phone}`);
 
-  if (payload.header.ruc) {
-    b.textLine(`RUC: ${payload.header.ruc}`);
-  }
-  if (payload.header.address) {
-    b.textLine(payload.header.address);
-  }
-  if (payload.header.phone) {
-    b.textLine(`TEL: ${payload.header.phone}`);
+  if (payload.header.slogan) {
+    b.textLine(payload.header.slogan.toUpperCase());
   }
 
   b.dashedDivider();
@@ -494,8 +514,8 @@ export function buildReceiptTicketEscPos(payload: ReceiptTicketPayload): Buffer 
    .textLine(`MESA: ${payload.tableNumber} ${payload.orderType === 'delivery' ? '(DELIVERY)' : ''}`)
    .bold(false);
 
-  b.twoColumns(`ORDEN: #${payload.orderNumber}`, `FECHA: ${payload.date.split(' ')[0]}`);
-  b.twoColumns(`HORA: ${payload.date.split(' ')[1] || ''}`, `ATENDIÓ: ${payload.waiterName || 'Caja'}`);
+  b.twoColumns(`FECHA: ${payload.date.split(' ')[0]}`, `HORA: ${payload.date.split(' ')[1] || ''}`);
+  b.twoColumns(`ORDEN: #${payload.orderNumber}`, `ATENDIÓ: ${payload.waiterName || 'Caja'}`);
 
   if (payload.customerDocNumber) {
     b.textLine(`${payload.customerDocType || 'DOC'}: ${payload.customerDocNumber}`);
@@ -549,18 +569,19 @@ export function buildReceiptTicketEscPos(payload: ReceiptTicketPayload): Buffer 
     b.twoColumns('FORMA DE PAGO:', payload.paymentMethod.toUpperCase(), true);
   }
   if (payload.amountPaid && payload.amountPaid > 0) {
-    b.twoColumns('PAGÓ CON:', `S/ ${payload.amountPaid.toFixed(2)}`);
+    b.twoColumns('IMPORTE RECIBIDO:', `S/ ${payload.amountPaid.toFixed(2)}`);
   }
   if (payload.changeDue && payload.changeDue > 0) {
     b.twoColumns('VUELTO:', `S/ ${payload.changeDue.toFixed(2)}`, true);
   }
 
-  b.feed(1);
+  b.dashedDivider();
   b.alignCenter()
    .bold(true)
    .textLine('¡GRACIAS POR SU PREFERENCIA!')
-   .textLine('Representación de Boleta Electrónica')
-   .feed(1)
+   .bold(false)
+   .textLine('Representación impresa de Boleta Electrónica.')
+   .textLine('Consulte su documento en www.sunat.gob.pe')
    .beep()
    .cut(true);
 
