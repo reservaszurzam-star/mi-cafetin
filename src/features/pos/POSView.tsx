@@ -13,6 +13,7 @@ import { formatMoney } from "../../lib/formatters";
 import { generateUUID } from "../../lib/utils";
 import { routeAndPrintOrderApi } from "../../lib/printerService";
 import { bluetoothPrinter } from "../../lib/bluetoothPrinter";
+import { printVisualTicket } from "../../lib/htmlTicketPrinter";
 
 export default function POSView() {
   const {
@@ -330,7 +331,14 @@ export default function POSView() {
     }
 
     if (options.printTicket) {
-      // Previsualización y confirmación en pantalla solo si el usuario marcó imprimir
+      // Disparar de inmediato la impresión visual idéntica a pantalla con logo y marcos
+      printVisualTicket(orderSnapshot, settings, {
+        ticketType: 'comanda_cocina',
+        stationName: options.targetStation,
+        batchNumber: newBatch,
+      });
+
+      // Previsualización en pantalla
       setTicketOrderToPrint(orderSnapshot);
       setTicketTypeToPrint("comanda_cocina");
       setShowPrintModal(true);
