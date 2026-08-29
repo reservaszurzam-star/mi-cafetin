@@ -3,12 +3,13 @@ import QRCode from "react-qr-code";
 import { 
   Printer, X, CheckCircle2, DollarSign, Calendar, Clock, 
   Store, Phone, MapPin, Tag, Utensils, AlertTriangle, 
-  CreditCard, User, Layers, RefreshCw, Zap, Check
+  CreditCard, User, Layers, RefreshCw, Zap, Check, Bluetooth
 } from "lucide-react";
 import { RestaurantOrder, Settings } from "../../types";
 import { useAppStore } from "../../hooks/StoreContext";
 import { formatMoney } from "../../lib/formatters";
 import { routeAndPrintOrderApi, printSingleTicketDirectApi } from "../../lib/printerService";
+import { bluetoothPrinter } from "../../lib/bluetoothPrinter";
 
 export type TicketType = "comanda_cocina" | "boleta_cliente" | "boleta_venta";
 
@@ -62,7 +63,51 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
 
   // Impresión Directa ESC/POS Hardware (USB / TCP)
   const [directPrinting, setDirectPrinting] = useState(false);
+  const [bluetoothPrinting, setBluetoothPrinting] = useState(false);
   const [directFeedback, setDirectFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handlePrintBluetooth = async () => {
+    if (!order) return;
+    setBluetoothPrinting(true);
+    setDirectFeedback(null);
+    try {
+      if (!bluetoothPrinter.getConnectedDeviceInfo()?.connected) {
+        await bluetoothPrinter.pairBleDevice(paperWidth);
+      }
+
+      const ok = await bluetoothPrinter.printOrderTicket(
+        order,
+        settings,
+        {
+          ticketType: ticketType as 'comanda_cocina' | 'boleta_cliente' | 'boleta_venta',
+          customerName,
+          customerDocNumber,
+          paymentMethod,
+          paperWidth,
+        }
+      );
+
+      if (ok) {
+        setDirectFeedback({
+          success: true,
+          message: "¡Ticket enviado exitosamente a la ticketera Bluetooth!"
+        });
+        if (onConfirmPrint) onConfirmPrint();
+      } else {
+        setDirectFeedback({
+          success: false,
+          message: "No se pudo completar la impresión por Bluetooth."
+        });
+      }
+    } catch (err: any) {
+      setDirectFeedback({
+        success: false,
+        message: err.message || "Error al imprimir por Bluetooth"
+      });
+    } finally {
+      setBluetoothPrinting(false);
+    }
+  };
 
   const handleDirectPrintEscPos = async () => {
     if (!order) return;
@@ -410,12 +455,21 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
           {/* Botones de Acción */}
           <div className="space-y-2 pt-2">
             <button
+              onClick={handlePrintBluetooth}
+              disabled={bluetoothPrinting}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+            >
+              <Bluetooth className={`w-4 h-4 ${bluetoothPrinting ? 'animate-spin' : ''}`} />
+              <span>{bluetoothPrinting ? 'Enviando por Bluetooth...' : '📲 Imprimir por Bluetooth Inalámbrico'}</span>
+            </button>
+
+            <button
               onClick={handleDirectPrintEscPos}
               disabled={directPrinting}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
             >
               <Zap className={`w-4 h-4 ${directPrinting ? 'animate-spin' : ''}`} />
-              <span>{directPrinting ? 'Enviando a Ticketera...' : '⚡ Imprimir Directo en Ticketera (ESC/POS)'}</span>
+              <span>{directPrinting ? 'Enviando a Ticketera...' : '⚡ Imprimir USB / Red TCP (ESC/POS)'}</span>
             </button>
 
             <button

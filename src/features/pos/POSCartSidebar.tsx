@@ -20,6 +20,7 @@ interface POSCartSidebarProps {
   onBackToCatalog?: () => void;
   onSaveDraft?: () => void;
   onDeleteOrder?: () => void;
+  isOwner?: boolean;
   settings: Settings;
 }
 
@@ -36,6 +37,7 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
   onBackToCatalog,
   onSaveDraft,
   onDeleteOrder,
+  isOwner = true,
   settings,
 }) => {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -307,18 +309,24 @@ export const POSCartSidebar: React.FC<POSCartSidebarProps> = ({
         )}
 
         {onDeleteOrder && activeOrder && (
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(`¿Estás seguro de que deseas cancelar la comanda y liberar la Mesa ${selectedTable}?`)) {
-                onDeleteOrder();
-              }
-            }}
-            className="w-full py-1.5 text-stone-400 hover:text-rose-600 text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Liberar / Cancelar comanda de esta mesa</span>
-          </button>
+          isOwner ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`¿Estás seguro de que deseas cancelar la comanda y liberar la Mesa ${selectedTable}? (Acción de Owner)`)) {
+                  onDeleteOrder();
+                }
+              }}
+              className="w-full py-1.5 text-stone-400 hover:text-rose-600 text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Liberar / Cancelar comanda de esta mesa</span>
+            </button>
+          ) : (
+            <div className="text-center py-1 text-[10px] font-bold text-stone-400">
+              🔒 Cancelación de comanda restringida a Owner
+            </div>
+          )
         )}
       </div>
 

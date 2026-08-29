@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Customer,
   Transaction,
@@ -151,7 +151,21 @@ export function useStore(tenantId: string) {
     if (!saved) return DEFAULT_SALES;
     try {
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed.filter((s: import("../types").Sale) => s.id !== 'sale-101' && s.id !== 'sale-102') : [];
+      if (!Array.isArray(parsed)) return DEFAULT_SALES;
+      const valid = parsed.filter((s: import("../types").Sale) => s.id !== 'sale-101' && s.id !== 'sale-102');
+      const seenIds = new Set<string>();
+      const seenSigs = new Set<string>();
+      const deduped: import("../types").Sale[] = [];
+      for (const s of valid) {
+        const timeKey = s.date ? new Date(s.date).toISOString().slice(0, 16) : s.id;
+        const sig = `${s.tableNumber}_${s.total}_${s.paymentMethod}_${timeKey}`;
+        if (!seenIds.has(s.id) && !seenSigs.has(sig)) {
+          seenIds.add(s.id);
+          seenSigs.add(sig);
+          deduped.push(s);
+        }
+      }
+      return deduped;
     } catch {
       return DEFAULT_SALES;
     }
@@ -907,6 +921,14 @@ export function useStore(tenantId: string) {
     [currentUser, settings.posTerminalId, tenantId],
   );
 
+  const deleteSale = useCallback((id: string) => {
+    setSales((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      localStorage.setItem(`${tenantId}_cafetin_sales`, JSON.stringify(next));
+      return next;
+    });
+  }, [tenantId]);
+
   // ── Helpers para Usuarios ──
   const addUser = useCallback((user: Omit<User, 'id' | 'createdAt'>) => {
     const newId = generateUUID();
@@ -1005,6 +1027,8 @@ export function useStore(tenantId: string) {
     });
   }, [tenantId]);
 
+  const processingOrdersRef = useRef<Set<string>>(new Set());
+
   const closeOrderAndPay = useCallback(
     (
       orderId: string, 
@@ -1013,123 +1037,128 @@ export function useStore(tenantId: string) {
       docType?: "Boleta" | "Factura" | "Nota de Venta", 
       docNumber?: string
     ) => {
-      setOrders((prev) => {
-        const target = prev.find((o) => o.id === orderId);
-        if (!target) return prev;
+      if (processingOrdersRef.current.has(orderId)) return;
 
-        // Normalizar pagos en una lista válida de métodos y montos
-        let paymentList: { method: PaymentMethod; amount: number }[] = [];
-        if (typeof paymentInput === 'string') {
-          paymentList = [{ method: paymentInput as PaymentMethod, amount: target.total }];
-        } else if (Array.isArray(paymentInput)) {
-          paymentList = paymentInput.length > 0 ? paymentInput : [{ method: 'Efectivo', amount: target.total }];
-        } else if (paymentInput && typeof paymentInput === 'object') {
-          paymentList = [paymentInput as { method: PaymentMethod; amount: number }];
-        } else {
-          paymentList = [{ method: 'Efectivo', amount: target.total }];
-        }
+      const target = orders.find((o) => o.id === orderId);
+      if (!target) return;
 
-        // Auto-descuento en Inventario
-        if (Array.isArray(target.items)) {
-          target.items.forEach(item => {
-            const matchingInventoryItem = (inventoryItems || []).find(inv => 
-              inv.name.toLowerCase() === item.productName.toLowerCase() || 
-              inv.name.toLowerCase().includes(item.productName.toLowerCase())
-            );
-            if (matchingInventoryItem) {
-               addInventoryMovement({
-                 itemId: matchingInventoryItem.id,
-                 type: 'out',
-                 quantity: item.quantity,
-                 reason: `Venta de ${item.productName}`,
-                 referenceOrderId: target.id
-               });
-            }
-          });
-        }
+      processingOrdersRef.current.add(orderId);
+      setTimeout(() => {
+        processingOrdersRef.current.delete(orderId);
+      }, 1500);
 
-        const saleItems = (target.items || []).map((i) => ({
-          productId: i.productId,
-          productName: i.productName,
-          quantity: i.quantity,
-          price: i.price,
-          notes: i.notes,
-        }));
+      // Normalizar pagos en una lista válida de métodos y montos
+      let paymentList: { method: PaymentMethod; amount: number }[] = [];
+      if (typeof paymentInput === 'string') {
+        paymentList = [{ method: paymentInput as PaymentMethod, amount: target.total }];
+      } else if (Array.isArray(paymentInput)) {
+        paymentList = paymentInput.length > 0 ? paymentInput : [{ method: 'Efectivo', amount: target.total }];
+      } else if (paymentInput && typeof paymentInput === 'object') {
+        paymentList = [paymentInput as { method: PaymentMethod; amount: number }];
+      } else {
+        paymentList = [{ method: 'Efectivo', amount: target.total }];
+      }
 
-        // Registrar Venta
-        paymentList.forEach(payment => {
-          addSale(
-            saleItems, 
-            payment.amount, 
-            payment.method, 
-            customerId || target.customerId, 
-            target.tableNumber, 
-            target.floor, 
-            target.type, 
-            target.waiterName
+      // Auto-descuento en Inventario
+      if (Array.isArray(target.items)) {
+        target.items.forEach(item => {
+          const matchingInventoryItem = (inventoryItems || []).find(inv => 
+            inv.name.toLowerCase() === item.productName.toLowerCase() || 
+            inv.name.toLowerCase().includes(item.productName.toLowerCase())
           );
+          if (matchingInventoryItem) {
+             addInventoryMovement({
+               itemId: matchingInventoryItem.id,
+               type: 'out',
+               quantity: item.quantity,
+               reason: `Venta de ${item.productName}`,
+               referenceOrderId: target.id
+             });
+          }
+        });
+      }
+
+      const saleItems = (target.items || []).map((i) => ({
+        productId: i.productId,
+        productName: i.productName,
+        quantity: i.quantity,
+        price: i.price,
+        notes: i.notes,
+      }));
+
+      // Registrar Venta
+      paymentList.forEach(payment => {
+        addSale(
+          saleItems, 
+          payment.amount, 
+          payment.method, 
+          customerId || target.customerId, 
+          target.tableNumber, 
+          target.floor, 
+          target.type, 
+          target.waiterName
+        );
+      });
+
+      // Generar Comprobante SUNAT si es Boleta o Factura
+      if (docType === "Boleta" || docType === "Factura") {
+        const config = getSunatConfig(tenantId);
+        const igvPercent = config.igvRate ?? 10.5;
+        const igvFactor = 1 + (igvPercent / 100);
+        const subtotal = Number((target.total / igvFactor).toFixed(2));
+        const igv = Number((target.total - subtotal).toFixed(2));
+        const series = docType === "Factura" ? config.facturaSeries : config.boletaSeries;
+        const number = String((sunatInvoices || []).length + 1).padStart(6, '0');
+        const hash = generateCanonicalHash(`${config.ruc}-${series}-${number}-${target.total}-${Date.now()}`);
+        
+        const newSunatDoc: SunatInvoice = {
+          id: `sunat-${Date.now()}`,
+          orderId: target.id,
+          type: docType,
+          series,
+          number,
+          date: new Date().toISOString(),
+          customerName: target.dinerName || "Cliente General",
+          customerDocType: docType === "Factura" ? "RUC" : (docNumber && docNumber.length === 8 ? "DNI" : "Sin Documento"),
+          customerDocNumber: docNumber || (docType === "Factura" ? "20601234567" : "00000000"),
+          subtotal,
+          igv,
+          total: target.total,
+          status: "Aceptado",
+          hash,
+          paymentMethod: paymentList[0]?.method || "Efectivo",
+          items: target.items || [],
+          tenant_id: tenantId,
+          cdrResponseCode: '0',
+          cdrDescription: `Comprobante ${series}-${number} aceptado por SUNAT.`,
+        };
+
+        newSunatDoc.qrCode = buildSunatQRString({
+          ruc: config.ruc,
+          type: docType,
+          series,
+          number,
+          igv,
+          total: target.total,
+          date: newSunatDoc.date,
+          customerDocType: newSunatDoc.customerDocType,
+          customerDocNumber: newSunatDoc.customerDocNumber,
+          hash,
         });
 
-        // Generar Comprobante SUNAT si es Boleta o Factura
-        if (docType === "Boleta" || docType === "Factura") {
-          const config = getSunatConfig(tenantId);
-          const igvPercent = config.igvRate ?? 10.5;
-          const igvFactor = 1 + (igvPercent / 100);
-          const subtotal = Number((target.total / igvFactor).toFixed(2));
-          const igv = Number((target.total - subtotal).toFixed(2));
-          const series = docType === "Factura" ? config.facturaSeries : config.boletaSeries;
-          const number = String((sunatInvoices || []).length + 1).padStart(6, '0');
-          const hash = generateCanonicalHash(`${config.ruc}-${series}-${number}-${target.total}-${Date.now()}`);
-          
-          const newSunatDoc: SunatInvoice = {
-            id: `sunat-${Date.now()}`,
-            orderId: target.id,
-            type: docType,
-            series,
-            number,
-            date: new Date().toISOString(),
-            customerName: target.dinerName || "Cliente General",
-            customerDocType: docType === "Factura" ? "RUC" : (docNumber && docNumber.length === 8 ? "DNI" : "Sin Documento"),
-            customerDocNumber: docNumber || (docType === "Factura" ? "20601234567" : "00000000"),
-            subtotal,
-            igv,
-            total: target.total,
-            status: "Aceptado",
-            hash,
-            paymentMethod: paymentList[0]?.method || "Efectivo",
-            items: target.items || [],
-            tenant_id: tenantId,
-            cdrResponseCode: '0',
-            cdrDescription: `Comprobante ${series}-${number} aceptado por SUNAT.`,
-          };
+        setSunatInvoices(s => {
+          const updated = [newSunatDoc, ...s];
+          localStorage.setItem(`${tenantId}_cafetin_sunat_invoices`, JSON.stringify(updated));
+          return updated;
+        });
+        svc.insertSunatInvoice(tenantId, newSunatDoc);
+      }
 
-          newSunatDoc.qrCode = buildSunatQRString({
-            ruc: config.ruc,
-            type: docType,
-            series,
-            number,
-            igv,
-            total: target.total,
-            date: newSunatDoc.date,
-            customerDocType: newSunatDoc.customerDocType,
-            customerDocNumber: newSunatDoc.customerDocNumber,
-            hash,
-          });
-
-          setSunatInvoices(s => {
-            const updated = [newSunatDoc, ...s];
-            localStorage.setItem(`${tenantId}_cafetin_sunat_invoices`, JSON.stringify(updated));
-            return updated;
-          });
-          svc.insertSunatInvoice(tenantId, newSunatDoc);
-        }
-
-        // Marcar el pedido como pagado
-        svc.updateOrderStatus(tenantId, orderId, 'paid');
-        return prev.filter((o) => o.id !== orderId);
-      });
+      // Marcar el pedido como pagado y removerlo de la lista de órdenes activas
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      svc.updateOrderStatus(tenantId, orderId, 'paid');
     },
-    [inventoryItems, addInventoryMovement, sunatInvoices?.length, tenantId, addSale]
+    [orders, inventoryItems, addInventoryMovement, sunatInvoices?.length, tenantId, addSale]
   );
 
 
@@ -1484,6 +1513,7 @@ export function useStore(tenantId: string) {
     addTransaction,
     deleteTransaction,
     addSale,
+    deleteSale,
     addProduct,
     updateProduct,
     updateProductStock,

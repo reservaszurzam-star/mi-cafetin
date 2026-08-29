@@ -36,8 +36,11 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
     updateProductStock, 
     renameCategory, 
     deleteCategory, 
+    currentUser,
     settings 
   } = useAppStore();
+
+  const isOwner = currentUser?.role === 'Owner';
 
   const isParadero = settings.companyName.toLowerCase().includes('paradero');
   const defaultCats = isParadero ? DEFAULT_CATEGORIES_PARADERO : DEFAULT_CATEGORIES_LASLOMAS;
@@ -249,16 +252,18 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
         </div>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Botón Gestión de Categorías */}
-          <button 
-            type="button"
-            onClick={() => setIsCategoryModalOpen(true)} 
-            className="h-11 px-4 bg-white hover:bg-stone-50 text-stone-800 border-2 border-stone-200 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs hover:border-stone-300 text-xs sm:text-sm"
-            title="Administrar o renombrar categorías"
-          >
-            <Tag className="w-4 h-4 text-amber-600" /> 
-            <span>Gestionar Categorías</span>
-          </button>
+          {/* Botón Gestión de Categorías (Solo Owner) */}
+          {isOwner && (
+            <button 
+              type="button"
+              onClick={() => setIsCategoryModalOpen(true)} 
+              className="h-11 px-4 bg-white hover:bg-stone-50 text-stone-800 border-2 border-stone-200 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs hover:border-stone-300 text-xs sm:text-sm"
+              title="Administrar o renombrar categorías (Solo Owner)"
+            >
+              <Tag className="w-4 h-4 text-amber-600" /> 
+              <span>Gestionar Categorías</span>
+            </button>
+          )}
 
           {/* Ranking */}
           <button 
@@ -270,15 +275,21 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
             <span>Ranking</span>
           </button>
 
-          {/* Añadir Producto */}
-          <button 
-            type="button"
-            onClick={handleOpenCreate} 
-            className="h-11 px-5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 rounded-xl font-black flex items-center justify-center gap-2 transition shadow-sm shadow-amber-500/20 text-xs sm:text-sm cursor-pointer"
-          >
-            <PackagePlus className="w-4 h-4 stroke-[2.5]" /> 
-            <span>Añadir Plato</span>
-          </button>
+          {/* Añadir Producto (Solo Owner) */}
+          {isOwner ? (
+            <button 
+              type="button"
+              onClick={handleOpenCreate} 
+              className="h-11 px-5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 rounded-xl font-black flex items-center justify-center gap-2 transition shadow-sm shadow-amber-500/20 text-xs sm:text-sm cursor-pointer"
+            >
+              <PackagePlus className="w-4 h-4 stroke-[2.5]" /> 
+              <span>Añadir Plato</span>
+            </button>
+          ) : (
+            <div className="h-11 px-4 bg-stone-100 border border-stone-200 text-stone-500 rounded-xl font-bold text-xs flex items-center gap-1.5">
+              <span>🔒 Carta protegida (Owner)</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -366,33 +377,36 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
                     </span>
 
                     {/* Acciones de la Tarjeta */}
-                    <div className="flex items-center gap-1">
-                      {/* Botón Editar Plato */}
-                      <button 
-                        type="button"
-                        onClick={() => handleOpenEdit(product)} 
-                        title="Editar plato y categoría"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 hover:bg-amber-500 hover:text-stone-950 text-stone-600 transition cursor-pointer"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                    {/* Acciones de la Tarjeta (Solo Owner) */}
+                    {isOwner && (
+                      <div className="flex items-center gap-1">
+                        {/* Botón Editar Plato */}
+                        <button 
+                          type="button"
+                          onClick={() => handleOpenEdit(product)} 
+                          title="Editar plato y categoría (Solo Owner)"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 hover:bg-amber-500 hover:text-stone-950 text-stone-600 transition cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
 
-                      {/* Botón Eliminar */}
-                      <button 
-                        type="button"
-                        onClick={() => setConfirmDialog({ 
-                          isOpen: true, 
-                          title: 'Eliminar Plato', 
-                          message: `¿Seguro que deseas eliminar "${product.name}" de la carta?`, 
-                          confirmText: 'Sí, eliminar',
-                          onConfirm: () => deleteProduct(product.id) 
-                        })} 
-                        title="Eliminar plato"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 hover:bg-rose-500 hover:text-white text-stone-600 transition cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                        {/* Botón Eliminar */}
+                        <button 
+                          type="button"
+                          onClick={() => setConfirmDialog({ 
+                            isOpen: true, 
+                            title: 'Eliminar Plato', 
+                            message: `¿Seguro que deseas eliminar "${product.name}" de la carta? (Solo Owner)`, 
+                            confirmText: 'Sí, eliminar',
+                            onConfirm: () => deleteProduct(product.id) 
+                          })} 
+                          title="Eliminar plato (Solo Owner)"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 hover:bg-rose-500 hover:text-white text-stone-600 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <h3 className="font-black text-sm text-stone-900 leading-snug line-clamp-2 min-h-[2.5rem]">
@@ -414,10 +428,12 @@ export default function ProductsList({ onNavigate }: { onNavigate: (v: ViewState
 
                   <button 
                     type="button"
-                    onClick={() => handleQuickStockChange(product.id, product.stock)}
-                    title="Clic para cambiar stock"
+                    onClick={() => isOwner && handleQuickStockChange(product.id, product.stock)}
+                    disabled={!isOwner}
+                    title={isOwner ? "Clic para cambiar stock" : "Solo Owner puede modificar stock"}
                     className={cn(
-                      "px-2.5 py-1 rounded-lg text-[10px] font-black transition cursor-pointer border",
+                      "px-2.5 py-1 rounded-lg text-[10px] font-black transition border",
+                      isOwner ? "cursor-pointer" : "cursor-default opacity-80",
                       product.stock === undefined ? "bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200" :
                       product.stock <= 5 ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" :
                       "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"

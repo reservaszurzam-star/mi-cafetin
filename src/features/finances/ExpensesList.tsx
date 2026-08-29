@@ -13,7 +13,8 @@ const EXPENSE_CATEGORIES = [
 ];
 
 export default function ExpensesList() {
-  const { expenses, addExpense, deleteExpense, settings, sales } = useAppStore();
+  const { expenses, addExpense, deleteExpense, settings, sales, currentUser } = useAppStore();
+  const isOwner = currentUser?.role === 'Owner';
   const [search, setSearch] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -206,12 +207,14 @@ export default function ExpensesList() {
                     <span className="font-mono font-black text-lg text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 px-3 py-1 rounded-lg">
                       {settings.currency} {expense.amount.toFixed(2)}
                     </span>
-                    <button onClick={() => { if (window.confirm("¿Seguro que deseas eliminar este gasto?")) deleteExpense(expense.id); }} 
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
-                      title="Eliminar Gasto"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    {isOwner && (
+                      <button onClick={() => { if (window.confirm("¿Seguro que deseas eliminar este gasto? (Solo Owner)")) deleteExpense(expense.id); }} 
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors cursor-pointer"
+                        title="Eliminar Gasto (Solo Owner)"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

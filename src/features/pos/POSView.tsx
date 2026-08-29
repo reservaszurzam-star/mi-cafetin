@@ -485,6 +485,7 @@ export default function POSView() {
             onBackToCatalog={() => setMobileTab('catalog')}
             onSaveDraft={handleSaveDraft}
             onDeleteOrder={() => activeOrder && deleteOrder(activeOrder.id)}
+            isOwner={currentUser?.role === 'Owner'}
             settings={settings}
           />
         </div>

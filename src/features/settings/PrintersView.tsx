@@ -4,10 +4,11 @@ import {
   Printer, Wifi, CheckCircle2, ServerCrash, RefreshCw, Plus, 
   Trash2, Edit3, X, FileText, Check, ArrowRight, Activity, 
   Cpu, Zap, Receipt, AlertCircle, Radio, QrCode, Power,
-  ShieldCheck, AlertTriangle, Clock, Send, Usb
+  ShieldCheck, AlertTriangle, Clock, Send, Usb, Bluetooth, Smartphone
 } from 'lucide-react';
 import { cn, generateUUID } from "../../lib/utils";
 import { StationPrinter, OrderStation } from '../../types';
+import { bluetoothPrinter, BluetoothDeviceInfo } from '../../lib/bluetoothPrinter';
 import { 
   runPrinterDiagnosticApi, 
   printTestTicketApi, 
@@ -76,9 +77,9 @@ export default function PrintersView() {
   // Verificar todas las impresoras al entrar
   const [isVerifyingAll, setIsVerifyingAll] = useState(false);
 
-  useEffect(() => {
-    loadSystemPrinters();
-  }, []);
+  // Estados de Bluetooth
+  const [isPairingBt, setIsPairingBt] = useState(false);
+  const [btConnectedInfo, setBtConnectedInfo] = useState<BluetoothDeviceInfo | null>(() => bluetoothPrinter.getConnectedDeviceInfo());
 
   const loadSystemPrinters = async () => {
     setLoadingSystemPrinters(true);
@@ -89,6 +90,89 @@ export default function PrintersView() {
       setFormUsbName(defaultThermal.name);
     }
     setLoadingSystemPrinters(false);
+  };
+
+  const handlePairBluetoothDirectly = async (paperWidth: '58mm' | '80mm' = '58mm') => {
+    setIsPairingBt(true);
+    setPrintFeedback(null);
+    try {
+      const info = await bluetoothPrinter.pairBleDevice(paperWidth);
+      setBtConnectedInfo(info);
+      setFormName(info.name);
+      setFormConnType("bluetooth");
+      setFormPaperWidth(paperWidth);
+
+      const existingIndex = printers.findIndex(p => p.connectionType === 'bluetooth' || p.name === info.name);
+      if (existingIndex >= 0) {
+        const updated = [...printers];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          name: info.name,
+          connectionType: 'bluetooth',
+          status: 'online',
+          paperWidth,
+          isActive: true,
+          updatedAt: new Date().toISOString(),
+        };
+        updatePrinters(updated);
+      } else {
+        const newPrinter: StationPrinter = {
+          id: generateUUID(),
+          name: info.name || "Ticketera Bluetooth",
+          station: formStation || "Caja & Facturación",
+          ipAddress: info.name,
+          port: 0,
+          connectionType: "bluetooth",
+          paperWidth,
+          categories: ["Combos & Promos", "Pollos a la Brasa", "Bebidas & Refrescos", "Postres", "Menú Diario"],
+          status: "online",
+          autoPrint: true,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        updatePrinters([...printers, newPrinter]);
+      }
+
+      setPrintFeedback({
+        id: 'bt',
+        success: true,
+        message: `¡Ticketera Bluetooth "${info.name}" conectada con éxito!`
+      });
+    } catch (err: any) {
+      setPrintFeedback({
+        id: 'bt',
+        success: false,
+        message: err.message || "No se pudo vincular la ticketera Bluetooth"
+      });
+    } finally {
+      setIsPairingBt(false);
+    }
+  };
+
+  const handlePairSerialBluetooth = async (paperWidth: '58mm' | '80mm' = '58mm') => {
+    setIsPairingBt(true);
+    setPrintFeedback(null);
+    try {
+      const info = await bluetoothPrinter.pairSerialDevice(paperWidth);
+      setBtConnectedInfo(info);
+      setFormName(info.name);
+      setFormConnType("bluetooth");
+      setFormPaperWidth(paperWidth);
+      setPrintFeedback({
+        id: 'bt',
+        success: true,
+        message: `¡Puerto Serial / COM Bluetooth conectado correctamente!`
+      });
+    } catch (err: any) {
+      setPrintFeedback({
+        id: 'bt',
+        success: false,
+        message: err.message || "Error al conectar por puerto serial"
+      });
+    } finally {
+      setIsPairingBt(false);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -127,7 +211,8 @@ export default function PrintersView() {
     if (!formName.trim()) return;
 
     const isUsb = formConnType === "usb";
-    const finalTarget = isUsb ? formUsbName.trim() : formIp.trim();
+    const isBt = formConnType === "bluetooth";
+    const finalTarget = isUsb ? formUsbName.trim() : (isBt ? (formName.trim() || 'Bluetooth') : formIp.trim());
 
     if (editingPrinter) {
       const updated = printers.map(p => p.id === editingPrinter.id ? {
@@ -135,7 +220,7 @@ export default function PrintersView() {
         name: formName.trim(),
         station: formStation,
         ipAddress: finalTarget,
-        port: isUsb ? 0 : (Number(formPort) || 9100),
+        port: isUsb || isBt ? 0 : (Number(formPort) || 9100),
         connectionType: formConnType,
         paperWidth: formPaperWidth,
         categories: formCategories,
@@ -150,11 +235,11 @@ export default function PrintersView() {
         name: formName.trim(),
         station: formStation,
         ipAddress: finalTarget,
-        port: isUsb ? 0 : (Number(formPort) || 9100),
+        port: isUsb || isBt ? 0 : (Number(formPort) || 9100),
         connectionType: formConnType,
         paperWidth: formPaperWidth,
         categories: formCategories,
-        status: "offline",
+        status: isBt ? "online" : "offline",
         autoPrint: formAutoPrint,
         isActive: formIsActive,
         createdAt: new Date().toISOString(),
@@ -181,6 +266,35 @@ export default function PrintersView() {
     // Marcar temporalmente en estado "connecting" en la UI
     updatePrinters(printers.map(p => p.id === printer.id ? { ...p, status: "connecting" } : p));
 
+    if (printer.connectionType === 'bluetooth') {
+      const isConn = bluetoothPrinter.getConnectedDeviceInfo()?.connected;
+      const res: DiagnosticResponse = {
+        success: Boolean(isConn),
+        status: isConn ? 'online' : 'offline',
+        ip: printer.name || 'Bluetooth',
+        port: 0,
+        connectionType: 'bluetooth',
+        message: isConn ? 'Ticketera Bluetooth vinculada y lista para imprimir.' : 'Ticketera Bluetooth no conectada. Presiona "Vincular".',
+        timestamp: new Date().toISOString(),
+        steps: [
+          {
+            step: '1. Canal Bluetooth BLE / Serial',
+            status: isConn ? 'success' : 'warning',
+            message: isConn ? 'Conexión GATT / Serial activa' : 'Sin conexión activa actualmente',
+          },
+          {
+            step: '2. Búfer ESC/POS',
+            status: 'success',
+            message: 'Comandos ESC/POS binarios listos (58mm/80mm)',
+          }
+        ]
+      };
+      setDiagnosticResult(res);
+      setDiagnosticLoading(false);
+      updatePrinters(printers.map(p => p.id === printer.id ? { ...p, status: res.status } : p));
+      return;
+    }
+
     const result = await runPrinterDiagnosticApi(printer);
     setDiagnosticResult(result);
     setDiagnosticLoading(false);
@@ -194,7 +308,26 @@ export default function PrintersView() {
     setTestPrintingId(printer.id);
     setPrintFeedback(null);
 
-    const res: PrintTestResponse = await printTestTicketApi(printer, settings.companyName || "Mi Cafetín");
+    let res: { success: boolean; message: string };
+
+    if (printer.connectionType === 'bluetooth') {
+      try {
+        const ok = await bluetoothPrinter.printTestTicket(settings.companyName || "Mi Cafetín", settings.slogan);
+        res = {
+          success: ok,
+          message: ok 
+            ? "¡Ticket de prueba impreso correctamente por Bluetooth!" 
+            : "No se pudo imprimir por Bluetooth."
+        };
+      } catch (err: any) {
+        res = {
+          success: false,
+          message: err.message || "Error al enviar a la ticketera Bluetooth"
+        };
+      }
+    } else {
+      res = await printTestTicketApi(printer, settings.companyName || "Mi Cafetín");
+    }
     
     setTestPrintingId(null);
     setPrintFeedback({
@@ -240,16 +373,16 @@ export default function PrintersView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800">
-              Hardware · Red TCP & USB Directo
+              Hardware · Red TCP, Cable USB & Bluetooth
             </span>
             <span className="text-xs text-stone-400 font-bold">· {settings.companyName}</span>
           </div>
           <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2.5">
             <Printer className="w-7 h-7 text-amber-500" />
-            Centro de Impresoras Térmicas Bienex & Ruteo
+            Centro de Impresoras Térmicas Bienex, USB & Bluetooth
           </h1>
           <p className="text-xs text-stone-500 font-semibold mt-0.5">
-            Soporte nativo para conexión por Red TCP/IP (Ethernet / Wi-Fi) y Cable USB directo en tu laptop / PC.
+            Soporte nativo para conexión por Red TCP/IP, Cable USB directo y Ticketeras Inalámbricas Bluetooth (POS-58 / MTP / PT-210).
           </p>
         </div>
 
@@ -268,6 +401,59 @@ export default function PrintersView() {
             className="h-11 px-5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/20 cursor-pointer text-xs"
           >
             <Plus className="w-4 h-4" /> Vincular Impresora
+          </button>
+        </div>
+      </div>
+
+      {/* ── CARD RÁPIDO DE VINCULACIÓN BLUETOOTH ── */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-stone-950 p-5 sm:p-6 rounded-3xl text-white shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 border border-blue-800/40 relative overflow-hidden">
+        <div className="flex items-start sm:items-center gap-4 relative z-10">
+          <div className="w-13 h-13 rounded-2xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center shrink-0 shadow-inner">
+            <Bluetooth className="w-7 h-7 text-blue-300 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-black text-base sm:text-lg tracking-tight">Conexión Inalámbrica Bluetooth</h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-400/20 text-blue-200 border border-blue-400/30">
+                Portátil & Móvil (BLE / Serial)
+              </span>
+              {btConnectedInfo?.connected && (
+                <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-black rounded-full flex items-center gap-1">
+                  <Check className="w-3 h-3" /> {btConnectedInfo.name}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-blue-200/80 font-medium mt-1 max-w-xl">
+              Vincula tu ticketera térmica Bluetooth portátil (58mm / 80mm) con 1 clic para imprimir comandas y boletas desde tu laptop, tablet o celular.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 w-full lg:w-auto shrink-0 relative z-10">
+          <button
+            type="button"
+            onClick={() => handlePairBluetoothDirectly('58mm')}
+            disabled={isPairingBt}
+            className="flex-1 lg:flex-none h-11 px-4 bg-blue-500 hover:bg-blue-400 active:scale-95 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 transition cursor-pointer disabled:opacity-50"
+          >
+            <Bluetooth className={`w-4 h-4 ${isPairingBt ? 'animate-spin' : ''}`} />
+            <span>{isPairingBt ? 'Buscando...' : '🔍 Vincular Ticketera Bluetooth'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await bluetoothPrinter.printTestTicket(settings.companyName || "Mi Cafetín", settings.slogan);
+                setPrintFeedback({ id: 'bt-quick', success: true, message: "¡Ticket de prueba enviado por Bluetooth!" });
+              } catch (e: any) {
+                setPrintFeedback({ id: 'bt-quick', success: false, message: e.message || "Error al enviar prueba Bluetooth. Vincula la ticketera primero." });
+              }
+            }}
+            className="flex-1 lg:flex-none h-11 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-blue-300" />
+            <span>Probar Impresión</span>
           </button>
         </div>
       </div>
@@ -293,8 +479,8 @@ export default function PrintersView() {
             <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Modos de Conexión</span>
             <Wifi className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-stone-900 mt-1">TCP & USB</div>
-          <span className="text-[10px] font-bold text-stone-500">Red Local 9100 / Cable USB</span>
+          <div className="text-2xl font-black text-stone-900 mt-1">TCP, USB & BT</div>
+          <span className="text-[10px] font-bold text-stone-500">Red 9100 / USB / Bluetooth</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs">
@@ -348,6 +534,7 @@ export default function PrintersView() {
           const isPrinting = testPrintingId === printer.id;
           const isActive = printer.isActive !== false;
           const isUsb = printer.connectionType === "usb";
+          const isBt = printer.connectionType === "bluetooth";
 
           let statusBadge = (
             <span className="px-2 py-0.5 bg-stone-100 text-stone-600 text-[10px] font-black uppercase rounded-md flex items-center gap-1">
@@ -390,7 +577,7 @@ export default function PrintersView() {
               key={printer.id} 
               className={cn(
                 "bg-white border rounded-3xl p-6 shadow-sm flex flex-col justify-between gap-5 relative overflow-hidden group transition-all",
-                isActive ? "border-stone-200 hover:border-amber-400" : "border-stone-200 bg-stone-50/70 opacity-80"
+                isActive ? (isBt ? "border-blue-200 hover:border-blue-400" : "border-stone-200 hover:border-amber-400") : "border-stone-200 bg-stone-50/70 opacity-80"
               )}
             >
               {/* Header de la Impresora */}
@@ -399,11 +586,13 @@ export default function PrintersView() {
                   <div className="flex items-center gap-3.5">
                     <div className={cn(
                       "w-12 h-12 rounded-2xl flex items-center justify-center font-black shrink-0 border",
-                      printer.status === "online" && isActive
-                        ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
-                        : "bg-stone-100 border-stone-200 text-stone-500"
+                      isBt 
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : (printer.status === "online" && isActive
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                            : "bg-stone-100 border-stone-200 text-stone-500")
                     )}>
-                      {isUsb ? <Usb className="w-6 h-6" /> : <Printer className="w-6 h-6" />}
+                      {isBt ? <Bluetooth className="w-6 h-6 text-blue-600" /> : isUsb ? <Usb className="w-6 h-6" /> : <Printer className="w-6 h-6" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -411,7 +600,11 @@ export default function PrintersView() {
                         {statusBadge}
                       </div>
                       <div className="flex items-center gap-2 mt-1 font-mono text-[11px] text-stone-500 font-bold">
-                        {isUsb ? (
+                        {isBt ? (
+                          <span className="bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1">
+                            <Bluetooth className="w-3 h-3 text-blue-600" /> {printer.ipAddress || 'Bluetooth Inalámbrico'}
+                          </span>
+                        ) : isUsb ? (
                           <span className="bg-purple-50 text-purple-900 px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
                             <Usb className="w-3 h-3 text-purple-600" /> {printer.ipAddress || 'USB: Spooler'}
                           </span>
@@ -423,11 +616,11 @@ export default function PrintersView() {
                         <span className="text-stone-400">· {printer.paperWidth || '80mm'}</span>
                         <span className={cn(
                           "text-[10px] uppercase px-1.5 py-0.5 rounded border font-black",
-                          isUsb 
-                            ? "bg-purple-100 text-purple-800 border-purple-300" 
-                            : "bg-amber-50 text-amber-800 border-amber-200"
+                          isBt 
+                            ? "bg-blue-100 text-blue-800 border-blue-300"
+                            : (isUsb ? "bg-purple-100 text-purple-800 border-purple-300" : "bg-amber-50 text-amber-800 border-amber-200")
                         )}>
-                          {isUsb ? 'USB DIRECTO' : 'RED TCP'}
+                          {isBt ? 'BLUETOOTH' : isUsb ? 'USB DIRECTO' : 'RED TCP'}
                         </span>
                       </div>
                     </div>
@@ -575,12 +768,15 @@ export default function PrintersView() {
                       setFormConnType(newType);
                       if (newType === 'usb' && !formName) {
                         setFormName("Impresora USB Laptop");
+                      } else if (newType === 'bluetooth' && !formName) {
+                        setFormName("Ticketera Bluetooth POS");
                       }
                     }}
                     className="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2.5 text-xs font-bold outline-none focus:border-amber-500 focus:bg-white cursor-pointer"
                   >
                     <option value="tcp">🌐 Red TCP/IP (Ethernet / WiFi 9100)</option>
                     <option value="usb">🔌 Cable USB Directo a esta Laptop / PC</option>
+                    <option value="bluetooth">📲 Bluetooth Inalámbrico (BLE / POS-58 / Portátil)</option>
                   </select>
                 </div>
 
@@ -601,7 +797,66 @@ export default function PrintersView() {
               </div>
 
               {/* CAMPOS DINÁMICOS SEGÚN TIPO DE CONEXIÓN */}
-              {formConnType === 'usb' ? (
+              {formConnType === 'bluetooth' ? (
+                <div className="bg-blue-50/90 p-4 rounded-2xl border border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bluetooth className="w-5 h-5 text-blue-600 animate-pulse" />
+                      <span className="font-black text-xs text-blue-950 uppercase tracking-wider">
+                        Vincular Ticketera Bluetooth:
+                      </span>
+                    </div>
+                    {btConnectedInfo?.connected && (
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-md flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-600" /> Vinculada
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                    Conecta directamente cualquier ticketera portátil Bluetooth (POS-58, MTP-II, PT-210, Zjiang, etc.) sin necesidad de cables ni red local.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handlePairBluetoothDirectly(formPaperWidth)}
+                      disabled={isPairingBt}
+                      className="py-3 px-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Bluetooth className={`w-4 h-4 ${isPairingBt ? 'animate-spin' : ''}`} />
+                      <span>{isPairingBt ? 'Buscando...' : '🔍 Buscar Dispositivo Bluetooth'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePairSerialBluetooth(formPaperWidth)}
+                      disabled={isPairingBt}
+                      className="py-3 px-3.5 bg-white hover:bg-blue-50 text-blue-900 border border-blue-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
+                    >
+                      <Radio className="w-4 h-4 text-blue-600" />
+                      <span>Conectar por Puerto COM</span>
+                    </button>
+                  </div>
+
+                  {btConnectedInfo?.connected && (
+                    <div className="bg-white p-3 rounded-xl border border-blue-200 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-stone-500 font-medium">Dispositivo Vinculado: </span>
+                        <strong className="text-blue-950">{btConnectedInfo.name}</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => bluetoothPrinter.printTestTicket(settings.companyName, settings.slogan)}
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded-lg font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-blue-700" />
+                        <span>Imprimir Ticket Prueba</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : formConnType === 'usb' ? (
                 <div className="bg-purple-50/70 p-4 rounded-2xl border border-purple-200 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="block text-[11px] font-black text-purple-950 uppercase tracking-wider">
