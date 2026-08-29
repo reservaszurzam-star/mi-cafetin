@@ -446,7 +446,9 @@ function mapDbOrderItem(i: Record<string, unknown>): OrderItem {
   };
 }
 
-function toDbOrderStatus(status: RestaurantOrder['status']): 'draft' | 'served' | 'paid' | 'delivered' | 'cancelled' {
+function toDbOrderStatus(status: RestaurantOrder['status']): 'draft' | 'sent' | 'partially_sent' | 'served' | 'paid' | 'delivered' | 'cancelled' {
+  if (status === 'sent') return 'sent';
+  if (status === 'partially_sent') return 'partially_sent';
   if (status === 'served') return 'served';
   if (status === 'paid') return 'paid';
   if (status === 'delivered') return 'delivered';

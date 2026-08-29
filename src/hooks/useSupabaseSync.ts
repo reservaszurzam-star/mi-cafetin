@@ -186,7 +186,7 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
       // Cambios en órdenes y comanda
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
+        { event: '*', schema: 'public', table: 'orders' },
         () => {
           svc.fetchOrders(tenantId).then(remoteOrders => {
             if (!remoteOrders) return;
@@ -200,18 +200,19 @@ export function useSupabaseSync(tenantId: string, setters: StoreSetters) {
                 const localItems = Array.isArray(local.items) ? local.items : [];
                 const remItems = Array.isArray(rem?.items) ? rem.items : [];
 
-                // Si la orden local tiene más platos, conservarla siempre
+                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
+                const remTime = new Date(rem.updatedAt || rem.createdAt || 0).getTime();
+
+                // Si la orden remota es más reciente o su estado cambió (ej. de draft a sent), tomar remota
+                if (remTime >= localTime || rem.status !== local.status) {
+                  return rem;
+                }
+
+                // Si la orden local tiene más platos no guardados aún
                 if (localItems.length > remItems.length) {
                   return local;
                 }
 
-                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
-                const remTime = new Date(rem.updatedAt || rem.createdAt || 0).getTime();
-
-                // Si la versión local es más reciente
-                if (localTime > remTime) {
-                  return local;
-                }
                 return rem;
               });
 
