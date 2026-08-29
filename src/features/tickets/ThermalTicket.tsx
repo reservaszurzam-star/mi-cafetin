@@ -478,9 +478,20 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
           {/* Botones de Acción */}
           <div className="space-y-2 pt-2">
             <button
+              onClick={() => {
+                handlePrint();
+                if (onConfirmPrint) onConfirmPrint();
+              }}
+              className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-black rounded-2xl text-sm transition shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+            >
+              <Printer className="w-5 h-5 text-stone-950" />
+              <span>🖨️ IMPRIMIR TICKET VISUAL CON LOGO</span>
+            </button>
+
+            <button
               onClick={handlePrintBluetooth}
               disabled={bluetoothPrinting}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs transition shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
             >
               <Bluetooth className={`w-4 h-4 ${bluetoothPrinting ? 'animate-spin' : ''}`} />
               <span>{bluetoothPrinting ? 'Enviando por Bluetooth...' : '📲 Imprimir por Bluetooth Inalámbrico'}</span>
@@ -491,27 +502,16 @@ export const ThermalTicket: React.FC<ThermalTicketProps> = ({
               className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-200 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
               <Smartphone className="w-4 h-4 text-blue-600" />
-              <span>📱 Imprimir vía App Celular (RawBT / Universal)</span>
+              <span>📱 Imprimir vía App Celular (RawBT)</span>
             </button>
 
             <button
               onClick={handleDirectPrintEscPos}
               disabled={directPrinting}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black rounded-2xl text-xs transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+              className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-200 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
             >
-              <Zap className={`w-4 h-4 ${directPrinting ? 'animate-spin' : ''}`} />
-              <span>{directPrinting ? 'Enviando a Ticketera...' : '⚡ Imprimir USB / Red TCP (ESC/POS)'}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                handlePrint();
-                if (onConfirmPrint) onConfirmPrint();
-              }}
-              className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-            >
-              <Printer className="w-4 h-4 text-stone-600" />
-              <span>Imprimir por Diálogo de Windows / PDF</span>
+              <Zap className={`w-4 h-4 text-emerald-600 ${directPrinting ? 'animate-spin' : ''}`} />
+              <span>{directPrinting ? 'Enviando a Ticketera...' : '⚡ Imprimir Directo ESC/POS (USB / Red)'}</span>
             </button>
 
             <button
