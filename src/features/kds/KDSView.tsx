@@ -9,6 +9,7 @@ import { useAppStore } from "../../hooks/StoreContext";
 import { ThermalTicket } from "../tickets/ThermalTicket";
 import { RestaurantOrder, KitchenScreen, OrderItem } from "../../types";
 import { KDSConfigModal } from "./KDSConfigModal";
+import { routeAndPrintOrderApi } from "../../lib/printerService";
 
 // Reproductor de Chime de Cocina con Web Audio API (cero dependencias externas)
 function playKitchenChime() {
@@ -50,7 +51,9 @@ export default function KDSView() {
     products,
     kitchenScreens, 
     toggleItemPrepared, 
-    markOrderServed 
+    markOrderServed,
+    printers,
+    settings
   } = useAppStore();
 
   const [activeScreenId, setActiveScreenId] = useState<string>(() => {
@@ -60,6 +63,9 @@ export default function KDSView() {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('cafetin_kds_autoprint') !== 'false';
+  });
   const [ticketToPrint, setTicketToPrint] = useState<{ order: RestaurantOrder; stationName: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -87,6 +93,8 @@ export default function KDSView() {
 
   // Detección de nuevas comandas entrantes para alerta sonora
   const prevOrdersCountRef = useRef(0);
+  const printedItemIdsRef = useRef<Set<string>>(new Set());
+
   const activeOrders = useMemo(() => {
     return orders.filter((o) => o.status === 'sent' || o.status === 'partially_sent');
   }, [orders]);
@@ -130,6 +138,28 @@ export default function KDSView() {
       };
     }).filter(order => order.items.length > 0);
   }, [activeOrders, activeScreen, products]);
+
+  // Auto-Impresión automática en KDS de Cocina al recibir comandas de las meseras
+  useEffect(() => {
+    if (!autoPrintEnabled || printers.length === 0) return;
+
+    screenOrders.forEach(order => {
+      const unsentOrNewItems = order.items.filter(item => !printedItemIdsRef.current.has(item.id));
+      if (unsentOrNewItems.length > 0) {
+        unsentOrNewItems.forEach(item => printedItemIdsRef.current.add(item.id));
+
+        routeAndPrintOrderApi(
+          {
+            ...order,
+            items: unsentOrNewItems,
+          },
+          printers,
+          settings,
+          { targetStation: activeScreen.station }
+        ).catch(err => console.log("KDS Auto-print error:", err));
+      }
+    });
+  }, [screenOrders, autoPrintEnabled, printers, settings, activeScreen.station]);
 
   // Métricas de la pantalla activa
   const totalItemsPending = screenOrders.reduce((acc, o) => acc + o.items.filter(i => !i.prepared).length, 0);
@@ -178,6 +208,24 @@ export default function KDSView() {
 
         {/* Botones de Control y Ajustes */}
         <div className="flex flex-wrap items-center gap-2">
+
+          {/* Botón Auto-Impresión Térmica */}
+          <button
+            onClick={() => {
+              const next = !autoPrintEnabled;
+              setAutoPrintEnabled(next);
+              localStorage.setItem('cafetin_kds_autoprint', String(next));
+            }}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+              autoPrintEnabled
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 border-emerald-300'
+                : 'bg-stone-100 dark:bg-stone-800 text-stone-500 border-stone-200 dark:border-stone-700'
+            }`}
+            title="Imprimir automáticamente en ticketera física al llegar pedidos de las meseras"
+          >
+            <Printer className={`w-4 h-4 ${autoPrintEnabled ? 'text-emerald-600' : ''}`} />
+            <span>{autoPrintEnabled ? '🖨️ Auto-Impresión ON' : 'Auto-Impresión OFF'}</span>
+          </button>
           
           {/* Botón Alerta Sonora */}
           <button

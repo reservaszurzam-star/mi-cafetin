@@ -304,6 +304,20 @@ export default function POSView() {
     // Enviar a cocina en estado de la app
     sendOrderToKitchen(activeOrder.id, options.targetStation);
 
+    // Auto-Impresión y ruteo automático en segundo plano para las ticketeras configuradas
+    if (printers && printers.some(p => p.isActive !== false)) {
+      routeAndPrintOrderApi(
+        orderSnapshot,
+        printers,
+        settings,
+        {
+          onlyUnsent: true,
+          targetStation: options.targetStation,
+          batchNumber: newBatch,
+        }
+      ).catch(err => console.log("Auto-routing print error:", err));
+    }
+
     if (options.printTicket) {
       // Previsualización y confirmación en pantalla solo si el usuario marcó imprimir
       setTicketOrderToPrint(orderSnapshot);
